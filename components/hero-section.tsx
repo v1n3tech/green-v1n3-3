@@ -26,26 +26,26 @@ export function HeroSection() {
   }, [])
 
   return (
-    <section className="pt-[120px] pb-20 relative overflow-hidden">
+    <section className="pt-[100px] sm:pt-[110px] lg:pt-[120px] pb-12 sm:pb-16 lg:pb-20 relative overflow-hidden">
       {/* Grid Pattern Background */}
       <div className="absolute inset-0 grid-pattern" />
       
-      <div className="max-w-[1440px] mx-auto px-5 relative">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-5 relative">
         {/* Status Badges */}
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="flex flex-wrap items-center gap-3 mb-10"
+          className="flex flex-wrap items-center gap-2 sm:gap-3 mb-6 sm:mb-10"
         >
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
             <span className="status-dot" />
             <span className="mono-xs text-foreground/90">AGROV1N3 PROGRAM</span>
           </div>
-          <div className="px-3 py-1.5 border border-primary/50 rounded-[2px]">
+          <div className="px-2 sm:px-3 py-1 sm:py-1.5 border border-primary/50 rounded-[2px]">
             <span className="mono-xs text-primary">BUILT ON SOLANA</span>
           </div>
-          <div className="flex items-center gap-2.5">
+          <div className="hidden sm:flex items-center gap-2.5">
             <span className="w-1.5 h-1.5 rounded-full bg-accent" />
             <span className="mono-xs text-foreground/90">PHASE 01 : PLATEAU STATE</span>
           </div>
@@ -56,10 +56,10 @@ export function HeroSection() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="flex items-center justify-between mb-10"
+          className="flex items-center justify-between mb-6 sm:mb-10"
         >
-          <div className="flex items-center gap-2.5">
-            <div className="w-1 h-5 bg-primary" />
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <div className="w-1 h-4 sm:h-5 bg-primary" />
             <span className="mono-xs text-primary">/ 00 — MANIFESTO</span>
           </div>
           <span className="mono-xs text-muted-foreground">{date}</span>
