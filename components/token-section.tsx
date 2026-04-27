@@ -45,7 +45,7 @@ export function TokenSection() {
                     alt="V1n3 Token"
                     width={40}
                     height={40}
-                    className="object-contain"
+                    className="object-contain w-auto h-auto"
                   />
                 </div>
                 <div>
@@ -97,7 +97,7 @@ export function TokenSection() {
             transition={{ delay: 0.1 }}
           >
             <div className="mb-6">
-              <h3 className="mono text-lg text-foreground mb-2">Token Utility</h3>
+              <h3 className="mono text-lg text-foreground mb-2 tracking-wide">TOKEN UTILITY</h3>
               <p className="text-sm text-foreground/50 leading-relaxed">
                 V1n3 powers the entire AgroV1n3 ecosystem, enabling seamless transactions, 
                 governance participation, and rewards distribution across all 14 communities.

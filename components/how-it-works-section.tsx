@@ -46,10 +46,10 @@ export function HowItWorksSection() {
 
         <div className="grid lg:grid-cols-[1fr,auto] gap-12 items-start">
           <div>
-            <h2 className="text-3xl sm:text-4xl font-sans leading-tight mb-4">
-              Your Path to
+            <h2 className="mono text-2xl sm:text-3xl leading-tight mb-4 tracking-wide">
+              YOUR PATH TO
               <br />
-              <span className="text-primary">Agro Excellence</span>
+              <span className="text-primary">AGRO EXCELLENCE</span>
             </h2>
             <p className="text-foreground/50 max-w-lg text-base leading-relaxed">
               From registration to revenue, a seamless journey that empowers 

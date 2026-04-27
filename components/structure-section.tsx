@@ -59,10 +59,10 @@ export function StructureSection() {
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20">
           {/* Left - Intro */}
           <div>
-            <h2 className="text-3xl sm:text-4xl font-sans leading-tight mb-4">
-              Operational
+            <h2 className="mono text-2xl sm:text-3xl leading-tight mb-4 tracking-wide">
+              OPERATIONAL
               <br />
-              <span className="text-primary">Framework</span>
+              <span className="text-primary">FRAMEWORK</span>
             </h2>
             <p className="text-foreground/50 max-w-md text-base leading-relaxed mb-8">
               A decentralized governance structure ensuring effective coordination 
