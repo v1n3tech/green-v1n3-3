@@ -55,9 +55,9 @@ export function CommunitiesSection() {
 
         <div className="flex flex-col lg:flex-row gap-8 items-start">
           {/* Hexagonal Grid */}
-          <div className="flex-1 py-4">
+          <div className="flex-1 py-4 max-w-[620px]">
             {/* Row 1 - 5 items */}
-            <div className="flex flex-wrap justify-center gap-2 mb-[-18px]">
+            <div className="flex flex-wrap justify-center gap-1 mb-[-16px]">
               {communities.slice(0, 5).map((community) => (
                 <HexCard
                   key={community.id}
@@ -69,7 +69,7 @@ export function CommunitiesSection() {
             </div>
 
             {/* Row 2 - 4 items (offset) */}
-            <div className="flex flex-wrap justify-center gap-2 mb-[-18px]">
+            <div className="flex flex-wrap justify-center gap-1 mb-[-16px]">
               {communities.slice(5, 9).map((community) => (
                 <HexCard
                   key={community.id}
@@ -81,7 +81,7 @@ export function CommunitiesSection() {
             </div>
 
             {/* Row 3 - 5 items */}
-            <div className="flex flex-wrap justify-center gap-2">
+            <div className="flex flex-wrap justify-center gap-1">
               {communities.slice(9, 14).map((community) => (
                 <HexCard
                   key={community.id}
@@ -150,11 +150,6 @@ export function CommunitiesSection() {
       </div>
     </section>
   )
-}
-
-// Helper to format member count
-function formatMembers(count: string): string {
-  return count
 }
 
 interface HexCardProps {

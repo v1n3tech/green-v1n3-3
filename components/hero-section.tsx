@@ -133,44 +133,60 @@ export function HeroSection() {
             </div>
 
             {/* Image Container with Sleek Frame */}
-            <div className="relative">
-              {/* Outer Frame - Solid Green Border */}
-              <div className="absolute -inset-[3px] border-2 border-primary rounded-[3px] z-0" />
+            <div className="relative group">
+              {/* Main Frame Border - Clean Green */}
+              <div className="absolute -inset-[2px] border border-primary/80 rounded-[2px] z-0" />
               
-              {/* Corner Accent Dots */}
-              <div className="absolute -top-1 -left-1 w-2 h-2 bg-primary z-20" />
-              <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary z-20" />
-              <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-primary z-20" />
-              <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-primary z-20" />
+              {/* Corner Brackets - Refined */}
+              <div className="absolute -top-1.5 -left-1.5 w-4 h-4 z-20">
+                <div className="absolute top-0 left-0 w-full h-[2px] bg-primary" />
+                <div className="absolute top-0 left-0 w-[2px] h-full bg-primary" />
+              </div>
+              <div className="absolute -top-1.5 -right-1.5 w-4 h-4 z-20">
+                <div className="absolute top-0 right-0 w-full h-[2px] bg-primary" />
+                <div className="absolute top-0 right-0 w-[2px] h-full bg-primary" />
+              </div>
+              <div className="absolute -bottom-1.5 -left-1.5 w-4 h-4 z-20">
+                <div className="absolute bottom-0 left-0 w-full h-[2px] bg-primary" />
+                <div className="absolute bottom-0 left-0 w-[2px] h-full bg-primary" />
+              </div>
+              <div className="absolute -bottom-1.5 -right-1.5 w-4 h-4 z-20">
+                <div className="absolute bottom-0 right-0 w-full h-[2px] bg-primary" />
+                <div className="absolute bottom-0 right-0 w-[2px] h-full bg-primary" />
+              </div>
+
+              {/* Glow Effect on Hover */}
+              <div className="absolute -inset-1 bg-primary/5 rounded-[3px] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-0" />
 
               <div className="relative aspect-[4/3] overflow-hidden rounded-[2px] bg-card">
                 <Image
                   src="/images/hero-farmer.jpg"
                   alt="Agro Executive - Bukola O."
                   fill
-                  className="object-cover"
+                  className="object-cover transition-transform duration-700 group-hover:scale-[1.02]"
                   priority
                 />
                 
-                {/* Subtle Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent" />
+                {/* Vignette Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-background/20" />
+                <div className="absolute inset-0 bg-gradient-to-r from-background/20 via-transparent to-background/20" />
                 
                 {/* Top Labels */}
                 <div className="absolute top-4 left-4 right-4 flex items-start justify-between">
-                  <div className="flex items-center gap-2 px-3 py-2 bg-background/95 backdrop-blur-sm rounded-[2px]">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-background/90 backdrop-blur-md rounded-[2px] border border-border/50">
                     <span className="status-dot status-dot-pulse" />
                     <span className="mono-xs text-foreground">LIVE CAPTURE / {captureTime}</span>
                   </div>
-                  <div className="px-3 py-2 bg-card/95 backdrop-blur-sm rounded-[2px]">
+                  <div className="px-3 py-2 bg-card/90 backdrop-blur-md rounded-[2px] border border-border/50">
                     <span className="mono-xs text-foreground/80">PHOTO : BUKOLA O.</span>
                   </div>
                 </div>
 
                 {/* Bottom Info */}
                 <div className="absolute bottom-4 left-4 right-4">
-                  <div className="mono-xs text-primary mb-1">AGRO EXECUTIVE #0001</div>
-                  <div className="text-lg font-mono text-foreground">Amina Yusuf</div>
-                  <div className="mono-xs text-foreground/50 mt-1">CROP FARMING • JOS SOUTH</div>
+                  <div className="mono-xs text-primary mb-1.5">AGRO EXECUTIVE #0001</div>
+                  <div className="text-lg font-mono text-foreground tracking-wide">Amina Yusuf</div>
+                  <div className="mono-xs text-foreground/40 mt-1">CROP FARMING • JOS SOUTH</div>
                 </div>
               </div>
             </div>
