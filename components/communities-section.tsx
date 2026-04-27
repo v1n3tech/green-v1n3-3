@@ -53,11 +53,11 @@ export function CommunitiesSection() {
           <span className="mono-xs text-primary">/ 03 — COMMUNITIES</span>
         </div>
 
-        <div className="grid lg:grid-cols-[1fr,360px] gap-6 lg:gap-8">
+        <div className="flex flex-col lg:flex-row gap-8 items-start">
           {/* Hexagonal Grid */}
-          <div className="py-6">
+          <div className="flex-1 py-4">
             {/* Row 1 - 5 items */}
-            <div className="flex flex-wrap justify-center gap-3 mb-[-20px]">
+            <div className="flex flex-wrap justify-center gap-2 mb-[-18px]">
               {communities.slice(0, 5).map((community) => (
                 <HexCard
                   key={community.id}
@@ -69,7 +69,7 @@ export function CommunitiesSection() {
             </div>
 
             {/* Row 2 - 4 items (offset) */}
-            <div className="flex flex-wrap justify-center gap-3 mb-[-20px]">
+            <div className="flex flex-wrap justify-center gap-2 mb-[-18px]">
               {communities.slice(5, 9).map((community) => (
                 <HexCard
                   key={community.id}
@@ -81,7 +81,7 @@ export function CommunitiesSection() {
             </div>
 
             {/* Row 3 - 5 items */}
-            <div className="flex flex-wrap justify-center gap-3">
+            <div className="flex flex-wrap justify-center gap-2">
               {communities.slice(9, 14).map((community) => (
                 <HexCard
                   key={community.id}
@@ -93,8 +93,8 @@ export function CommunitiesSection() {
             </div>
           </div>
 
-          {/* Selected Community Panel */}
-          <div className="border border-border rounded-[3px] bg-card/30 h-fit sticky top-[140px]">
+          {/* Selected Community Panel - Beside Hex Grid */}
+          <div className="w-full lg:w-[340px] border border-border rounded-[3px] bg-card/50 flex-shrink-0 lg:sticky lg:top-[140px]">
             <div className="px-5 py-4 border-b border-border flex items-center justify-between">
               <span className="mono-xs text-muted-foreground">SELECTED : V1N3</span>
               <span className="mono-xs text-primary">{selected.id}</span>
@@ -152,6 +152,11 @@ export function CommunitiesSection() {
   )
 }
 
+// Helper to format member count
+function formatMembers(count: string): string {
+  return count
+}
+
 interface HexCardProps {
   community: typeof communities[0]
   isSelected: boolean
@@ -164,7 +169,7 @@ function HexCard({ community, isSelected, onClick }: HexCardProps) {
   return (
     <button
       onClick={onClick}
-      className="relative w-[105px] h-[120px] flex flex-col items-center justify-center transition-transform hover:scale-105 active:scale-100"
+      className="relative w-[95px] h-[110px] flex flex-col items-center justify-center transition-transform hover:scale-105 active:scale-100"
     >
       {/* Hexagon Shape */}
       <svg
@@ -177,10 +182,10 @@ function HexCard({ community, isSelected, onClick }: HexCardProps) {
             transition-all duration-200
             ${isSelected 
               ? 'fill-primary stroke-primary' 
-              : 'fill-card stroke-border hover:stroke-primary/50'
+              : 'fill-[#060906] stroke-[rgba(0,200,83,0.15)] hover:stroke-primary/40'
             }
           `}
-          strokeWidth="1"
+          strokeWidth="1.5"
         />
       </svg>
 

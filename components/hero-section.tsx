@@ -73,7 +73,7 @@ export function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.6 }}
           >
-            <h1 className="text-[clamp(2.8rem,7.5vw,5.5rem)] leading-[0.92] tracking-tight font-sans">
+            <h1 className="text-[clamp(2.2rem,5.5vw,4rem)] leading-[1.05] tracking-tight font-mono">
               <span className="text-foreground">Cultivating</span>
               <br />
               <span className="text-primary">Nigeria&apos;s</span>
@@ -132,15 +132,18 @@ export function HeroSection() {
               </span>
             </div>
 
-            {/* Image Container with Frame Brackets */}
+            {/* Image Container with Sleek Frame */}
             <div className="relative">
-              {/* Corner Brackets */}
-              <div className="absolute top-2 left-2 w-6 h-6 border-l-[1.5px] border-t-[1.5px] border-primary z-10" />
-              <div className="absolute top-2 right-2 w-6 h-6 border-r-[1.5px] border-t-[1.5px] border-primary z-10" />
-              <div className="absolute bottom-2 left-2 w-6 h-6 border-l-[1.5px] border-b-[1.5px] border-primary z-10" />
-              <div className="absolute bottom-2 right-2 w-6 h-6 border-r-[1.5px] border-b-[1.5px] border-primary z-10" />
+              {/* Outer Frame - Solid Green Border */}
+              <div className="absolute -inset-[3px] border-2 border-primary rounded-[3px] z-0" />
+              
+              {/* Corner Accent Dots */}
+              <div className="absolute -top-1 -left-1 w-2 h-2 bg-primary z-20" />
+              <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary z-20" />
+              <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-primary z-20" />
+              <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-primary z-20" />
 
-              <div className="relative aspect-[4/5] overflow-hidden rounded-[2px] border border-border">
+              <div className="relative aspect-[4/3] overflow-hidden rounded-[2px] bg-card">
                 <Image
                   src="/images/hero-farmer.jpg"
                   alt="Agro Executive - Bukola O."
@@ -149,25 +152,25 @@ export function HeroSection() {
                   priority
                 />
                 
-                {/* Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" />
+                {/* Subtle Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent" />
                 
                 {/* Top Labels */}
-                <div className="absolute top-5 left-5 right-5 flex items-start justify-between">
-                  <div className="flex items-center gap-2 px-3 py-2 bg-background/90 backdrop-blur-sm rounded-[2px] border border-border">
+                <div className="absolute top-4 left-4 right-4 flex items-start justify-between">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-background/95 backdrop-blur-sm rounded-[2px]">
                     <span className="status-dot status-dot-pulse" />
                     <span className="mono-xs text-foreground">LIVE CAPTURE / {captureTime}</span>
                   </div>
-                  <div className="px-3 py-2 bg-card/95 backdrop-blur-sm rounded-[2px] border border-border">
+                  <div className="px-3 py-2 bg-card/95 backdrop-blur-sm rounded-[2px]">
                     <span className="mono-xs text-foreground/80">PHOTO : BUKOLA O.</span>
                   </div>
                 </div>
 
                 {/* Bottom Info */}
-                <div className="absolute bottom-5 left-5 right-5">
+                <div className="absolute bottom-4 left-4 right-4">
                   <div className="mono-xs text-primary mb-1">AGRO EXECUTIVE #0001</div>
-                  <div className="text-xl font-sans text-foreground">Amina Yusuf</div>
-                  <div className="mono-xs text-foreground/50 mt-1">CROP FARMING COMMUNITY • JOS SOUTH</div>
+                  <div className="text-lg font-mono text-foreground">Amina Yusuf</div>
+                  <div className="mono-xs text-foreground/50 mt-1">CROP FARMING • JOS SOUTH</div>
                 </div>
               </div>
             </div>

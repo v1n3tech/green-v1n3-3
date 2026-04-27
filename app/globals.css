@@ -4,25 +4,25 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #050805;
+  --background: #020302;
   --foreground: #e8f0e8;
-  --card: #0a120a;
+  --card: #060906;
   --card-foreground: #e8f0e8;
-  --popover: #080c08;
+  --popover: #040604;
   --popover-foreground: #e8f0e8;
   --primary: #00c853;
-  --primary-foreground: #050805;
-  --secondary: #0d150d;
+  --primary-foreground: #020302;
+  --secondary: #080c08;
   --secondary-foreground: #e8f0e8;
-  --muted: #121a12;
-  --muted-foreground: #5a6b5a;
+  --muted: #0a0f0a;
+  --muted-foreground: #4a5a4a;
   --accent: #d4a000;
-  --accent-foreground: #050805;
+  --accent-foreground: #020302;
   --destructive: #dc2626;
   --destructive-foreground: #e8f0e8;
-  --border: rgba(0, 200, 83, 0.12);
-  --border-strong: rgba(0, 200, 83, 0.35);
-  --input: #121a12;
+  --border: rgba(0, 200, 83, 0.10);
+  --border-strong: rgba(0, 200, 83, 0.40);
+  --input: #0a0f0a;
   --ring: #00c853;
   --radius: 3px;
 }
@@ -161,8 +161,8 @@
 /* Grid pattern */
 .grid-pattern {
   background-image: 
-    linear-gradient(rgba(0, 200, 83, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 200, 83, 0.04) 1px, transparent 1px);
+    linear-gradient(rgba(0, 200, 83, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 200, 83, 0.025) 1px, transparent 1px);
   background-size: 48px 48px;
 }
 
