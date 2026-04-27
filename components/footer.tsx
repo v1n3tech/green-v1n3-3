@@ -6,10 +6,10 @@ import { Twitter, Send, Github, FileText } from 'lucide-react'
 
 const footerLinks = {
   platform: [
+    { label: 'Doctrine', href: '#doctrine' },
     { label: 'Communities', href: '#communities' },
-    { label: 'How it Works', href: '#how-it-works' },
-    { label: 'Token', href: '#token' },
-    { label: 'Structure', href: '#structure' },
+    { label: 'Infrastructure', href: '#infra' },
+    { label: 'V1n3 Token', href: '#chain' },
   ],
   resources: [
     { label: 'Documentation', href: '#' },
@@ -39,12 +39,12 @@ const socialLinks = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-border/30 bg-card/30">
-      <div className="px-4 md:px-8 lg:px-16 py-16">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 lg:gap-12">
+    <footer className="border-t border-border bg-card/20">
+      <div className="max-w-[1440px] mx-auto px-5 py-16">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 lg:gap-10">
           {/* Brand */}
           <div className="col-span-2 md:col-span-3 lg:col-span-2">
-            <Link href="/" className="flex items-center gap-2 mb-4">
+            <Link href="/" className="flex items-center gap-2.5 mb-5">
               <Image
                 src="/logo.png"
                 alt="GreenV1n3"
@@ -52,11 +52,12 @@ export function Footer() {
                 height={32}
                 className="object-contain"
               />
-              <span className="font-mono text-lg">
-                Green<span className="text-primary">V1n3</span>
+              <span className="mono text-base tracking-wider">
+                <span className="text-foreground">GREEN</span>
+                <span className="text-primary">V1N3</span>
               </span>
             </Link>
-            <p className="text-sm text-muted-foreground leading-relaxed mb-6 max-w-xs">
+            <p className="text-sm text-foreground/50 leading-relaxed mb-6 max-w-xs">
               Cultivating Nigeria&apos;s next economy through youth agricultural empowerment, 
               powered by blockchain technology.
             </p>
@@ -66,10 +67,10 @@ export function Footer() {
                 <a
                   key={social.label}
                   href={social.href}
-                  className="flex items-center justify-center size-9 rounded-sm border border-border/50 bg-card/50 hover:border-primary/30 hover:text-primary transition-colors"
+                  className="w-9 h-9 flex items-center justify-center border border-border rounded-[2px] bg-card/30 hover:border-primary/50 hover:text-primary transition-all"
                   aria-label={social.label}
                 >
-                  <social.icon className="size-4" />
+                  <social.icon className="w-4 h-4" />
                 </a>
               ))}
             </div>
@@ -77,11 +78,11 @@ export function Footer() {
 
           {/* Platform Links */}
           <div>
-            <h4 className="font-mono text-xs text-muted-foreground mb-4 tracking-wider">PLATFORM</h4>
-            <ul className="space-y-2">
+            <h4 className="mono-xs text-muted-foreground mb-4">PLATFORM</h4>
+            <ul className="space-y-2.5">
               {footerLinks.platform.map((link) => (
                 <li key={link.label}>
-                  <Link href={link.href} className="text-sm hover:text-primary transition-colors">
+                  <Link href={link.href} className="text-sm text-foreground/70 hover:text-primary transition-colors">
                     {link.label}
                   </Link>
                 </li>
@@ -91,11 +92,11 @@ export function Footer() {
 
           {/* Resources Links */}
           <div>
-            <h4 className="font-mono text-xs text-muted-foreground mb-4 tracking-wider">RESOURCES</h4>
-            <ul className="space-y-2">
+            <h4 className="mono-xs text-muted-foreground mb-4">RESOURCES</h4>
+            <ul className="space-y-2.5">
               {footerLinks.resources.map((link) => (
                 <li key={link.label}>
-                  <Link href={link.href} className="text-sm hover:text-primary transition-colors">
+                  <Link href={link.href} className="text-sm text-foreground/70 hover:text-primary transition-colors">
                     {link.label}
                   </Link>
                 </li>
@@ -105,11 +106,11 @@ export function Footer() {
 
           {/* Company Links */}
           <div>
-            <h4 className="font-mono text-xs text-muted-foreground mb-4 tracking-wider">COMPANY</h4>
-            <ul className="space-y-2">
+            <h4 className="mono-xs text-muted-foreground mb-4">COMPANY</h4>
+            <ul className="space-y-2.5">
               {footerLinks.company.map((link) => (
                 <li key={link.label}>
-                  <Link href={link.href} className="text-sm hover:text-primary transition-colors">
+                  <Link href={link.href} className="text-sm text-foreground/70 hover:text-primary transition-colors">
                     {link.label}
                   </Link>
                 </li>
@@ -119,11 +120,11 @@ export function Footer() {
 
           {/* Legal Links */}
           <div>
-            <h4 className="font-mono text-xs text-muted-foreground mb-4 tracking-wider">LEGAL</h4>
-            <ul className="space-y-2">
+            <h4 className="mono-xs text-muted-foreground mb-4">LEGAL</h4>
+            <ul className="space-y-2.5">
               {footerLinks.legal.map((link) => (
                 <li key={link.label}>
-                  <Link href={link.href} className="text-sm hover:text-primary transition-colors">
+                  <Link href={link.href} className="text-sm text-foreground/70 hover:text-primary transition-colors">
                     {link.label}
                   </Link>
                 </li>
@@ -134,19 +135,22 @@ export function Footer() {
       </div>
 
       {/* Bottom Bar */}
-      <div className="border-t border-border/30 px-4 md:px-8 lg:px-16 py-6">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <span>&copy; 2026 V1n3Tech.</span>
-            <span className="hidden sm:inline">|</span>
-            <span>Founded by Mantim Danzaki</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1.5">
-              <span className="size-1.5 rounded-full bg-primary animate-pulse" />
-              BUILT ON SOLANA
-            </span>
-            <span>PLATEAU STATE, NIGERIA</span>
+      <div className="border-t border-border">
+        <div className="max-w-[1440px] mx-auto px-5 py-5">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3 mono-xs text-muted-foreground">
+              <span>&copy; 2026 V1N3TECH</span>
+              <span className="text-border-strong">/</span>
+              <span>FOUNDED BY MANTIM DANZAKI</span>
+            </div>
+            <div className="flex items-center gap-4 mono-xs text-muted-foreground">
+              <span className="flex items-center gap-2">
+                <span className="status-dot status-dot-pulse" />
+                BUILT ON SOLANA
+              </span>
+              <span className="text-border-strong">/</span>
+              <span>PLATEAU STATE, NIGERIA</span>
+            </div>
           </div>
         </div>
       </div>

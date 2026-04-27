@@ -1,115 +1,281 @@
 'use client'
 
+import { useState } from 'react'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { 
   User, 
   ShoppingBag, 
-  PiggyBank, 
+  TrendingUp, 
   Wallet, 
-  Megaphone, 
+  Star,
   BarChart3, 
-  Trophy, 
+  ArrowLeftRight, 
   Newspaper 
 } from 'lucide-react'
 
 const features = [
   {
+    id: '01',
     icon: User,
-    title: 'Interactive Profile',
-    description: 'Personal page with posts, photos, music and video capabilities to showcase your agricultural journey.',
+    title: 'Personal Interactive Page',
+    description: 'Words, photos, music and video — your stage in the network. Every Agro Executive carries a living profile.',
+    size: 'large',
+    hasImage: true,
   },
   {
-    icon: ShoppingBag,
-    title: 'Agro Online Shop',
-    description: 'Buy and sell agricultural products directly within the platform with V1n3 or fiat currency.',
-  },
-  {
-    icon: PiggyBank,
-    title: 'Investment Platform',
-    description: 'Connect with investors and access funding opportunities for your agricultural ventures.',
-  },
-  {
+    id: '02',
     icon: Wallet,
     title: 'Personal Wallet',
-    description: 'Secure Solana-powered wallet to store, send, and receive V1n3 tokens and other assets.',
+    description: 'Solana-powered. Send, receive, stake V1n3.',
+    size: 'small',
   },
   {
-    icon: Megaphone,
-    title: 'Advertising Hub',
-    description: 'Promote your products and services to thousands of engaged agricultural professionals.',
+    id: '03',
+    icon: TrendingUp,
+    title: 'Investors Hub',
+    description: 'Fractional stakes. Transparent ledgers.',
+    size: 'small',
   },
   {
-    icon: BarChart3,
-    title: 'Performance Analytics',
-    description: 'Real-time evaluation and monitoring of your agricultural activities and progress.',
+    id: '04',
+    icon: ShoppingBag,
+    title: 'Agro-Online Shop',
+    description: 'List, sell, source from verified executives.',
+    size: 'medium',
   },
   {
-    icon: Trophy,
+    id: '05',
+    icon: Star,
     title: 'Weekly Ratings',
-    description: 'Personal financial and operational ratings with gamified leaderboards and rewards.',
+    description: 'Financial and operational scores. Leaderboards.',
+    size: 'small',
   },
   {
+    id: '06',
+    icon: BarChart3,
+    title: 'Evaluation & Monitoring',
+    description: 'Real-time analytics on your progress.',
+    size: 'small',
+  },
+  {
+    id: '07',
+    icon: ArrowLeftRight,
+    title: 'Information & Advertising',
+    description: 'Promote products to the network.',
+    size: 'small',
+  },
+  {
+    id: '08',
     icon: Newspaper,
-    title: 'Agro News',
-    description: 'Stay updated with agriculture and economic news, market trends, and opportunities.',
+    title: 'Agro News & Updates',
+    description: 'Agriculture and economic intelligence.',
+    size: 'small',
   },
 ]
 
+const profileImages = [
+  { color: 'bg-primary/20', active: false },
+  { color: 'bg-primary', active: true },
+  { color: 'bg-primary/20', active: false },
+]
+
 export function FeaturesSection() {
+  const [activeSlide] = useState(1)
+
   return (
-    <section className="relative py-24 px-4 md:px-8 lg:px-16">
-      <div className="absolute inset-0 grid-pattern opacity-20" />
-      
-      <div className="relative z-10">
+    <section className="py-20 relative">
+      <div className="max-w-[1440px] mx-auto px-5">
         {/* Section Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mb-16"
-        >
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-1 h-4 bg-primary" />
-            <span className="text-xs font-mono tracking-wider text-primary">/ 06 — FEATURES</span>
-          </div>
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-            <h2 className="text-4xl sm:text-5xl font-mono leading-tight text-balance">
-              Everything you need<span className="text-accent">.</span>
-              <br />
-              <span className="text-primary">One platform</span><span className="text-muted-foreground">.</span>
-            </h2>
-            <p className="text-muted-foreground max-w-md text-base leading-relaxed">
-              The Green V1n3 platform brings together all the tools you need to 
-              succeed in the agricultural economy.
-            </p>
-          </div>
-        </motion.div>
+        <div className="flex items-center gap-2.5 mb-12">
+          <div className="w-1 h-5 bg-primary" />
+          <span className="mono-xs text-primary">/ 04 — INFRASTRUCTURE</span>
+        </div>
 
-        {/* Features Grid */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {features.map((feature, i) => (
-            <motion.div
-              key={feature.title}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.05 }}
-              className="group"
-            >
-              <div className="h-full p-5 rounded-sm border border-border/50 bg-card/50 hover:border-primary/30 hover:bg-card transition-all">
-                {/* Icon */}
-                <div className="flex items-center justify-center size-10 rounded-sm bg-primary/10 border border-primary/30 mb-4 group-hover:scale-110 transition-transform">
-                  <feature.icon className="size-5 text-primary" />
-                </div>
+        {/* Bento Grid */}
+        <div className="grid grid-cols-12 gap-3">
+          {/* Large Card - Personal Interactive Page */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="col-span-12 lg:col-span-6 row-span-2"
+          >
+            <div className="h-full border border-border rounded-[3px] bg-card/30 p-5 flex flex-col">
+              {/* Image Carousel Preview */}
+              <div className="flex gap-2 mb-4 h-[200px] sm:h-[240px]">
+                {profileImages.map((img, i) => (
+                  <div
+                    key={i}
+                    className={`
+                      flex-1 rounded-[2px] transition-all duration-300
+                      ${i === activeSlide ? 'flex-[2] ' + img.color : img.color + ' opacity-60'}
+                    `}
+                  >
+                    {i === activeSlide && (
+                      <div className="w-full h-full relative overflow-hidden rounded-[2px]">
+                        <Image
+                          src="/images/hero-farmer.jpg"
+                          alt="Profile"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
 
-                {/* Content */}
-                <h3 className="font-mono text-sm mb-2">{feature.title}</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  {feature.description}
+              {/* Content */}
+              <div>
+                <h3 className="mono text-lg text-foreground mb-2">Personal Interactive Page</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Words, photos, music and video — your stage in the network. Every Agro Executive carries a living profile.
                 </p>
               </div>
-            </motion.div>
-          ))}
+            </div>
+          </motion.div>
+
+          {/* Medium Card - Agro-Online Shop */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+            className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-2"
+          >
+            <div className="h-full border border-border rounded-[3px] bg-card/30 p-5 flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 rounded-[2px] bg-accent/20 border border-accent/30 flex items-center justify-center">
+                  <ShoppingBag className="w-5 h-5 text-accent" />
+                </div>
+                <span className="index">04</span>
+              </div>
+              <div className="mt-auto">
+                <h3 className="mono text-base text-foreground mb-2">Agro-Online Shop</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  List, sell, source from verified executives.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Small Card - Investors Hub */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.15 }}
+            className="col-span-12 sm:col-span-6 lg:col-span-3"
+          >
+            <div className="h-full border border-border rounded-[3px] bg-card/30 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 rounded-[2px] bg-primary/10 border border-primary/20 flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-primary" />
+                </div>
+                <span className="index">03</span>
+              </div>
+              <h3 className="mono text-sm text-foreground mb-1">Investors Hub</h3>
+              <p className="text-xs text-muted-foreground">Fractional stakes. Transparent ledgers.</p>
+            </div>
+          </motion.div>
+
+          {/* Small Card - Personal Wallet */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+            className="col-span-12 sm:col-span-6 lg:col-span-3"
+          >
+            <div className="h-full border border-border rounded-[3px] bg-card/30 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 rounded-[2px] bg-primary/10 border border-primary/20 flex items-center justify-center">
+                  <Wallet className="w-5 h-5 text-primary" />
+                </div>
+                <span className="index">02</span>
+              </div>
+              <h3 className="mono text-sm text-foreground mb-1">Personal Wallet</h3>
+              <p className="text-xs text-muted-foreground">Solana-powered. Send, receive, stake.</p>
+            </div>
+          </motion.div>
+
+          {/* Row 2 - 4 small cards */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.25 }}
+            className="col-span-6 lg:col-span-3"
+          >
+            <div className="h-full border border-border rounded-[3px] bg-card/30 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 rounded-[2px] bg-primary/10 border border-primary/20 flex items-center justify-center">
+                  <Star className="w-5 h-5 text-primary" />
+                </div>
+                <span className="index">05</span>
+              </div>
+              <h3 className="mono text-sm text-foreground mb-1">Weekly Ratings</h3>
+              <p className="text-xs text-muted-foreground">Financial scores. Leaderboards.</p>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.3 }}
+            className="col-span-6 lg:col-span-3"
+          >
+            <div className="h-full border border-border rounded-[3px] bg-card/30 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 rounded-[2px] bg-primary/10 border border-primary/20 flex items-center justify-center">
+                  <BarChart3 className="w-5 h-5 text-primary" />
+                </div>
+                <span className="index">06</span>
+              </div>
+              <h3 className="mono text-sm text-foreground mb-1">Evaluation & Monitoring</h3>
+              <p className="text-xs text-muted-foreground">Real-time analytics.</p>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.35 }}
+            className="col-span-6 lg:col-span-3"
+          >
+            <div className="h-full border border-border rounded-[3px] bg-card/30 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 rounded-[2px] bg-primary/10 border border-primary/20 flex items-center justify-center">
+                  <ArrowLeftRight className="w-5 h-5 text-primary" />
+                </div>
+                <span className="index">07</span>
+              </div>
+              <h3 className="mono text-sm text-foreground mb-1">Info & Advertising</h3>
+              <p className="text-xs text-muted-foreground">Promote to the network.</p>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.4 }}
+            className="col-span-6 lg:col-span-3"
+          >
+            <div className="h-full border border-border rounded-[3px] bg-card/30 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 rounded-[2px] bg-primary/10 border border-primary/20 flex items-center justify-center">
+                  <Newspaper className="w-5 h-5 text-primary" />
+                </div>
+                <span className="index">08</span>
+              </div>
+              <h3 className="mono text-sm text-foreground mb-1">Agro News</h3>
+              <p className="text-xs text-muted-foreground">Economic intelligence.</p>
+            </div>
+          </motion.div>
         </div>
       </div>
     </section>

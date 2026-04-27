@@ -3,14 +3,13 @@
 import { motion } from 'framer-motion'
 import { Coins, TrendingUp, Users, Lock, Zap, Gift } from 'lucide-react'
 import Image from 'next/image'
-import { Button } from '@/components/ui/button'
 
 const tokenomics = [
   { label: 'Community Rewards', percentage: 40, color: 'bg-primary' },
   { label: 'Development Fund', percentage: 25, color: 'bg-accent' },
-  { label: 'Team & Advisors', percentage: 15, color: 'bg-emerald-500' },
-  { label: 'Liquidity Pool', percentage: 12, color: 'bg-cyan-500' },
-  { label: 'Marketing', percentage: 8, color: 'bg-purple-500' },
+  { label: 'Team & Advisors', percentage: 15, color: 'bg-primary/60' },
+  { label: 'Liquidity Pool', percentage: 12, color: 'bg-primary/40' },
+  { label: 'Marketing', percentage: 8, color: 'bg-primary/20' },
 ]
 
 const utilities = [
@@ -22,78 +21,66 @@ const utilities = [
 
 export function TokenSection() {
   return (
-    <section id="token" className="relative py-24 px-4 md:px-8 lg:px-16">
-      <div className="absolute inset-0 grid-pattern opacity-20" />
-      
-      <div className="relative z-10">
+    <section id="chain" className="py-20 relative border-t border-border">
+      <div className="max-w-[1440px] mx-auto px-5">
         {/* Section Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mb-16"
-        >
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-1 h-4 bg-primary" />
-            <span className="text-xs font-mono tracking-wider text-primary">/ 04 — TOKEN</span>
-          </div>
-          <h2 className="text-4xl sm:text-5xl font-mono leading-tight text-balance">
-            The <span className="text-primary">V1n3</span> Token<span className="text-accent">.</span>
-          </h2>
-        </motion.div>
+        <div className="flex items-center gap-2.5 mb-12">
+          <div className="w-1 h-5 bg-primary" />
+          <span className="mono-xs text-primary">/ 05 — V1N3 TOKEN</span>
+        </div>
 
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-16">
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
           {/* Left - Token Info */}
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
             {/* Token Card */}
-            <div className="p-6 rounded-sm border border-border/50 bg-card/50 mb-6">
+            <div className="p-5 border border-border rounded-[3px] bg-card/30 mb-4">
               <div className="flex items-center gap-4 mb-6">
-                <div className="relative size-16 rounded-sm overflow-hidden border border-primary/30 bg-primary/10 flex items-center justify-center">
+                <div className="relative w-14 h-14 rounded-[2px] border border-primary/30 bg-primary/10 flex items-center justify-center">
                   <Image
                     src="/logo.png"
                     alt="V1n3 Token"
-                    width={48}
-                    height={48}
+                    width={40}
+                    height={40}
                     className="object-contain"
                   />
                 </div>
                 <div>
-                  <div className="text-xs font-mono text-muted-foreground mb-1">SOLANA SPL TOKEN</div>
-                  <div className="text-2xl font-mono">V1N3</div>
-                  <div className="text-xs text-muted-foreground">Green V1n3 Utility Token</div>
+                  <div className="mono-xs text-muted-foreground mb-0.5">SOLANA SPL TOKEN</div>
+                  <div className="mono text-2xl text-foreground">V1N3</div>
+                  <div className="mono-xs text-muted-foreground">Green V1n3 Utility Token</div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 bg-secondary/50 rounded-sm">
-                  <div className="text-xs font-mono text-muted-foreground mb-1">TOTAL SUPPLY</div>
-                  <div className="text-lg font-mono">100,000,000</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-background/50 border border-border rounded-[2px]">
+                  <div className="mono-xs text-muted-foreground mb-1">TOTAL SUPPLY</div>
+                  <div className="mono text-base text-foreground">100,000,000</div>
                 </div>
-                <div className="p-3 bg-secondary/50 rounded-sm">
-                  <div className="text-xs font-mono text-muted-foreground mb-1">CIRCULATING</div>
-                  <div className="text-lg font-mono text-primary">PRE-LAUNCH</div>
+                <div className="p-3 bg-background/50 border border-border rounded-[2px]">
+                  <div className="mono-xs text-muted-foreground mb-1">STATUS</div>
+                  <div className="mono text-base text-primary">PRE-LAUNCH</div>
                 </div>
               </div>
             </div>
 
             {/* Tokenomics */}
-            <div className="p-6 rounded-sm border border-border/50 bg-card/50">
-              <h3 className="font-mono text-sm mb-4 flex items-center gap-2">
-                <Coins className="size-4 text-primary" />
-                TOKENOMICS
-              </h3>
-              <div className="space-y-3">
+            <div className="p-5 border border-border rounded-[3px] bg-card/30">
+              <div className="flex items-center gap-2 mb-5">
+                <Coins className="w-4 h-4 text-primary" />
+                <span className="mono-sm text-foreground">TOKENOMICS</span>
+              </div>
+              <div className="space-y-4">
                 {tokenomics.map((item) => (
                   <div key={item.label}>
-                    <div className="flex items-center justify-between text-sm mb-1">
-                      <span className="text-muted-foreground">{item.label}</span>
-                      <span className="font-mono">{item.percentage}%</span>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-sm text-foreground/70">{item.label}</span>
+                      <span className="mono-sm text-foreground">{item.percentage}%</span>
                     </div>
-                    <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                    <div className="h-1 bg-border rounded-full overflow-hidden">
                       <div className={`h-full ${item.color} rounded-full`} style={{ width: `${item.percentage}%` }} />
                     </div>
                   </div>
@@ -104,34 +91,35 @@ export function TokenSection() {
 
           {/* Right - Utilities */}
           <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
           >
             <div className="mb-6">
-              <h3 className="font-mono text-lg mb-2">Token Utility</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
+              <h3 className="mono text-lg text-foreground mb-2">Token Utility</h3>
+              <p className="text-sm text-foreground/50 leading-relaxed">
                 V1n3 powers the entire AgroV1n3 ecosystem, enabling seamless transactions, 
                 governance participation, and rewards distribution across all 14 communities.
               </p>
             </div>
 
-            <div className="grid gap-3">
+            <div className="grid gap-3 mb-6">
               {utilities.map((utility, i) => (
                 <motion.div
                   key={utility.title}
-                  initial={{ opacity: 0, y: 10 }}
-                  whileInView={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, x: 10 }}
+                  whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  className="p-4 rounded-sm border border-border/50 bg-card/50 hover:border-primary/30 transition-colors"
+                  transition={{ delay: i * 0.05 }}
+                  className="p-4 border border-border rounded-[2px] bg-card/30 card-hover"
                 >
                   <div className="flex items-start gap-4">
-                    <div className="flex items-center justify-center size-10 rounded-sm bg-primary/10 border border-primary/30 shrink-0">
-                      <utility.icon className="size-5 text-primary" />
+                    <div className="w-9 h-9 rounded-[2px] bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
+                      <utility.icon className="w-4 h-4 text-primary" />
                     </div>
                     <div>
-                      <h4 className="font-mono text-sm mb-1">{utility.title}</h4>
+                      <h4 className="mono-sm text-foreground mb-0.5">{utility.title}</h4>
                       <p className="text-xs text-muted-foreground">{utility.description}</p>
                     </div>
                   </div>
@@ -140,17 +128,17 @@ export function TokenSection() {
             </div>
 
             {/* Pre-launch CTA */}
-            <div className="mt-6 p-4 rounded-sm border border-primary/30 bg-primary/5">
-              <div className="flex items-center gap-3 mb-3">
-                <Lock className="size-4 text-primary" />
-                <span className="font-mono text-sm">PRE-LAUNCH ALLOCATION</span>
+            <div className="p-5 border border-primary/30 rounded-[2px] bg-primary/5">
+              <div className="flex items-center gap-2.5 mb-3">
+                <Lock className="w-4 h-4 text-primary" />
+                <span className="mono-sm text-foreground">PRE-LAUNCH ALLOCATION</span>
               </div>
-              <p className="text-xs text-muted-foreground mb-4">
+              <p className="text-sm text-foreground/50 mb-4">
                 Early adopters who register during the pre-launch phase receive bonus V1n3 allocation.
               </p>
-              <Button size="sm" className="w-full bg-primary text-primary-foreground font-mono text-xs">
+              <button className="w-full px-5 py-3 bg-primary text-background rounded-[2px] mono-sm hover:bg-primary/90 transition-colors">
                 JOIN WHITELIST
-              </Button>
+              </button>
             </div>
           </motion.div>
         </div>

@@ -1,183 +1,180 @@
 'use client'
 
-import { motion } from 'framer-motion'
-import { ArrowRight, Play, MapPin } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
+import { motion } from 'framer-motion'
+import { ArrowRight } from 'lucide-react'
 
 export function HeroSection() {
-  return (
-    <section className="relative min-h-screen pt-32 pb-16 overflow-hidden">
-      {/* Background Grid */}
-      <div className="absolute inset-0 grid-pattern opacity-40" />
-      <div className="absolute inset-0 noise pointer-events-none" />
-      
-      {/* Gradient Orbs */}
-      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-primary/20 rounded-full blur-3xl" />
-      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
+  const [date, setDate] = useState('')
+  const [captureTime, setCaptureTime] = useState('00:00')
 
-      <div className="relative z-10 px-4 md:px-8 lg:px-16">
-        {/* Status Tags */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
+  useEffect(() => {
+    const now = new Date()
+    const day = now.getDate().toString().padStart(2, '0')
+    const month = (now.getMonth() + 1).toString().padStart(2, '0')
+    const year = now.getFullYear()
+    setDate(`${day}.${month}.${year}`)
+
+    const updateCapture = () => {
+      const n = new Date()
+      setCaptureTime(`${n.getMinutes().toString().padStart(2, '0')}:${n.getSeconds().toString().padStart(2, '0')}`)
+    }
+    updateCapture()
+    const interval = setInterval(updateCapture, 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  return (
+    <section className="pt-[120px] pb-20 relative overflow-hidden">
+      {/* Grid Pattern Background */}
+      <div className="absolute inset-0 grid-pattern" />
+      
+      <div className="max-w-[1440px] mx-auto px-5 relative">
+        {/* Status Badges */}
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-wrap items-center gap-3 mb-8"
+          transition={{ delay: 0.1 }}
+          className="flex flex-wrap items-center gap-3 mb-10"
         >
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/80 rounded-sm border border-border/50">
-            <span className="size-1.5 rounded-full bg-primary" />
-            <span className="text-xs font-mono tracking-wider text-muted-foreground">AGROV1N3 PROGRAM</span>
+          <div className="flex items-center gap-2.5">
+            <span className="status-dot" />
+            <span className="mono-xs text-foreground/90">AGROV1N3 PROGRAM</span>
           </div>
-          <div className="px-3 py-1.5 bg-transparent border border-primary/50 rounded-sm">
-            <span className="text-xs font-mono tracking-wider text-primary">BUILT ON SOLANA</span>
+          <div className="px-3 py-1.5 border border-primary/50 rounded-[2px]">
+            <span className="mono-xs text-primary">BUILT ON SOLANA</span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/80 rounded-sm border border-border/50">
-            <span className="size-1.5 rounded-full bg-accent" />
-            <span className="text-xs font-mono tracking-wider text-muted-foreground">PHASE 01 : PLATEAU STATE</span>
+          <div className="flex items-center gap-2.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+            <span className="mono-xs text-foreground/90">PHASE 01 : PLATEAU STATE</span>
           </div>
         </motion.div>
 
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
-          {/* Left Content */}
-          <div>
-            {/* Section Label */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="flex items-center gap-3 mb-6"
-            >
-              <div className="w-1 h-4 bg-primary" />
-              <span className="text-xs font-mono tracking-wider text-primary">/ 00 — MANIFESTO</span>
-              <span className="text-xs font-mono tracking-wider text-muted-foreground ml-auto">04.27.2026</span>
-            </motion.div>
-
-            {/* Main Heading */}
-            <motion.h1
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="text-5xl sm:text-6xl lg:text-7xl font-mono leading-[0.95] mb-6 text-balance"
-            >
-              Cultivating
-              <br />
-              <span className="text-primary">Nigeria&apos;s</span> next
-              <br />
-              economy<span className="text-accent">.</span>
-            </motion.h1>
-
-            {/* Description */}
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-xl mb-8"
-            >
-              Green V1n3 is the operating system for the AgroV1n3 program — a country-scale field 
-              network where ten thousand young Nigerians work fourteen agricultural disciplines, on-chain, 
-              earning V1n3 tokens as they build the future of food.
-            </motion.p>
-
-            {/* CTA Buttons */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="flex flex-wrap gap-3"
-            >
-              <Button size="lg" className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 font-mono text-sm px-6">
-                JOIN AS EXECUTIVE
-                <ArrowRight className="size-4" />
-              </Button>
-              <Button size="lg" variant="outline" className="gap-2 border-border/50 font-mono text-sm px-6">
-                <Play className="size-4" />
-                WATCH MANIFESTO
-              </Button>
-            </motion.div>
-
-            {/* Stats Row */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              className="flex flex-wrap gap-8 mt-12 pt-8 border-t border-border/30"
-            >
-              <div>
-                <div className="text-3xl font-mono text-primary">10K+</div>
-                <div className="text-xs font-mono text-muted-foreground tracking-wider">TARGET EXECUTIVES</div>
-              </div>
-              <div>
-                <div className="text-3xl font-mono text-foreground">14</div>
-                <div className="text-xs font-mono text-muted-foreground tracking-wider">AGRO COMMUNITIES</div>
-              </div>
-              <div>
-                <div className="text-3xl font-mono text-foreground">17</div>
-                <div className="text-xs font-mono text-muted-foreground tracking-wider">LOCAL GOVERNMENTS</div>
-              </div>
-            </motion.div>
+        {/* Section Label */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="flex items-center justify-between mb-10"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="w-1 h-5 bg-primary" />
+            <span className="mono-xs text-primary">/ 00 — MANIFESTO</span>
           </div>
+          <span className="mono-xs text-muted-foreground">{date}</span>
+        </motion.div>
 
-          {/* Right Content - Featured Card */}
+        {/* Main Content Grid */}
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-start">
+          {/* Left: Headline */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.4 }}
-            className="relative"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.6 }}
           >
-            {/* Vertical Text */}
-            <div className="absolute -left-8 top-1/2 -translate-y-1/2 hidden lg:flex flex-col items-center gap-2">
-              <div className="w-px h-16 bg-border/50" />
-              <span className="text-xs font-mono tracking-widest text-muted-foreground/50 writing-mode-vertical rotate-180" style={{ writingMode: 'vertical-rl' }}>
-                EXEC : 01 / PLATEAU PILOT
-              </span>
-              <div className="w-px h-16 bg-border/50" />
+            <h1 className="text-[clamp(2.8rem,7.5vw,5.5rem)] leading-[0.92] tracking-tight font-sans">
+              <span className="text-foreground">Cultivating</span>
+              <br />
+              <span className="text-primary">Nigeria&apos;s</span>
+              <span className="text-foreground"> next</span>
+              <br />
+              <span className="text-foreground">economy</span>
+              <span className="text-primary">.</span>
+            </h1>
+
+            <p className="mt-10 text-base sm:text-lg text-foreground/50 max-w-lg leading-relaxed">
+              Green V1n3 is the operating system for the AgroV1n3 program — a country-scale field 
+              network where ten thousand young Nigerians work fourteen agricultural disciplines, on-chain.
+            </p>
+
+            <div className="mt-10 flex flex-wrap gap-4">
+              <button className="flex items-center gap-3 px-6 py-3.5 bg-primary text-background rounded-[2px] mono-sm hover:bg-primary/90 transition-colors group">
+                BECOME AN AGRO EXECUTIVE
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+              </button>
+              <button className="flex items-center gap-3 px-6 py-3.5 border border-border hover:border-border-strong rounded-[2px] mono-sm text-foreground/70 hover:text-foreground transition-all">
+                EXPLORE COMMUNITIES
+              </button>
             </div>
 
-            {/* Image Card */}
-            <div className="relative rounded-sm overflow-hidden border border-border/50 bg-card">
-              {/* Live Badge */}
-              <div className="absolute top-4 left-4 z-10 flex items-center gap-2 px-3 py-1.5 bg-background/80 backdrop-blur-sm rounded-sm border border-border/50">
-                <span className="size-1.5 rounded-full bg-primary animate-pulse" />
-                <span className="text-xs font-mono tracking-wider">LIVE CAPTURE / 04:27</span>
+            {/* Stats */}
+            <div className="mt-14 pt-8 border-t border-border flex flex-wrap gap-10">
+              <div>
+                <div className="mono text-2xl text-primary">10K+</div>
+                <div className="mono-xs text-muted-foreground mt-1">TARGET EXECUTIVES</div>
               </div>
-
-              {/* Photo Credit */}
-              <div className="absolute top-4 right-4 z-10 px-3 py-1.5 bg-background/80 backdrop-blur-sm rounded-sm border border-border/50">
-                <span className="text-xs font-mono tracking-wider text-muted-foreground">PHOTO : BUKOLA O.</span>
+              <div>
+                <div className="mono text-2xl text-foreground">14</div>
+                <div className="mono-xs text-muted-foreground mt-1">COMMUNITIES</div>
               </div>
+              <div>
+                <div className="mono text-2xl text-foreground">17</div>
+                <div className="mono-xs text-muted-foreground mt-1">LOCAL GOVERNMENTS</div>
+              </div>
+            </div>
+          </motion.div>
 
-              {/* Image */}
-              <div className="aspect-[4/5] sm:aspect-[3/4] relative">
+          {/* Right: Featured Image */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.4, duration: 0.6 }}
+            className="relative"
+          >
+            {/* Vertical Label */}
+            <div className="absolute -left-10 top-1/2 -translate-y-1/2 hidden xl:block">
+              <span 
+                className="mono-xs text-muted-foreground/50 tracking-widest"
+                style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+              >
+                EXEC : 01 / PLATEAU PILOT
+              </span>
+            </div>
+
+            {/* Image Container with Frame Brackets */}
+            <div className="relative">
+              {/* Corner Brackets */}
+              <div className="absolute top-2 left-2 w-6 h-6 border-l-[1.5px] border-t-[1.5px] border-primary z-10" />
+              <div className="absolute top-2 right-2 w-6 h-6 border-r-[1.5px] border-t-[1.5px] border-primary z-10" />
+              <div className="absolute bottom-2 left-2 w-6 h-6 border-l-[1.5px] border-b-[1.5px] border-primary z-10" />
+              <div className="absolute bottom-2 right-2 w-6 h-6 border-r-[1.5px] border-b-[1.5px] border-primary z-10" />
+
+              <div className="relative aspect-[4/5] overflow-hidden rounded-[2px] border border-border">
                 <Image
                   src="/images/hero-farmer.jpg"
-                  alt="Nigerian farmer in agricultural field"
+                  alt="Agro Executive - Bukola O."
                   fill
                   className="object-cover"
                   priority
                 />
-                {/* Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
-              </div>
+                
+                {/* Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" />
+                
+                {/* Top Labels */}
+                <div className="absolute top-5 left-5 right-5 flex items-start justify-between">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-background/90 backdrop-blur-sm rounded-[2px] border border-border">
+                    <span className="status-dot status-dot-pulse" />
+                    <span className="mono-xs text-foreground">LIVE CAPTURE / {captureTime}</span>
+                  </div>
+                  <div className="px-3 py-2 bg-card/95 backdrop-blur-sm rounded-[2px] border border-border">
+                    <span className="mono-xs text-foreground/80">PHOTO : BUKOLA O.</span>
+                  </div>
+                </div>
 
-              {/* Bottom Info */}
-              <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background to-transparent">
-                <div className="flex items-end justify-between">
-                  <div>
-                    <div className="text-xs font-mono text-primary mb-1">AGRO EXECUTIVE #0001</div>
-                    <div className="text-lg font-mono">Amina Yusuf</div>
-                    <div className="text-xs text-muted-foreground">Crop Farming Community</div>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
-                    <MapPin className="size-3" />
-                    <span>Jos, Plateau</span>
-                  </div>
+                {/* Bottom Info */}
+                <div className="absolute bottom-5 left-5 right-5">
+                  <div className="mono-xs text-primary mb-1">AGRO EXECUTIVE #0001</div>
+                  <div className="text-xl font-sans text-foreground">Amina Yusuf</div>
+                  <div className="mono-xs text-foreground/50 mt-1">CROP FARMING COMMUNITY • JOS SOUTH</div>
                 </div>
               </div>
             </div>
 
-            {/* Location Tag */}
-            <div className="absolute -bottom-4 right-4 flex items-center gap-2 px-3 py-1.5 bg-secondary rounded-sm border border-border/50">
-              <span className="text-xs font-mono tracking-wider text-muted-foreground">RECORDING</span>
-              <span className="text-xs font-mono tracking-wider">N 9°56&apos; / E 8°53&apos;</span>
+            {/* Recording Coordinates */}
+            <div className="absolute -bottom-6 right-0">
+              <span className="mono-xs text-muted-foreground">RECORDING  N 9°58&apos; / E 8°53&apos;</span>
             </div>
           </motion.div>
         </div>

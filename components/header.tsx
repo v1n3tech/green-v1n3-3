@@ -1,158 +1,159 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Wallet, Menu, X, ChevronRight } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Wallet, Menu, X } from 'lucide-react'
 
 const navItems = [
-  { label: 'Vision', href: '#vision', number: '01' },
-  { label: 'Communities', href: '#communities', number: '02' },
-  { label: 'How it works', href: '#how-it-works', number: '03' },
-  { label: 'Token', href: '#token', number: '04' },
-  { label: 'Structure', href: '#structure', number: '05' },
+  { id: '01', label: 'Doctrine' },
+  { id: '02', label: 'Infra' },
+  { id: '03', label: 'Communities' },
+  { id: '04', label: 'Chain' },
+  { id: '05', label: 'V1n3' },
+  { id: '06', label: 'Horizon' },
 ]
 
 export function Header() {
-  const [isOpen, setIsOpen] = useState(false)
+  const [time, setTime] = useState('')
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date()
+      const hours = now.getHours().toString().padStart(2, '0')
+      const mins = now.getMinutes().toString().padStart(2, '0')
+      setTime(`${hours}:${mins}WAT`)
+    }
+    updateTime()
+    const interval = setInterval(updateTime, 1000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
-    <>
-      {/* Top Status Bar */}
-      <div className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
-        <div className="flex items-center justify-between px-4 py-2 text-xs font-mono tracking-wider">
-          <div className="flex items-center gap-4">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background/98 backdrop-blur-sm">
+      {/* Status Bar */}
+      <div className="border-b border-border">
+        <div className="max-w-[1440px] mx-auto px-5 h-8 flex items-center justify-between">
+          <div className="flex items-center gap-5">
             <div className="flex items-center gap-2">
-              <span className="size-1.5 rounded-full bg-primary animate-pulse" />
-              <span className="text-muted-foreground">SOLANA MAINNET</span>
+              <span className="status-dot status-dot-pulse" />
+              <span className="mono-xs text-muted-foreground">NETWORK : SOLANA MAINNET</span>
             </div>
-            <span className="text-muted-foreground/60">V0.1.0 / BUILD 0427</span>
+            <span className="hidden md:inline text-border-strong">/</span>
+            <div className="hidden md:flex items-center gap-2">
+              <span className="mono-xs text-foreground/90">V1N3 : N3,002.40</span>
+              <span className="mono-xs text-primary">+2.4%</span>
+            </div>
+            <span className="hidden lg:inline text-border-strong">/</span>
+            <div className="hidden lg:flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+              <span className="mono-xs text-muted-foreground">PHASE 01 : PLATEAU</span>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-muted-foreground">SOL <span className="text-foreground">187.42</span></span>
-            <span className="text-primary font-semibold">V1N3 PRE-LAUNCH</span>
-            <span className="text-muted-foreground hidden sm:block">17:17WAT</span>
+          <div className="flex items-center gap-5">
+            <span className="mono-xs text-muted-foreground">{time}</span>
+            <span className="hidden sm:inline mono-xs text-primary hover:text-primary/80 cursor-pointer transition-colors">V1N3TECH.IO</span>
           </div>
         </div>
       </div>
 
-      {/* Main Header */}
-      <header className="fixed top-8 left-0 right-0 z-40 border-b border-border/30 bg-background/60 backdrop-blur-xl">
-        <div className="flex items-center justify-between px-4 md:px-8 py-3">
+      {/* Main Navigation */}
+      <div className="border-b border-border">
+        <div className="max-w-[1440px] mx-auto px-5 h-14 flex items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2.5 group">
             <Image
               src="/logo.png"
               alt="GreenV1n3"
               width={36}
               height={36}
-              className="object-contain"
+              className="w-9 h-9"
             />
-            <span className="font-mono text-lg tracking-tight">
-              Green<span className="text-primary">V1n3</span>
+            <span className="mono text-base tracking-wider">
+              <span className="text-foreground">GREEN</span>
+              <span className="text-primary">V1N3</span>
             </span>
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden lg:flex items-center gap-6">
+          <nav className="hidden lg:flex items-center">
             {navItems.map((item) => (
               <Link
-                key={item.label}
-                href={item.href}
-                className="group flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                key={item.id}
+                href={`#${item.label.toLowerCase()}`}
+                className="flex items-center gap-1.5 px-5 py-2 group"
               >
-                <span className="text-primary/70 font-mono text-xs">/{item.number}</span>
-                <span>{item.label}</span>
+                <span className="mono-xs text-muted-foreground/70 group-hover:text-primary transition-colors">{item.id}</span>
+                <span className="mono-sm text-foreground/70 group-hover:text-foreground transition-colors">{item.label}</span>
               </Link>
             ))}
           </nav>
 
           {/* Actions */}
-          <div className="flex items-center gap-3">
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="hidden sm:flex gap-2 border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground font-mono text-xs"
-            >
-              <Wallet className="size-3.5" />
-              CONNECT WALLET
-            </Button>
+          <div className="flex items-center gap-5">
+            <Link href="/signin" className="hidden sm:block mono-sm text-foreground/70 hover:text-foreground transition-colors">
+              SIGN IN
+            </Link>
+            <button className="flex items-center gap-2.5 px-4 py-2 border border-primary/50 rounded-[2px] hover:border-primary hover:bg-primary/5 transition-all group">
+              <Wallet className="w-4 h-4 text-primary" />
+              <span className="mono-sm text-primary">CONNECT WALLET</span>
+            </button>
             <button
-              onClick={() => setIsOpen(true)}
-              className="lg:hidden p-2 text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="lg:hidden p-2 text-foreground/70 hover:text-foreground transition-colors"
             >
-              <Menu className="size-5" />
+              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Mobile Menu */}
       <AnimatePresence>
-        {isOpen && (
+        {mobileOpen && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl lg:hidden"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="lg:hidden absolute top-full left-0 right-0 bg-background border-b border-border overflow-hidden"
           >
-            <div className="flex flex-col h-full p-6">
-              <div className="flex items-center justify-between mb-12">
-                <Link href="/" className="flex items-center gap-2">
-                  <Image
-                    src="/logo.png"
-                    alt="GreenV1n3"
-                    width={36}
-                    height={36}
-                    className="object-contain"
-                  />
-                  <span className="font-mono text-lg">
-                    Green<span className="text-primary">V1n3</span>
-                  </span>
-                </Link>
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="p-2 text-muted-foreground hover:text-foreground"
+            <nav className="flex flex-col p-5 gap-1">
+              {navItems.map((item, i) => (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
                 >
-                  <X className="size-5" />
-                </button>
-              </div>
-
-              <nav className="flex-1 flex flex-col gap-2">
-                {navItems.map((item, i) => (
-                  <motion.div
-                    key={item.label}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.1 }}
+                  <Link
+                    href={`#${item.label.toLowerCase()}`}
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3.5 border border-border rounded-[2px] card-hover"
                   >
-                    <Link
-                      href={item.href}
-                      onClick={() => setIsOpen(false)}
-                      className="group flex items-center justify-between py-4 border-b border-border/30"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-primary font-mono text-sm">/{item.number}</span>
-                        <span className="text-2xl font-mono">{item.label}</span>
-                      </div>
-                      <ChevronRight className="size-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                    </Link>
-                  </motion.div>
-                ))}
-              </nav>
-
-              <div className="pt-6 border-t border-border/30">
-                <Button className="w-full gap-2 bg-primary text-primary-foreground font-mono">
-                  <Wallet className="size-4" />
-                  CONNECT WALLET
-                </Button>
-              </div>
-            </div>
+                    <span className="mono-xs text-muted-foreground">{item.id}</span>
+                    <span className="mono-sm text-foreground">{item.label}</span>
+                  </Link>
+                </motion.div>
+              ))}
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: navItems.length * 0.05 }}
+              >
+                <Link
+                  href="/signin"
+                  onClick={() => setMobileOpen(false)}
+                  className="mt-3 flex items-center justify-center px-4 py-3.5 border border-border rounded-[2px] mono-sm text-foreground card-hover"
+                >
+                  SIGN IN
+                </Link>
+              </motion.div>
+            </nav>
           </motion.div>
         )}
       </AnimatePresence>
-    </>
+    </header>
   )
 }

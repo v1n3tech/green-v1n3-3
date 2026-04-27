@@ -1,136 +1,199 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  Sprout, 
-  PawPrint, 
-  ShoppingCart, 
-  Factory, 
-  Scale, 
-  Palmtree, 
-  Cpu, 
-  Heart, 
-  Radio, 
-  Shield, 
-  BookOpen, 
-  Lightbulb, 
-  Building2, 
-  Truck,
-  ArrowUpRight
+  Leaf, Bird, ShoppingBag, Factory, Scale, Palmtree, Cpu, Heart,
+  Radio, Shield, BookOpen, Lightbulb, Home, Truck, ArrowRight
 } from 'lucide-react'
 
 const communities = [
-  { name: 'Crop Farming', icon: Sprout, members: '2,450', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' },
-  { name: 'Animal Farming', icon: PawPrint, members: '1,820', color: 'bg-amber-500/10 text-amber-400 border-amber-500/30' },
-  { name: 'Agro Marketing', icon: ShoppingCart, members: '1,340', color: 'bg-blue-500/10 text-blue-400 border-blue-500/30' },
-  { name: 'Agro Processing', icon: Factory, members: '980', color: 'bg-orange-500/10 text-orange-400 border-orange-500/30' },
-  { name: 'Management & Legislation', icon: Scale, members: '560', color: 'bg-purple-500/10 text-purple-400 border-purple-500/30' },
-  { name: 'Agro Tourism', icon: Palmtree, members: '720', color: 'bg-teal-500/10 text-teal-400 border-teal-500/30' },
-  { name: 'Agro Technology', icon: Cpu, members: '890', color: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30' },
-  { name: 'Agro Health Care', icon: Heart, members: '670', color: 'bg-rose-500/10 text-rose-400 border-rose-500/30' },
-  { name: 'Media & Branding', icon: Radio, members: '540', color: 'bg-pink-500/10 text-pink-400 border-pink-500/30' },
-  { name: 'Agro Security', icon: Shield, members: '420', color: 'bg-red-500/10 text-red-400 border-red-500/30' },
-  { name: 'Agro Literature', icon: BookOpen, members: '380', color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' },
-  { name: 'Motivation & Training', icon: Lightbulb, members: '760', color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' },
-  { name: 'Green Real Estate', icon: Building2, members: '290', color: 'bg-lime-500/10 text-lime-400 border-lime-500/30' },
-  { name: 'Agro Logistics', icon: Truck, members: '510', color: 'bg-sky-500/10 text-sky-400 border-sky-500/30' },
+  { id: 'C-01', name: 'Crop Farming', icon: Leaf, members: '2.4K', gcms: 18, rating: 'A+' },
+  { id: 'C-02', name: 'Animal Farming', icon: Bird, members: '1.8K', gcms: 15, rating: 'A' },
+  { id: 'C-03', name: 'Agro Marketing', icon: ShoppingBag, members: '1.5K', gcms: 12, rating: 'A-' },
+  { id: 'C-04', name: 'Agro Processing', icon: Factory, members: '980', gcms: 10, rating: 'B+' },
+  { id: 'C-05', name: 'Mgmt. & Legislation', icon: Scale, members: '1.2K', gcms: 12, rating: 'A-' },
+  { id: 'C-06', name: 'Agro Tourism', icon: Palmtree, members: '650', gcms: 8, rating: 'B' },
+  { id: 'C-07', name: 'Agro Technology', icon: Cpu, members: '1.1K', gcms: 11, rating: 'A' },
+  { id: 'C-08', name: 'Agro Health Care', icon: Heart, members: '890', gcms: 9, rating: 'B+' },
+  { id: 'C-09', name: 'Media & Branding', icon: Radio, members: '720', gcms: 8, rating: 'B+' },
+  { id: 'C-10', name: 'Agro Security', icon: Shield, members: '540', gcms: 6, rating: 'B' },
+  { id: 'C-11', name: 'Agro Literature', icon: BookOpen, members: '380', gcms: 5, rating: 'B-' },
+  { id: 'C-12', name: 'Motivation & Training', icon: Lightbulb, members: '920', gcms: 10, rating: 'A-' },
+  { id: 'C-13', name: 'Real Estate (Green)', icon: Home, members: '450', gcms: 6, rating: 'B' },
+  { id: 'C-14', name: 'Agro Logistics', icon: Truck, members: '680', gcms: 7, rating: 'B+' },
 ]
 
+const communityDescriptions: Record<string, string> = {
+  'C-01': 'Food crop cultivation, cash crops, horticulture.',
+  'C-02': 'Poultry, livestock, fishery, apiculture.',
+  'C-03': 'Distribution, wholesale, retail, export.',
+  'C-04': 'Value addition, packaging, preservation.',
+  'C-05': 'Policy, governance, contracts, compliance.',
+  'C-06': 'Farm visits, agro-parks, eco-tourism.',
+  'C-07': 'Smart farming, IoT, drones, analytics.',
+  'C-08': 'Animal health, plant pathology, food safety.',
+  'C-09': 'Content creation, PR, social media.',
+  'C-10': 'Farm protection, anti-theft, surveillance.',
+  'C-11': 'Research, documentation, publications.',
+  'C-12': 'Training programs, workshops, mentorship.',
+  'C-13': 'Farmland acquisition, green buildings.',
+  'C-14': 'Transport, cold chain, warehousing.',
+}
+
 export function CommunitiesSection() {
+  const [selected, setSelected] = useState(communities[4])
+
   return (
-    <section id="communities" className="relative py-24 px-4 md:px-8 lg:px-16">
-      {/* Background Elements */}
-      <div className="absolute inset-0 grid-pattern opacity-20" />
-      
-      <div className="relative z-10">
+    <section id="communities" className="py-20 relative">
+      <div className="max-w-[1440px] mx-auto px-5">
         {/* Section Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mb-16"
-        >
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-1 h-4 bg-primary" />
-            <span className="text-xs font-mono tracking-wider text-primary">/ 02 — COMMUNITIES</span>
-          </div>
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-            <h2 className="text-4xl sm:text-5xl font-mono leading-tight text-balance">
-              14 Disciplines<span className="text-accent">.</span>
-              <br />
-              <span className="text-primary">One Network</span><span className="text-muted-foreground">.</span>
-            </h2>
-            <p className="text-muted-foreground max-w-md text-base leading-relaxed">
-              Each community represents a vital node in the agricultural value chain. 
-              Choose your discipline and start earning V1n3 tokens.
-            </p>
-          </div>
-        </motion.div>
-
-        {/* Communities Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {communities.map((community, i) => (
-            <motion.div
-              key={community.name}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.05 }}
-              className="group"
-            >
-              <div className={`relative p-4 rounded-sm border ${community.color} bg-card/50 hover:bg-card transition-all cursor-pointer`}>
-                {/* Number Badge */}
-                <div className="absolute top-3 right-3 text-xs font-mono text-muted-foreground/50">
-                  {String(i + 1).padStart(2, '0')}
-                </div>
-
-                {/* Icon */}
-                <div className="mb-3">
-                  <community.icon className="size-6" />
-                </div>
-
-                {/* Content */}
-                <div className="flex items-end justify-between">
-                  <div>
-                    <h3 className="font-mono text-sm mb-1">{community.name}</h3>
-                    <div className="text-xs text-muted-foreground">
-                      <span className="text-foreground">{community.members}</span> executives
-                    </div>
-                  </div>
-                  <ArrowUpRight className="size-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-              </div>
-            </motion.div>
-          ))}
+        <div className="flex items-center gap-2.5 mb-12">
+          <div className="w-1 h-5 bg-primary" />
+          <span className="mono-xs text-primary">/ 03 — COMMUNITIES</span>
         </div>
 
-        {/* Bottom Stats */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          className="mt-16 p-6 bg-card/50 rounded-sm border border-border/50"
-        >
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-            <div className="text-center md:text-left">
-              <div className="text-2xl sm:text-3xl font-mono text-primary">12,330</div>
-              <div className="text-xs font-mono text-muted-foreground tracking-wider">TOTAL REGISTERED</div>
+        <div className="grid lg:grid-cols-[1fr,360px] gap-6 lg:gap-8">
+          {/* Hexagonal Grid */}
+          <div className="py-6">
+            {/* Row 1 - 5 items */}
+            <div className="flex flex-wrap justify-center gap-3 mb-[-20px]">
+              {communities.slice(0, 5).map((community) => (
+                <HexCard
+                  key={community.id}
+                  community={community}
+                  isSelected={selected.id === community.id}
+                  onClick={() => setSelected(community)}
+                />
+              ))}
             </div>
-            <div className="text-center md:text-left">
-              <div className="text-2xl sm:text-3xl font-mono text-foreground">8,920</div>
-              <div className="text-xs font-mono text-muted-foreground tracking-wider">ACTIVE EXECUTIVES</div>
+
+            {/* Row 2 - 4 items (offset) */}
+            <div className="flex flex-wrap justify-center gap-3 mb-[-20px]">
+              {communities.slice(5, 9).map((community) => (
+                <HexCard
+                  key={community.id}
+                  community={community}
+                  isSelected={selected.id === community.id}
+                  onClick={() => setSelected(community)}
+                />
+              ))}
             </div>
-            <div className="text-center md:text-left">
-              <div className="text-2xl sm:text-3xl font-mono text-foreground">456K</div>
-              <div className="text-xs font-mono text-muted-foreground tracking-wider">V1N3 DISTRIBUTED</div>
-            </div>
-            <div className="text-center md:text-left">
-              <div className="text-2xl sm:text-3xl font-mono text-accent">95%</div>
-              <div className="text-xs font-mono text-muted-foreground tracking-wider">RETENTION RATE</div>
+
+            {/* Row 3 - 5 items */}
+            <div className="flex flex-wrap justify-center gap-3">
+              {communities.slice(9, 14).map((community) => (
+                <HexCard
+                  key={community.id}
+                  community={community}
+                  isSelected={selected.id === community.id}
+                  onClick={() => setSelected(community)}
+                />
+              ))}
             </div>
           </div>
-        </motion.div>
+
+          {/* Selected Community Panel */}
+          <div className="border border-border rounded-[3px] bg-card/30 h-fit sticky top-[140px]">
+            <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+              <span className="mono-xs text-muted-foreground">SELECTED : V1N3</span>
+              <span className="mono-xs text-primary">{selected.id}</span>
+            </div>
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={selected.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.15 }}
+                className="p-5"
+              >
+                {/* Icon and Title */}
+                <div className="flex items-start gap-4 mb-6">
+                  <div className="w-11 h-11 rounded-[3px] bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
+                    <selected.icon className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="mono text-lg text-foreground leading-tight">{selected.name}</h3>
+                    <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
+                      {communityDescriptions[selected.id]}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-3 mb-6">
+                  <div className="p-3 border border-border rounded-[2px] bg-background/50">
+                    <div className="mono text-base text-foreground">{selected.members}</div>
+                    <div className="mono-xs text-muted-foreground mt-0.5">MEMBERS</div>
+                  </div>
+                  <div className="p-3 border border-border rounded-[2px] bg-background/50">
+                    <div className="mono text-base text-foreground">{selected.gcms}</div>
+                    <div className="mono-xs text-muted-foreground mt-0.5">GCMS</div>
+                  </div>
+                  <div className="p-3 border border-border rounded-[2px] bg-background/50">
+                    <div className="mono text-base text-foreground">{selected.rating}</div>
+                    <div className="mono-xs text-muted-foreground mt-0.5">AVG RATING</div>
+                  </div>
+                </div>
+
+                {/* Register Button */}
+                <button className="w-full flex items-center justify-center gap-2.5 px-5 py-3 border border-border hover:border-primary/50 hover:bg-primary/5 rounded-[2px] mono-sm text-foreground/90 transition-all group">
+                  REGISTER HERE
+                  <ArrowRight className="w-4 h-4 text-primary group-hover:translate-x-0.5 transition-transform" />
+                </button>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </div>
       </div>
     </section>
+  )
+}
+
+interface HexCardProps {
+  community: typeof communities[0]
+  isSelected: boolean
+  onClick: () => void
+}
+
+function HexCard({ community, isSelected, onClick }: HexCardProps) {
+  const Icon = community.icon
+
+  return (
+    <button
+      onClick={onClick}
+      className="relative w-[105px] h-[120px] flex flex-col items-center justify-center transition-transform hover:scale-105 active:scale-100"
+    >
+      {/* Hexagon Shape */}
+      <svg
+        viewBox="0 0 100 115"
+        className="absolute inset-0 w-full h-full"
+      >
+        <polygon
+          points="50,0 100,28.75 100,86.25 50,115 0,86.25 0,28.75"
+          className={`
+            transition-all duration-200
+            ${isSelected 
+              ? 'fill-primary stroke-primary' 
+              : 'fill-card stroke-border hover:stroke-primary/50'
+            }
+          `}
+          strokeWidth="1"
+        />
+      </svg>
+
+      {/* Content */}
+      <div className="relative z-10 flex flex-col items-center gap-1 px-3 text-center">
+        <Icon className={`w-5 h-5 ${isSelected ? 'text-background' : 'text-foreground/70'} transition-colors`} />
+        <span className={`mono-xs leading-tight ${isSelected ? 'text-background' : 'text-foreground/80'}`}>
+          {community.name}
+        </span>
+        <span className={`mono-xs ${isSelected ? 'text-background/60' : 'text-muted-foreground'}`}>
+          {community.id}
+        </span>
+      </div>
+    </button>
   )
 }
