@@ -47,8 +47,6 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark bg-background">
       <body className={`${_abel.variable} ${_aldrich.variable} font-sans antialiased`}>
-        {/* Subtle green background glow */}
-        <div className="bg-glow" aria-hidden="true" />
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

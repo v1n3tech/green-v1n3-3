@@ -35,25 +35,24 @@ export function Header() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/98 backdrop-blur-sm">
       {/* Status Bar */}
       <div className="border-b border-border">
-        <div className="max-w-[1440px] mx-auto px-3 sm:px-5 h-7 sm:h-8 flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-5">
-            <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="max-w-[1440px] mx-auto px-5 h-8 flex items-center justify-between">
+          <div className="flex items-center gap-5">
+            <div className="flex items-center gap-2">
               <span className="status-dot status-dot-pulse" />
-              <span className="mono-xs text-muted-foreground hidden xs:inline">NETWORK : </span>
-              <span className="mono-xs text-muted-foreground">SOLANA</span>
+              <span className="mono-xs text-muted-foreground">NETWORK : SOLANA MAINNET</span>
             </div>
-            <span className="hidden sm:inline text-border-strong">/</span>
-            <div className="hidden sm:flex items-center gap-1.5">
+            <span className="hidden md:inline text-border-strong">/</span>
+            <div className="hidden md:flex items-center gap-2">
               <span className="mono-xs text-foreground/90">V1N3 : N3,002.40</span>
               <span className="mono-xs text-primary">+2.4%</span>
             </div>
             <span className="hidden lg:inline text-border-strong">/</span>
-            <div className="hidden lg:flex items-center gap-1.5">
+            <div className="hidden lg:flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-accent" />
               <span className="mono-xs text-muted-foreground">PHASE 01 : PLATEAU</span>
             </div>
           </div>
-          <div className="flex items-center gap-2 sm:gap-5">
+          <div className="flex items-center gap-5">
             <span className="mono-xs text-muted-foreground">{time}</span>
             <span className="hidden sm:inline mono-xs text-primary hover:text-primary/80 cursor-pointer transition-colors">V1N3TECH.IO</span>
           </div>
@@ -62,17 +61,17 @@ export function Header() {
 
       {/* Main Navigation */}
       <div className="border-b border-border">
-        <div className="max-w-[1440px] mx-auto px-3 sm:px-5 h-12 sm:h-14 flex items-center justify-between">
+        <div className="max-w-[1440px] mx-auto px-5 h-14 flex items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 sm:gap-2.5 group">
+          <Link href="/" className="flex items-center gap-2.5 group">
             <Image
               src="/logo.png"
               alt="GreenV1n3"
               width={36}
               height={36}
-              className="w-7 h-7 sm:w-9 sm:h-9"
+              className="w-9 h-9"
             />
-            <span className="mono text-sm sm:text-base tracking-wider">
+            <span className="mono text-base tracking-wider">
               <span className="text-foreground">GREEN</span>
               <span className="text-primary">V1N3</span>
             </span>
@@ -93,20 +92,17 @@ export function Header() {
           </nav>
 
           {/* Actions */}
-          <div className="flex items-center gap-2 sm:gap-4">
-            <Link href="/signin" className="hidden md:block mono-sm text-foreground/70 hover:text-foreground transition-colors">
+          <div className="flex items-center gap-5">
+            <Link href="/signin" className="hidden sm:block mono-sm text-foreground/70 hover:text-foreground transition-colors">
               SIGN IN
             </Link>
-            <button className="flex items-center gap-1.5 sm:gap-2.5 px-2.5 sm:px-4 py-1.5 sm:py-2 border border-primary/50 rounded-[2px] hover:border-primary hover:bg-primary/5 transition-all group">
-              <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
-              <span className="mono-xs sm:mono-sm text-primary hidden xs:inline">CONNECT</span>
-              <span className="mono-xs sm:mono-sm text-primary xs:hidden">
-                <Wallet className="w-4 h-4" />
-              </span>
+            <button className="flex items-center gap-2.5 px-4 py-2 border border-primary/50 rounded-[2px] hover:border-primary hover:bg-primary/5 transition-all group">
+              <Wallet className="w-4 h-4 text-primary" />
+              <span className="mono-sm text-primary">CONNECT WALLET</span>
             </button>
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="lg:hidden p-1.5 sm:p-2 text-foreground/70 hover:text-foreground transition-colors"
+              className="lg:hidden p-2 text-foreground/70 hover:text-foreground transition-colors"
             >
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
