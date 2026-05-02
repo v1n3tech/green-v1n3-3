@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { ensureCustodialWallet } from "@/lib/wallet/mint"
 import { revalidatePath } from "next/cache"
 
 export async function signInWithOtp(email: string) {
@@ -35,8 +36,32 @@ export async function verifyOtp(email: string, token: string) {
     return { error: error.message }
   }
 
+  // Mint a custodial Solana wallet for this user if they don't have one yet.
+  // Idempotent: skips if profiles.wallet_address is already set (e.g. wallet-first signup).
+  let walletAddress: string | null = null
+  let walletWarning: string | null = null
+
+  if (data.user) {
+    try {
+      const result = await ensureCustodialWallet(data.user.id)
+      walletAddress = result.publicKey
+    } catch (err) {
+      // Non-fatal: the user is authenticated even if mint fails. We surface a
+      // soft warning so the UI can show a retry hint, and the next sign-in
+      // will retry automatically (ensureCustodialWallet is idempotent).
+      walletWarning =
+        err instanceof Error ? err.message : "Failed to provision wallet"
+      console.log("[v0] verifyOtp wallet mint failed:", walletWarning)
+    }
+  }
+
   revalidatePath("/", "layout")
-  return { success: true, user: data.user }
+  return {
+    success: true,
+    user: data.user,
+    walletAddress,
+    walletWarning,
+  }
 }
 
 export async function signInWithWallet(walletAddress: string) {

@@ -24,8 +24,11 @@ type AuthStep =
   | "wallet-list"
   | "email-input"
   | "otp-verify"
+  | "provisioning"
   | "wallet-email"
   | "success"
+
+type ProvisionStage = "verifying" | "minting" | "linking" | "done"
 
 interface ConnectModalProps {
   isOpen: boolean
@@ -48,6 +51,10 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [pendingWallet, setPendingWallet] = useState<string | null>(null)
+  const [mintedAddress, setMintedAddress] = useState<string | null>(null)
+  const [provisionStage, setProvisionStage] =
+    useState<ProvisionStage>("verifying")
+  const [walletWarning, setWalletWarning] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isOpen) {
@@ -56,6 +63,9 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
       setOtp("")
       setError("")
       setPendingWallet(null)
+      setMintedAddress(null)
+      setProvisionStage("verifying")
+      setWalletWarning(null)
     }
   }, [isOpen])
 
@@ -159,17 +169,48 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
     if (otp.length !== 6) return
     setLoading(true)
     setError("")
+    setWalletWarning(null)
+
+    // Move into the multi-stage provisioning view immediately so the user
+    // sees progress while the server verifies the code AND mints the wallet
+    // in a single round-trip.
+    setStep("provisioning")
+    setProvisionStage("verifying")
+
+    // Visual stage progression — the actual server work is a single call,
+    // but we surface the discrete phases the user is waiting through.
+    const stageTimers: ReturnType<typeof setTimeout>[] = []
+    stageTimers.push(setTimeout(() => setProvisionStage("minting"), 600))
+    stageTimers.push(setTimeout(() => setProvisionStage("linking"), 1400))
+
     const result = await verifyOtp(email, otp)
+    stageTimers.forEach(clearTimeout)
+
     if (result.error) {
       setError(result.error)
-    } else {
+      setStep("otp-verify")
+      setLoading(false)
+      return
+    }
+
+    if (result.walletAddress) {
+      setMintedAddress(result.walletAddress)
+    }
+    if (result.walletWarning) {
+      setWalletWarning(result.walletWarning)
+    }
+
+    setProvisionStage("done")
+
+    // Brief beat on "done" before transitioning to success.
+    setTimeout(() => {
       setStep("success")
+      setLoading(false)
       setTimeout(() => {
         onSuccess?.()
         onClose()
-      }, 1500)
-    }
-    setLoading(false)
+      }, 1800)
+    }, 500)
   }
 
   const goBack = () => {
@@ -187,6 +228,13 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
 
   if (!isOpen) return null
 
+  const isLocked = step === "provisioning"
+
+  const safeClose = () => {
+    if (isLocked) return
+    onClose()
+  }
+
   const getTitle = () => {
     switch (step) {
       case "select":
@@ -197,6 +245,8 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
         return "/ EMAIL"
       case "otp-verify":
         return "/ VERIFY"
+      case "provisioning":
+        return "/ PROVISIONING"
       case "wallet-email":
         return "/ LINK EMAIL"
       case "success":
@@ -213,7 +263,7 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="absolute inset-0 bg-background/90 backdrop-blur-md"
-          onClick={onClose}
+          onClick={safeClose}
         />
 
         {/* Modal */}
@@ -248,23 +298,26 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
           {/* Header */}
           <div className="relative flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2">
-              {step !== "select" && step !== "success" && (
-                <button
-                  onClick={goBack}
-                  className="p-1 -ml-1 text-muted-foreground hover:text-primary transition-colors"
-                  aria-label="Go back"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                </button>
-              )}
+              {step !== "select" &&
+                step !== "success" &&
+                step !== "provisioning" && (
+                  <button
+                    onClick={goBack}
+                    className="p-1 -ml-1 text-muted-foreground hover:text-primary transition-colors"
+                    aria-label="Go back"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                  </button>
+                )}
               <div className="flex items-center gap-2">
                 <span className="status-dot status-dot-pulse" />
                 <span className="mono-xs text-primary">{getTitle()}</span>
               </div>
             </div>
             <button
-              onClick={onClose}
-              className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+              onClick={safeClose}
+              disabled={isLocked}
+              className="p-1 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               aria-label="Close"
             >
               <X className="w-3.5 h-3.5" />
@@ -478,8 +531,64 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
               </div>
             )}
 
+            {step === "provisioning" && (
+              <div className="py-2 space-y-4">
+                {/* Spinning ring with center dot */}
+                <div className="flex justify-center pt-2">
+                  <div className="relative w-14 h-14">
+                    <div className="absolute inset-0 rounded-full border border-border" />
+                    <div className="absolute inset-0 rounded-full border-t border-r border-primary animate-spin" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="status-dot status-dot-pulse" />
+                    </div>
+                    <div className="absolute -inset-2 bg-primary/10 blur-xl rounded-full -z-10" />
+                  </div>
+                </div>
+
+                {/* Stage list */}
+                <div className="space-y-1.5 px-1">
+                  <ProvisionLine
+                    index={1}
+                    label="VERIFYING CODE"
+                    state={
+                      provisionStage === "verifying"
+                        ? "active"
+                        : "done"
+                    }
+                  />
+                  <ProvisionLine
+                    index={2}
+                    label="MINTING SOLANA WALLET"
+                    state={
+                      provisionStage === "verifying"
+                        ? "pending"
+                        : provisionStage === "minting"
+                          ? "active"
+                          : "done"
+                    }
+                  />
+                  <ProvisionLine
+                    index={3}
+                    label="LINKING TO PROFILE"
+                    state={
+                      provisionStage === "verifying" ||
+                      provisionStage === "minting"
+                        ? "pending"
+                        : provisionStage === "linking"
+                          ? "active"
+                          : "done"
+                    }
+                  />
+                </div>
+
+                <p className="mono-xs text-muted-foreground/60 text-center text-[9px] pt-1">
+                  / DO NOT CLOSE THIS WINDOW
+                </p>
+              </div>
+            )}
+
             {step === "success" && (
-              <div className="py-8 flex flex-col items-center gap-4">
+              <div className="py-6 flex flex-col items-center gap-4">
                 <div className="relative">
                   <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
                   <div className="relative w-12 h-12 flex items-center justify-center rounded-full bg-primary/10 border border-primary/40">
@@ -494,11 +603,82 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
                     / WELCOME TO GREENV1N3
                   </p>
                 </div>
+
+                {mintedAddress && (
+                  <div className="w-full px-3 py-2.5 bg-primary/5 border border-primary/30 rounded-[2px]">
+                    <span className="mono-xs text-muted-foreground/70 text-[9px] block mb-1">
+                      / YOUR WALLET
+                    </span>
+                    <p className="font-mono text-[10px] text-primary truncate tracking-wide">
+                      {mintedAddress}
+                    </p>
+                  </div>
+                )}
+
+                {walletWarning && (
+                  <div className="w-full px-3 py-2 bg-destructive/10 border border-destructive/30 rounded-[2px]">
+                    <p className="mono-xs text-destructive text-[9px]">
+                      WALLET PROVISIONING DEFERRED — WILL RETRY ON NEXT SIGN IN
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
         </motion.div>
       </div>
     </AnimatePresence>
+  )
+}
+
+function ProvisionLine({
+  index,
+  label,
+  state,
+}: {
+  index: number
+  label: string
+  state: "pending" | "active" | "done"
+}) {
+  return (
+    <div
+      className={`flex items-center justify-between px-3 py-2 border rounded-[2px] transition-colors ${
+        state === "active"
+          ? "bg-primary/5 border-primary/40"
+          : state === "done"
+            ? "bg-secondary border-border"
+            : "bg-secondary/40 border-border/50"
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <span
+          className={`mono-xs w-4 text-[9px] ${
+            state === "pending"
+              ? "text-muted-foreground/40"
+              : "text-muted-foreground/70"
+          }`}
+        >
+          {String(index).padStart(2, "0")}
+        </span>
+        <span
+          className={`mono-sm text-[10px] tracking-wide transition-colors ${
+            state === "active"
+              ? "text-foreground"
+              : state === "done"
+                ? "text-foreground/70"
+                : "text-muted-foreground/50"
+          }`}
+        >
+          {label}
+        </span>
+      </div>
+      {state === "active" && (
+        <Loader2 className="w-3 h-3 text-primary animate-spin" />
+      )}
+      {state === "done" && <Check className="w-3 h-3 text-primary" />}
+      {state === "pending" && (
+        <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30" />
+      )}
+    </div>
   )
 }
