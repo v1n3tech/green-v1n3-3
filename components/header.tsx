@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Wallet, Menu, X } from 'lucide-react'
 import { ConnectModal } from '@/components/auth/connect-modal'
+import { UserMenu, type UserMenuProfile } from '@/components/header/user-menu'
 import { createClient } from '@/lib/supabase/client'
 import { signOut } from '@/lib/auth/actions'
 
@@ -22,7 +23,7 @@ export function Header() {
   const [time, setTime] = useState('')
   const [mobileOpen, setMobileOpen] = useState(false)
   const [connectOpen, setConnectOpen] = useState(false)
-  const [user, setUser] = useState<{ email?: string | null; wallet?: string | null } | null>(null)
+  const [profile, setProfile] = useState<UserMenuProfile | null>(null)
 
   useEffect(() => {
     const updateTime = () => {
@@ -42,18 +43,21 @@ export function Header() {
     const checkUser = async () => {
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (authUser) {
-        const { data: profile } = await supabase
+        const { data: row } = await supabase
           .from('profiles')
-          .select('wallet_address')
+          .select('wallet_address, display_name, agro_id, role')
           .eq('id', authUser.id)
           .single()
-        
-        setUser({
+
+        setProfile({
           email: authUser.email,
-          wallet: profile?.wallet_address
+          walletAddress: row?.wallet_address ?? null,
+          displayName: row?.display_name ?? null,
+          agroId: row?.agro_id ?? null,
+          role: row?.role ?? null,
         })
       } else {
-        setUser(null)
+        setProfile(null)
       }
     }
     
@@ -68,11 +72,7 @@ export function Header() {
 
   const handleSignOut = async () => {
     await signOut()
-    setUser(null)
-  }
-
-  const truncateAddress = (address: string) => {
-    return `${address.slice(0, 4)}...${address.slice(-4)}`
+    setProfile(null)
   }
 
   return (
@@ -138,21 +138,8 @@ export function Header() {
 
             {/* Actions */}
             <div className="flex items-center gap-2 sm:gap-3 lg:gap-5">
-              {user ? (
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 border border-primary/30 rounded-[2px] bg-primary/5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    <span className="mono-xs text-primary text-[10px]">
-                      {user.wallet ? truncateAddress(user.wallet) : user.email?.split('@')[0]}
-                    </span>
-                  </div>
-                  <button 
-                    onClick={handleSignOut}
-                    className="mono-xs text-foreground/50 hover:text-foreground transition-colors text-[10px] sm:text-xs"
-                  >
-                    EXIT
-                  </button>
-                </div>
+              {profile ? (
+                <UserMenu profile={profile} onSignOut={handleSignOut} />
               ) : (
                 <button 
                   onClick={() => setConnectOpen(true)}
@@ -199,7 +186,7 @@ export function Header() {
                     </Link>
                   </motion.div>
                 ))}
-                {!user && (
+                {!profile && (
                   <motion.div
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
