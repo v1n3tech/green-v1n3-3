@@ -13,6 +13,7 @@ import {
   LogOut,
   ExternalLink,
   Hash,
+  LayoutGrid,
 } from "lucide-react"
 
 export interface UserMenuProfile {
@@ -135,26 +136,8 @@ export function UserMenu({ profile, onSignOut }: UserMenuProps) {
             className="absolute right-0 top-[calc(100%+8px)] w-[300px] z-50"
             role="menu"
           >
-            {/* Corner-bracket frame */}
-            <div className="relative bg-card border border-border-strong rounded-[2px] shadow-2xl shadow-primary/10 overflow-hidden">
-              {/* Corner brackets */}
-              <span
-                aria-hidden
-                className="absolute top-0 left-0 w-2 h-2 border-l border-t border-primary"
-              />
-              <span
-                aria-hidden
-                className="absolute top-0 right-0 w-2 h-2 border-r border-t border-primary"
-              />
-              <span
-                aria-hidden
-                className="absolute bottom-0 left-0 w-2 h-2 border-l border-b border-primary"
-              />
-              <span
-                aria-hidden
-                className="absolute bottom-0 right-0 w-2 h-2 border-r border-b border-primary"
-              />
-
+            {/* Sleek system panel — clean borders, no corner accents */}
+            <div className="relative bg-card border border-border rounded-[2px] shadow-xl shadow-black/40 overflow-hidden">
               {/* Identity header */}
               <div className="px-4 pt-4 pb-3 border-b border-border bg-secondary/40">
                 <div className="flex items-center gap-3">
@@ -240,22 +223,29 @@ export function UserMenu({ profile, onSignOut }: UserMenuProps) {
               {/* Nav items */}
               <div className="py-2">
                 <MenuLink
-                  href="/profile"
+                  href="/dashboard"
                   index="01"
+                  icon={<LayoutGrid className="w-3.5 h-3.5" />}
+                  label="DASHBOARD"
+                  onClick={() => setOpen(false)}
+                />
+                <MenuLink
+                  href="/profile"
+                  index="02"
                   icon={<User className="w-3.5 h-3.5" />}
                   label="PROFILE"
                   onClick={() => setOpen(false)}
                 />
                 <MenuLink
                   href="/wallet"
-                  index="02"
+                  index="03"
                   icon={<WalletIcon className="w-3.5 h-3.5" />}
                   label="WALLET"
                   onClick={() => setOpen(false)}
                 />
                 <MenuLink
                   href="/settings"
-                  index="03"
+                  index="04"
                   icon={<Settings className="w-3.5 h-3.5" />}
                   label="SETTINGS"
                   onClick={() => setOpen(false)}
@@ -270,7 +260,7 @@ export function UserMenu({ profile, onSignOut }: UserMenuProps) {
                   >
                     <div className="flex items-center gap-3">
                       <span className="mono-xs text-muted-foreground/50 text-[9px] w-5">
-                        04
+                        05
                       </span>
                       <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                       <span className="mono-sm text-foreground/80 group-hover:text-foreground text-[10.5px] tracking-wider transition-colors">
@@ -292,7 +282,7 @@ export function UserMenu({ profile, onSignOut }: UserMenuProps) {
                   role="menuitem"
                 >
                   <span className="mono-xs text-muted-foreground/50 text-[9px] w-5">
-                    05
+                    06
                   </span>
                   <LogOut className="w-3.5 h-3.5 text-muted-foreground group-hover:text-destructive transition-colors" />
                   <span className="mono-sm text-foreground/70 group-hover:text-destructive text-[10.5px] tracking-wider transition-colors">

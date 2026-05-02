@@ -41,15 +41,55 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  const path = request.nextUrl.pathname
+
+  // Routes that require completed onboarding before being viewable.
+  const requiresOnboarding =
+    path.startsWith('/profile') ||
+    path.startsWith('/dashboard') ||
+    path.startsWith('/wallet') ||
+    path.startsWith('/settings')
+
   if (
-    // if the user is not logged in and the app path, in this case, /protected, is accessed, redirect to the login page
+    // if the user is not logged in and the app path is accessed, redirect home
     request.nextUrl.pathname.startsWith('/protected') &&
     !user
   ) {
-    // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     return NextResponse.redirect(url)
+  }
+
+  if (user) {
+    // /onboarding is gated to authed-but-incomplete users only. If they hit
+    // /onboarding after finishing, send them to the dashboard so the wizard
+    // never re-appears.
+    if (path === '/onboarding' || path.startsWith('/onboarding/')) {
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('onboarding_completed')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (prof?.onboarding_completed) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/dashboard'
+        return NextResponse.redirect(url)
+      }
+    } else if (requiresOnboarding) {
+      // Block protected app surfaces until onboarding is done.
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('onboarding_completed')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (prof && prof.onboarding_completed === false) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/onboarding'
+        return NextResponse.redirect(url)
+      }
+    }
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.

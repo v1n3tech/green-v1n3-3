@@ -302,14 +302,8 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
           transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
           className="relative w-full max-w-[380px]"
         >
-          {/* Sharp card with corner brackets — matches app design language */}
-          <div className="relative bg-card border border-border-strong rounded-[2px] overflow-hidden">
-            {/* Corner brackets */}
-            <span aria-hidden className="absolute top-0 left-0 w-2 h-2 border-l border-t border-primary z-10" />
-            <span aria-hidden className="absolute top-0 right-0 w-2 h-2 border-r border-t border-primary z-10" />
-            <span aria-hidden className="absolute bottom-0 left-0 w-2 h-2 border-l border-b border-primary z-10" />
-            <span aria-hidden className="absolute bottom-0 right-0 w-2 h-2 border-r border-b border-primary z-10" />
-
+          {/* Sleek system panel — clean borders, no corner accents */}
+          <div className="relative bg-card border border-border rounded-[2px] overflow-hidden">
             {/* Status bar — top */}
             <div className="border-b border-border bg-secondary/40">
               <div className="flex items-center justify-between px-4 h-8">

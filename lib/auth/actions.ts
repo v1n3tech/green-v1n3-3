@@ -171,6 +171,56 @@ export async function getUser() {
   return user
 }
 
+/**
+ * Atomically finalizes the onboarding wizard via the SECURITY DEFINER
+ * `complete_onboarding` RPC (see migration 004_onboarding_flow.sql).
+ *
+ * The RPC validates required fields, mints an agro_id if the row doesn't
+ * already have one, and flips onboarding_completed = true in a single
+ * round-trip. RLS is bypassed inside the function but it's locked to the
+ * calling auth.uid(), so a user can only complete their own onboarding.
+ */
+export async function completeOnboarding(input: {
+  firstName: string
+  lastName: string
+  phone: string
+  lga: string
+  role: "user" | "agro_executive"
+  community?: string | null
+  secondaryCommunities?: string[]
+  bio?: string | null
+  avatarUrl?: string | null
+}) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: "Not authenticated" }
+  }
+
+  const { data, error } = await supabase.rpc("complete_onboarding", {
+    p_first_name: input.firstName.trim(),
+    p_last_name: input.lastName.trim(),
+    p_phone: input.phone.trim(),
+    p_lga: input.lga,
+    p_role: input.role,
+    p_community: input.community ?? null,
+    p_secondary_communities: input.secondaryCommunities ?? [],
+    p_bio: input.bio?.trim() || null,
+    p_avatar_url: input.avatarUrl ?? null,
+  })
+
+  if (error) {
+    console.log("[v0] completeOnboarding rpc failed:", error.message)
+    return { error: error.message }
+  }
+
+  revalidatePath("/", "layout")
+  return { success: true, profile: data }
+}
+
 export async function getProfile(userId: string) {
   const supabase = await createClient()
   const { data, error } = await supabase

@@ -265,6 +265,30 @@
   100% { width: 100%; }
 }
 
+/* Onboarding form input — shared style for inputs/textareas/selects */
+.onboard-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--input);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.onboard-input::placeholder {
+  color: rgba(232, 240, 232, 0.25);
+}
+
+.onboard-input:focus {
+  outline: none;
+  border-color: rgba(0, 200, 83, 0.55);
+  background: var(--input);
+}
+
 /* Background Glow Effect */
 .bg-green-glow {
   position: relative;
