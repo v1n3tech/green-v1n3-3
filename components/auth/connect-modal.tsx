@@ -4,22 +4,28 @@ import { useState, useEffect } from "react"
 import { useWallet } from "@solana/wallet-adapter-react"
 import { Mail, ChevronRight, X, Loader2, Check, ArrowLeft } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import { 
-  signInWithOtp, 
-  verifyOtp, 
+import {
+  signInWithOtp,
+  verifyOtp,
   linkWalletToEmail,
-  updateProfileWallet 
+  updateProfileWallet,
 } from "@/lib/auth/actions"
 import { createClient } from "@/lib/supabase/client"
-import { 
-  PhantomIcon, 
-  SolflareIcon, 
-  TorusIcon, 
+import {
+  PhantomIcon,
+  SolflareIcon,
+  TorusIcon,
   LedgerIcon,
-  SolanaWalletIcon 
+  SolanaWalletIcon,
 } from "@/components/icons/wallet-icons"
 
-type AuthStep = "select" | "wallet-list" | "email-input" | "otp-verify" | "wallet-email" | "success"
+type AuthStep =
+  | "select"
+  | "wallet-list"
+  | "email-input"
+  | "otp-verify"
+  | "wallet-email"
+  | "success"
 
 interface ConnectModalProps {
   isOpen: boolean
@@ -57,19 +63,22 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
     if (connected && publicKey && step === "wallet-list") {
       handleWalletConnected()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connected, publicKey, step])
 
   const handleWalletConnected = async () => {
     if (!publicKey) return
-    
+
     setLoading(true)
     setError("")
-    
+
     const walletAddress = publicKey.toBase58()
     const supabase = createClient()
-    
-    const { data: { user } } = await supabase.auth.getUser()
-    
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
     if (user) {
       const result = await updateProfileWallet(user.id, walletAddress)
       if (result.error) {
@@ -87,7 +96,7 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
         .select("email")
         .eq("wallet_address", walletAddress)
         .single()
-      
+
       if (existingProfile?.email) {
         setEmail(existingProfile.email)
         const result = await signInWithOtp(existingProfile.email)
@@ -101,13 +110,15 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
         setStep("wallet-email")
       }
     }
-    
+
     setLoading(false)
   }
 
   const handleWalletSelect = async (walletName: string) => {
     setError("")
-    const wallet = wallets.find(w => w.adapter.name.toLowerCase() === walletName.toLowerCase())
+    const wallet = wallets.find(
+      (w) => w.adapter.name.toLowerCase() === walletName.toLowerCase(),
+    )
     if (wallet) {
       try {
         select(wallet.adapter.name)
@@ -178,12 +189,18 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
 
   const getTitle = () => {
     switch (step) {
-      case "select": return "CONNECT"
-      case "wallet-list": return "SELECT WALLET"
-      case "email-input": return "EMAIL"
-      case "otp-verify": return "VERIFY"
-      case "wallet-email": return "LINK EMAIL"
-      case "success": return "CONNECTED"
+      case "select":
+        return "/ CONNECT"
+      case "wallet-list":
+        return "/ SELECT WALLET"
+      case "email-input":
+        return "/ EMAIL"
+      case "otp-verify":
+        return "/ VERIFY"
+      case "wallet-email":
+        return "/ LINK EMAIL"
+      case "success":
+        return "/ CONNECTED"
     }
   }
 
@@ -191,227 +208,292 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-center justify-center">
         {/* Backdrop */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-[#030504]/90 backdrop-blur-sm"
+          className="absolute inset-0 bg-background/90 backdrop-blur-md"
           onClick={onClose}
         />
-        
+
         {/* Modal */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97, y: 8 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          transition={{ duration: 0.15 }}
-          className="relative w-full max-w-[320px] mx-4 bg-[#0a0f0a] border border-[#1a2f1a] rounded-[3px] overflow-hidden"
+          exit={{ opacity: 0, scale: 0.97, y: 8 }}
+          transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+          className="relative w-full max-w-[360px] mx-4 bg-card border border-border rounded-[3px] overflow-hidden glow-md"
         >
+          {/* Subtle grid pattern background */}
+          <div className="absolute inset-0 grid-pattern opacity-40 pointer-events-none" />
+
           {/* Corner Brackets */}
-          <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-l border-t border-[#00c853] z-10" />
-          <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-r border-t border-[#00c853] z-10" />
-          <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-l border-b border-[#00c853] z-10" />
-          <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-r border-b border-[#00c853] z-10" />
-          
+          <div className="absolute top-0 left-0 w-3 h-3 z-20 pointer-events-none">
+            <div className="absolute top-0 left-0 w-full h-[1.5px] bg-primary" />
+            <div className="absolute top-0 left-0 w-[1.5px] h-full bg-primary" />
+          </div>
+          <div className="absolute top-0 right-0 w-3 h-3 z-20 pointer-events-none">
+            <div className="absolute top-0 right-0 w-full h-[1.5px] bg-primary" />
+            <div className="absolute top-0 right-0 w-[1.5px] h-full bg-primary" />
+          </div>
+          <div className="absolute bottom-0 left-0 w-3 h-3 z-20 pointer-events-none">
+            <div className="absolute bottom-0 left-0 w-full h-[1.5px] bg-primary" />
+            <div className="absolute bottom-0 left-0 w-[1.5px] h-full bg-primary" />
+          </div>
+          <div className="absolute bottom-0 right-0 w-3 h-3 z-20 pointer-events-none">
+            <div className="absolute bottom-0 right-0 w-full h-[1.5px] bg-primary" />
+            <div className="absolute bottom-0 right-0 w-[1.5px] h-full bg-primary" />
+          </div>
+
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[#1a2f1a]">
+          <div className="relative flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2">
               {step !== "select" && step !== "success" && (
-                <button 
+                <button
                   onClick={goBack}
-                  className="p-1 -ml-1 text-[#4a6a4a] hover:text-[#8ab88a] transition-colors"
+                  className="p-1 -ml-1 text-muted-foreground hover:text-primary transition-colors"
+                  aria-label="Go back"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
                 </button>
               )}
-              <span className="font-mono text-[10px] text-[#8ab88a]/80 tracking-[0.2em]">{getTitle()}</span>
+              <div className="flex items-center gap-2">
+                <span className="status-dot status-dot-pulse" />
+                <span className="mono-xs text-primary">{getTitle()}</span>
+              </div>
             </div>
-            <button 
+            <button
               onClick={onClose}
-              className="p-1 text-[#4a6a4a] hover:text-[#8ab88a] transition-colors"
+              className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Close"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
-          
+
           {/* Content */}
-          <div className="p-4">
+          <div className="relative p-5">
             {error && (
-              <div className="mb-3 px-3 py-2 bg-red-950/30 border border-red-900/30 rounded-[2px]">
-                <p className="font-mono text-[9px] text-red-400 tracking-wide">{error}</p>
+              <div className="mb-3 px-3 py-2 bg-destructive/10 border border-destructive/30 rounded-[2px]">
+                <p className="mono-xs text-destructive text-[9px]">{error}</p>
               </div>
             )}
-            
+
             {step === "select" && (
               <div className="space-y-2">
+                <span className="mono-xs text-muted-foreground/70 block mb-3">
+                  CHOOSE METHOD
+                </span>
+
                 <button
                   onClick={() => setStep("wallet-list")}
-                  className="w-full flex items-center justify-between px-3 py-2.5 bg-[#0d140d] border border-[#1a2f1a] rounded-[2px] hover:border-[#2a4a2a] hover:bg-[#0f180f] transition-all group"
+                  className="w-full flex items-center justify-between px-3.5 py-3 bg-secondary border border-border rounded-[2px] card-hover group"
                 >
                   <div className="flex items-center gap-3">
                     <SolanaWalletIcon className="w-5 h-5 rounded-[2px]" />
-                    <span className="font-mono text-[10px] text-[#8ab88a]/70 group-hover:text-[#8ab88a] transition-colors tracking-[0.15em]">
+                    <span className="mono-sm text-foreground/80 group-hover:text-foreground transition-colors text-[11px]">
                       CONNECT WALLET
                     </span>
                   </div>
-                  <ChevronRight className="w-3 h-3 text-[#4a6a4a] group-hover:text-[#00c853] transition-colors" />
+                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                 </button>
-                
+
                 <button
                   onClick={() => setStep("email-input")}
-                  className="w-full flex items-center justify-between px-3 py-2.5 bg-[#0d140d] border border-[#1a2f1a] rounded-[2px] hover:border-[#2a4a2a] hover:bg-[#0f180f] transition-all group"
+                  className="w-full flex items-center justify-between px-3.5 py-3 bg-secondary border border-border rounded-[2px] card-hover group"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 flex items-center justify-center rounded-[2px] bg-[#00c853]/10 border border-[#00c853]/20">
-                      <Mail className="w-2.5 h-2.5 text-[#00c853]" />
+                    <div className="w-5 h-5 flex items-center justify-center rounded-[2px] bg-primary/10 border border-primary/30">
+                      <Mail className="w-2.5 h-2.5 text-primary" />
                     </div>
-                    <span className="font-mono text-[10px] text-[#8ab88a]/70 group-hover:text-[#8ab88a] transition-colors tracking-[0.15em]">
+                    <span className="mono-sm text-foreground/80 group-hover:text-foreground transition-colors text-[11px]">
                       CONTINUE WITH EMAIL
                     </span>
                   </div>
-                  <ChevronRight className="w-3 h-3 text-[#4a6a4a] group-hover:text-[#00c853] transition-colors" />
+                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                 </button>
-                
-                <p className="font-mono text-[8px] text-[#4a6a4a] text-center pt-3 tracking-[0.15em]">
-                  BY CONNECTING, YOU AGREE TO OUR TERMS
-                </p>
+
+                <div className="pt-4 mt-2 border-t border-border">
+                  <p className="mono-xs text-muted-foreground/60 text-center text-[9px]">
+                    BY CONNECTING, YOU AGREE TO OUR TERMS
+                  </p>
+                </div>
               </div>
             )}
-            
+
             {step === "wallet-list" && (
-              <div className="space-y-1.5">
-                {WALLETS.map((wallet) => (
+              <div className="space-y-2">
+                <span className="mono-xs text-muted-foreground/70 block mb-3">
+                  AVAILABLE WALLETS
+                </span>
+                {WALLETS.map((wallet, idx) => (
                   <button
                     key={wallet.name}
                     onClick={() => handleWalletSelect(wallet.adapter)}
                     disabled={loading}
-                    className="w-full flex items-center justify-between px-3 py-2 bg-[#0d140d] border border-[#1a2f1a] rounded-[2px] hover:border-[#2a4a2a] hover:bg-[#0f180f] transition-all group disabled:opacity-50"
+                    className="w-full flex items-center justify-between px-3.5 py-2.5 bg-secondary border border-border rounded-[2px] card-hover group disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <div className="flex items-center gap-3">
+                      <span className="mono-xs text-muted-foreground/60 w-4">
+                        {String(idx + 1).padStart(2, "0")}
+                      </span>
                       <wallet.Icon className="w-5 h-5 rounded-[2px]" />
-                      <span className="font-mono text-[10px] text-[#8ab88a]/70 group-hover:text-[#8ab88a] transition-colors tracking-[0.15em]">
+                      <span className="mono-sm text-foreground/80 group-hover:text-foreground transition-colors text-[11px]">
                         {wallet.name.toUpperCase()}
                       </span>
                     </div>
                     {loading ? (
-                      <Loader2 className="w-3 h-3 text-[#00c853] animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
                     ) : (
-                      <ChevronRight className="w-3 h-3 text-[#4a6a4a] group-hover:text-[#00c853] transition-colors" />
+                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                     )}
                   </button>
                 ))}
               </div>
             )}
-            
+
             {step === "email-input" && (
               <div className="space-y-4">
+                <p className="mono-xs text-muted-foreground/80 leading-relaxed text-[10px]">
+                  ENTER YOUR EMAIL TO RECEIVE A 6-DIGIT VERIFICATION CODE
+                </p>
+
                 <div>
-                  <label className="font-mono text-[8px] text-[#4a6a4a] tracking-[0.2em] mb-2 block">
-                    EMAIL ADDRESS
+                  <label className="mono-xs text-muted-foreground mb-2 block text-[9px]">
+                    / EMAIL ADDRESS
                   </label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
-                    className="w-full px-3 py-2.5 bg-[#0d140d] border border-[#1a2f1a] rounded-[2px] font-mono text-[11px] text-[#8ab88a] placeholder:text-[#3a5a3a] focus:outline-none focus:border-[#00c853]/40 transition-colors"
+                    className="w-full px-3 py-2.5 bg-input border border-border rounded-[2px] font-mono text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/60 transition-colors tracking-wide"
                     autoFocus
                   />
                 </div>
-                
+
                 <button
                   onClick={handleEmailSubmit}
                   disabled={!email || loading}
-                  className="w-full py-2.5 bg-[#00c853] text-[#030504] font-mono text-[10px] font-medium tracking-[0.2em] rounded-[2px] hover:bg-[#00c853]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-primary text-primary-foreground mono-sm rounded-[2px] hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-[11px]"
                 >
                   {loading ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   ) : (
-                    "SEND CODE"
+                    <>
+                      <span>SEND CODE</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </>
                   )}
                 </button>
               </div>
             )}
-            
+
             {step === "wallet-email" && (
               <div className="space-y-4">
-                <p className="font-mono text-[9px] text-[#6a8a6a] leading-relaxed">
-                  Link your email to create your social wallet
+                <p className="mono-xs text-muted-foreground/80 leading-relaxed text-[10px]">
+                  LINK YOUR EMAIL TO CREATE YOUR SOCIAL WALLET
                 </p>
-                
-                <div className="px-3 py-2 bg-[#00c853]/5 border border-[#00c853]/20 rounded-[2px]">
-                  <p className="font-mono text-[9px] text-[#00c853]/70 truncate">
+
+                <div className="px-3 py-2.5 bg-primary/5 border border-primary/30 rounded-[2px]">
+                  <span className="mono-xs text-muted-foreground/70 text-[9px] block mb-1">
+                    / WALLET ADDRESS
+                  </span>
+                  <p className="font-mono text-[10px] text-primary truncate tracking-wide">
                     {pendingWallet}
                   </p>
                 </div>
-                
+
                 <div>
-                  <label className="font-mono text-[8px] text-[#4a6a4a] tracking-[0.2em] mb-2 block">
-                    EMAIL ADDRESS
+                  <label className="mono-xs text-muted-foreground mb-2 block text-[9px]">
+                    / EMAIL ADDRESS
                   </label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
-                    className="w-full px-3 py-2.5 bg-[#0d140d] border border-[#1a2f1a] rounded-[2px] font-mono text-[11px] text-[#8ab88a] placeholder:text-[#3a5a3a] focus:outline-none focus:border-[#00c853]/40 transition-colors"
+                    className="w-full px-3 py-2.5 bg-input border border-border rounded-[2px] font-mono text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/60 transition-colors tracking-wide"
                     autoFocus
                   />
                 </div>
-                
+
                 <button
                   onClick={handleWalletEmailSubmit}
                   disabled={!email || loading}
-                  className="w-full py-2.5 bg-[#00c853] text-[#030504] font-mono text-[10px] font-medium tracking-[0.2em] rounded-[2px] hover:bg-[#00c853]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-primary text-primary-foreground mono-sm rounded-[2px] hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-[11px]"
                 >
                   {loading ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   ) : (
-                    "LINK & SEND CODE"
+                    <>
+                      <span>LINK & SEND CODE</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </>
                   )}
                 </button>
               </div>
             )}
-            
+
             {step === "otp-verify" && (
               <div className="space-y-4">
-                <p className="font-mono text-[9px] text-[#6a8a6a] leading-relaxed">
-                  ENTER THE 6-DIGIT CODE SENT TO{" "}
-                  <span className="text-[#8ab88a]">{email.toUpperCase()}</span>
+                <p className="mono-xs text-muted-foreground/80 leading-relaxed text-[10px]">
+                  ENTER THE 6-DIGIT CODE SENT TO
+                  <br />
+                  <span className="text-foreground/90">{email.toUpperCase()}</span>
                 </p>
-                
+
                 <div>
+                  <label className="mono-xs text-muted-foreground mb-2 block text-[9px]">
+                    / VERIFICATION CODE
+                  </label>
                   <input
                     type="text"
+                    inputMode="numeric"
                     value={otp}
-                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    onChange={(e) =>
+                      setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+                    }
                     placeholder="000000"
                     maxLength={6}
-                    className="w-full px-3 py-3 bg-[#0d140d] border border-[#1a2f1a] rounded-[2px] text-sm text-[#8ab88a] text-center font-mono tracking-[0.5em] placeholder:text-[#3a5a3a] focus:outline-none focus:border-[#00c853]/40 transition-colors"
+                    className="w-full px-3 py-3.5 bg-input border border-border rounded-[2px] text-base text-foreground text-center font-mono tracking-[0.6em] placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/60 transition-colors"
                     autoFocus
                   />
                 </div>
-                
+
                 <button
                   onClick={handleOtpVerify}
                   disabled={otp.length !== 6 || loading}
-                  className="w-full py-2.5 bg-[#00c853] text-[#030504] font-mono text-[10px] font-medium tracking-[0.2em] rounded-[2px] hover:bg-[#00c853]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-primary text-primary-foreground mono-sm rounded-[2px] hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-[11px]"
                 >
                   {loading ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   ) : (
-                    "VERIFY"
+                    <>
+                      <span>VERIFY</span>
+                      <Check className="w-3.5 h-3.5" />
+                    </>
                   )}
                 </button>
               </div>
             )}
-            
+
             {step === "success" && (
-              <div className="py-6 flex flex-col items-center gap-4">
-                <div className="w-10 h-10 flex items-center justify-center rounded-full bg-[#00c853]/10 border border-[#00c853]/30">
-                  <Check className="w-5 h-5 text-[#00c853]" />
+              <div className="py-8 flex flex-col items-center gap-4">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
+                  <div className="relative w-12 h-12 flex items-center justify-center rounded-full bg-primary/10 border border-primary/40">
+                    <Check className="w-5 h-5 text-primary" />
+                  </div>
                 </div>
-                <p className="font-mono text-[10px] text-[#8ab88a]/80 tracking-[0.2em]">SUCCESSFULLY CONNECTED</p>
+                <div className="text-center">
+                  <p className="mono-sm text-foreground text-[11px] mb-1">
+                    SUCCESSFULLY CONNECTED
+                  </p>
+                  <p className="mono-xs text-muted-foreground text-[9px]">
+                    / WELCOME TO GREENV1N3
+                  </p>
+                </div>
               </div>
             )}
           </div>
