@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useWallet } from "@solana/wallet-adapter-react"
-import { Mail, ChevronRight, X, Loader2, Check, ArrowLeft } from "lucide-react"
+import { Mail, ChevronRight, X, Loader2, Check, ArrowLeft, Wallet as WalletIcon } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   signInWithOtp,
@@ -16,7 +16,6 @@ import {
   SolflareIcon,
   TorusIcon,
   LedgerIcon,
-  SolanaWalletIcon,
 } from "@/components/icons/wallet-icons"
 
 type AuthStep =
@@ -175,14 +174,9 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
     setError("")
     setWalletWarning(null)
 
-    // Move into the multi-stage provisioning view immediately so the user
-    // sees progress while the server verifies the code AND mints the wallet
-    // in a single round-trip.
     setStep("provisioning")
     setProvisionStage("verifying")
 
-    // Visual stage progression — the actual server work is a single call,
-    // but we surface the discrete phases the user is waiting through.
     const stageTimers: ReturnType<typeof setTimeout>[] = []
     stageTimers.push(setTimeout(() => setProvisionStage("minting"), 600))
     stageTimers.push(setTimeout(() => setProvisionStage("linking"), 1400))
@@ -197,11 +191,6 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
       return
     }
 
-    // CRITICAL: explicitly set the session on the BROWSER Supabase client.
-    // This persists the auth cookies via @supabase/ssr's browser cookie
-    // storage and fires the onAuthStateChange listener — the server action's
-    // Set-Cookie response alone is not always reliably picked up by the
-    // browser SDK's in-memory state.
     if (result.accessToken && result.refreshToken) {
       try {
         const supabase = createClient()
@@ -221,9 +210,6 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
 
     setProvisionStage("done")
 
-    // Returning users see a brief "welcome back" then close; new users get
-    // a longer dwell on the success screen so they can read their callsign
-    // and copy their wallet address before the modal dismisses.
     const dwellMs = result.isNewUser ? 3200 : 1500
 
     setTimeout(() => {
@@ -277,401 +263,470 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
     }
   }
 
+  const getStepIndex = () => {
+    switch (step) {
+      case "select":
+        return "00"
+      case "wallet-list":
+        return "01"
+      case "email-input":
+        return "01"
+      case "wallet-email":
+        return "02"
+      case "otp-verify":
+        return "02"
+      case "provisioning":
+        return "03"
+      case "success":
+        return "04"
+    }
+  }
+
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-background/90 backdrop-blur-md"
+          className="absolute inset-0 bg-background/95 backdrop-blur-md"
           onClick={safeClose}
         />
 
         {/* Modal */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.97, y: 8 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.97, y: 8 }}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 8 }}
           transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-          className="relative w-full max-w-[360px] mx-4 bg-card border border-border rounded-[3px] overflow-hidden shadow-2xl shadow-black/40"
+          className="relative w-full max-w-[380px]"
         >
+          {/* Sharp card with corner brackets — matches app design language */}
+          <div className="relative bg-card border border-border-strong rounded-[2px] overflow-hidden">
+            {/* Corner brackets */}
+            <span aria-hidden className="absolute top-0 left-0 w-2 h-2 border-l border-t border-primary z-10" />
+            <span aria-hidden className="absolute top-0 right-0 w-2 h-2 border-r border-t border-primary z-10" />
+            <span aria-hidden className="absolute bottom-0 left-0 w-2 h-2 border-l border-b border-primary z-10" />
+            <span aria-hidden className="absolute bottom-0 right-0 w-2 h-2 border-r border-b border-primary z-10" />
 
-          {/* Header */}
-          <div className="relative flex items-center justify-between px-4 py-3 border-b border-border">
-            <div className="flex items-center gap-2">
-              {step !== "select" &&
-                step !== "success" &&
-                step !== "provisioning" && (
+            {/* Status bar — top */}
+            <div className="border-b border-border bg-secondary/40">
+              <div className="flex items-center justify-between px-4 h-8">
+                <div className="flex items-center gap-2.5">
+                  <span className="status-dot status-dot-pulse" />
+                  <span className="mono-xs text-muted-foreground text-[9px]">SECURE SESSION</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <span className="mono-xs text-muted-foreground/70 text-[9px]">STEP {getStepIndex()}</span>
                   <button
-                    onClick={goBack}
-                    className="p-1 -ml-1 text-muted-foreground hover:text-primary transition-colors"
-                    aria-label="Go back"
+                    onClick={safeClose}
+                    disabled={isLocked}
+                    className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    aria-label="Close"
                   >
-                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <X className="w-3.5 h-3.5" />
                   </button>
-                )}
-              <div className="flex items-center gap-2">
-                <span className="status-dot status-dot-pulse" />
-                <span className="mono-xs text-primary">{getTitle()}</span>
+                </div>
               </div>
             </div>
-            <button
-              onClick={safeClose}
-              disabled={isLocked}
-              className="p-1 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              aria-label="Close"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
 
-          {/* Content */}
-          <div className="relative p-5">
-            {error && (
-              <div className="mb-3 px-3 py-2 bg-destructive/10 border border-destructive/30 rounded-[2px]">
-                <p className="mono-xs text-destructive text-[9px]">{error}</p>
+            {/* Title bar */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <div className="flex items-center gap-2">
+                {step !== "select" &&
+                  step !== "success" &&
+                  step !== "provisioning" && (
+                    <button
+                      onClick={goBack}
+                      className="p-1 -ml-1 text-muted-foreground hover:text-primary transition-colors"
+                      aria-label="Go back"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                <div className="w-1 h-4 bg-primary" />
+                <span className="mono-xs text-primary tracking-wider">{getTitle()}</span>
               </div>
-            )}
+            </div>
 
-            {step === "select" && (
-              <div className="space-y-2">
-                <span className="mono-xs text-muted-foreground/70 block mb-3">
-                  CHOOSE METHOD
-                </span>
-
-                <button
-                  onClick={() => setStep("wallet-list")}
-                  className="w-full flex items-center justify-between px-3.5 py-3 bg-secondary border border-border rounded-[2px] card-hover group"
-                >
-                  <div className="flex items-center gap-3">
-                    <SolanaWalletIcon className="w-5 h-5 rounded-[2px]" />
-                    <span className="mono-sm text-foreground/80 group-hover:text-foreground transition-colors text-[11px]">
-                      CONNECT WALLET
-                    </span>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-                </button>
-
-                <button
-                  onClick={() => setStep("email-input")}
-                  className="w-full flex items-center justify-between px-3.5 py-3 bg-secondary border border-border rounded-[2px] card-hover group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 flex items-center justify-center rounded-[2px] bg-primary/10 border border-primary/30">
-                      <Mail className="w-2.5 h-2.5 text-primary" />
-                    </div>
-                    <span className="mono-sm text-foreground/80 group-hover:text-foreground transition-colors text-[11px]">
-                      CONTINUE WITH EMAIL
-                    </span>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-                </button>
-
-                <div className="pt-4 mt-2 border-t border-border">
-                  <p className="mono-xs text-muted-foreground/60 text-center text-[9px]">
-                    BY CONNECTING, YOU AGREE TO OUR TERMS
-                  </p>
+            {/* Content */}
+            <div className="relative p-5">
+              {error && (
+                <div className="mb-3 px-3 py-2 bg-destructive/10 border border-destructive/30 rounded-[2px]">
+                  <p className="mono-xs text-destructive text-[9px]">{error}</p>
                 </div>
-              </div>
-            )}
+              )}
 
-            {step === "wallet-list" && (
-              <div className="space-y-2">
-                <span className="mono-xs text-muted-foreground/70 block mb-3">
-                  AVAILABLE WALLETS
-                </span>
-                {WALLETS.map((wallet, idx) => (
+              {step === "select" && (
+                <div>
+                  <span className="mono-xs text-muted-foreground/70 block mb-3 text-[9px]">
+                    / CHOOSE METHOD
+                  </span>
+
+                  <div className="space-y-px">
+                    <MethodRow
+                      index="01"
+                      icon={<WalletIcon className="w-3.5 h-3.5" />}
+                      label="CONNECT WALLET"
+                      hint="SOL"
+                      onClick={() => setStep("wallet-list")}
+                    />
+                    <MethodRow
+                      index="02"
+                      icon={<Mail className="w-3.5 h-3.5" />}
+                      label="CONTINUE WITH EMAIL"
+                      hint="OTP"
+                      onClick={() => setStep("email-input")}
+                    />
+                  </div>
+
+                  <div className="pt-4 mt-4 border-t border-border">
+                    <p className="mono-xs text-muted-foreground/60 text-center text-[9px] tracking-wider">
+                      BY CONNECTING, YOU AGREE TO OUR TERMS
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {step === "wallet-list" && (
+                <div>
+                  <span className="mono-xs text-muted-foreground/70 block mb-3 text-[9px]">
+                    / AVAILABLE WALLETS
+                  </span>
+                  <div className="space-y-px">
+                    {WALLETS.map((wallet, idx) => (
+                      <button
+                        key={wallet.name}
+                        onClick={() => handleWalletSelect(wallet.adapter)}
+                        disabled={loading}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-primary/5 group transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <span className="mono-xs text-muted-foreground/50 text-[9px] w-5">
+                          {String(idx + 1).padStart(2, "0")}
+                        </span>
+                        <wallet.Icon className="w-4 h-4 rounded-[2px] shrink-0" />
+                        <span className="mono-sm text-foreground/80 group-hover:text-foreground text-[10.5px] tracking-wider transition-colors flex-1 text-left">
+                          {wallet.name.toUpperCase()}
+                        </span>
+                        {loading ? (
+                          <Loader2 className="w-3 h-3 text-primary animate-spin" />
+                        ) : (
+                          <ChevronRight className="w-3 h-3 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {step === "email-input" && (
+                <div className="space-y-4">
+                  <p className="mono-xs text-muted-foreground/80 leading-relaxed text-[10px] tracking-wide">
+                    ENTER YOUR EMAIL TO RECEIVE A 6-DIGIT VERIFICATION CODE.
+                  </p>
+
+                  <div>
+                    <label className="mono-xs text-muted-foreground mb-2 block text-[9px]">
+                      / EMAIL ADDRESS
+                    </label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="w-full px-3 py-2.5 bg-input border border-border rounded-[2px] font-mono text-[12px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/60 transition-colors tracking-wide"
+                      autoFocus
+                    />
+                  </div>
+
                   <button
-                    key={wallet.name}
-                    onClick={() => handleWalletSelect(wallet.adapter)}
-                    disabled={loading}
-                    className="w-full flex items-center justify-between px-3.5 py-2.5 bg-secondary border border-border rounded-[2px] card-hover group disabled:opacity-40 disabled:cursor-not-allowed"
+                    onClick={handleEmailSubmit}
+                    disabled={!email || loading}
+                    className="w-full py-3 bg-primary text-primary-foreground mono-sm rounded-[2px] hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-[11px] tracking-wider"
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="mono-xs text-muted-foreground/60 w-4">
-                        {String(idx + 1).padStart(2, "0")}
-                      </span>
-                      <wallet.Icon className="w-5 h-5 rounded-[2px]" />
-                      <span className="mono-sm text-foreground/80 group-hover:text-foreground transition-colors text-[11px]">
-                        {wallet.name.toUpperCase()}
-                      </span>
-                    </div>
                     {loading ? (
-                      <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
-                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                      <>
+                        <span>SEND CODE</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </>
                     )}
                   </button>
-                ))}
-              </div>
-            )}
-
-            {step === "email-input" && (
-              <div className="space-y-4">
-                <p className="mono-xs text-muted-foreground/80 leading-relaxed text-[10px]">
-                  ENTER YOUR EMAIL TO RECEIVE A 6-DIGIT VERIFICATION CODE
-                </p>
-
-                <div>
-                  <label className="mono-xs text-muted-foreground mb-2 block text-[9px]">
-                    / EMAIL ADDRESS
-                  </label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="w-full px-3 py-2.5 bg-input border border-border rounded-[2px] font-mono text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/60 transition-colors tracking-wide"
-                    autoFocus
-                  />
                 </div>
+              )}
 
-                <button
-                  onClick={handleEmailSubmit}
-                  disabled={!email || loading}
-                  className="w-full py-3 bg-primary text-primary-foreground mono-sm rounded-[2px] hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-[11px]"
-                >
-                  {loading ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <>
-                      <span>SEND CODE</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
-
-            {step === "wallet-email" && (
-              <div className="space-y-4">
-                <p className="mono-xs text-muted-foreground/80 leading-relaxed text-[10px]">
-                  LINK YOUR EMAIL TO CREATE YOUR SOCIAL WALLET
-                </p>
-
-                <div className="px-3 py-2.5 bg-primary/5 border border-primary/30 rounded-[2px]">
-                  <span className="mono-xs text-muted-foreground/70 text-[9px] block mb-1">
-                    / WALLET ADDRESS
-                  </span>
-                  <p className="font-mono text-[10px] text-primary truncate tracking-wide">
-                    {pendingWallet}
+              {step === "wallet-email" && (
+                <div className="space-y-4">
+                  <p className="mono-xs text-muted-foreground/80 leading-relaxed text-[10px] tracking-wide">
+                    LINK YOUR EMAIL TO CREATE YOUR SOCIAL WALLET.
                   </p>
-                </div>
 
-                <div>
-                  <label className="mono-xs text-muted-foreground mb-2 block text-[9px]">
-                    / EMAIL ADDRESS
-                  </label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="w-full px-3 py-2.5 bg-input border border-border rounded-[2px] font-mono text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/60 transition-colors tracking-wide"
-                    autoFocus
-                  />
-                </div>
-
-                <button
-                  onClick={handleWalletEmailSubmit}
-                  disabled={!email || loading}
-                  className="w-full py-3 bg-primary text-primary-foreground mono-sm rounded-[2px] hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-[11px]"
-                >
-                  {loading ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <>
-                      <span>LINK & SEND CODE</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
-
-            {step === "otp-verify" && (
-              <div className="space-y-4">
-                <p className="mono-xs text-muted-foreground/80 leading-relaxed text-[10px]">
-                  ENTER THE 6-DIGIT CODE SENT TO
-                  <br />
-                  <span className="text-foreground/90">{email.toUpperCase()}</span>
-                </p>
-
-                <div>
-                  <label className="mono-xs text-muted-foreground mb-2 block text-[9px]">
-                    / VERIFICATION CODE
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={otp}
-                    onChange={(e) =>
-                      setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
-                    }
-                    placeholder="000000"
-                    maxLength={6}
-                    className="w-full px-3 py-3.5 bg-input border border-border rounded-[2px] text-base text-foreground text-center font-mono tracking-[0.6em] placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/60 transition-colors"
-                    autoFocus
-                  />
-                </div>
-
-                <button
-                  onClick={handleOtpVerify}
-                  disabled={otp.length !== 6 || loading}
-                  className="w-full py-3 bg-primary text-primary-foreground mono-sm rounded-[2px] hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-[11px]"
-                >
-                  {loading ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <>
-                      <span>VERIFY</span>
-                      <Check className="w-3.5 h-3.5" />
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
-
-            {step === "provisioning" && (
-              <div className="py-2 space-y-4">
-                {/* Spinning ring with center dot */}
-                <div className="flex justify-center pt-2">
-                  <div className="relative w-14 h-14">
-                    <div className="absolute inset-0 rounded-full border border-border" />
-                    <div className="absolute inset-0 rounded-full border-t border-primary animate-spin" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="status-dot status-dot-pulse" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Stage list */}
-                <div className="space-y-1.5 px-1">
-                  <ProvisionLine
-                    index={1}
-                    label="VERIFYING CODE"
-                    state={
-                      provisionStage === "verifying"
-                        ? "active"
-                        : "done"
-                    }
-                  />
-                  <ProvisionLine
-                    index={2}
-                    label="MINTING SOLANA WALLET"
-                    state={
-                      provisionStage === "verifying"
-                        ? "pending"
-                        : provisionStage === "minting"
-                          ? "active"
-                          : "done"
-                    }
-                  />
-                  <ProvisionLine
-                    index={3}
-                    label="LINKING TO PROFILE"
-                    state={
-                      provisionStage === "verifying" ||
-                      provisionStage === "minting"
-                        ? "pending"
-                        : provisionStage === "linking"
-                          ? "active"
-                          : "done"
-                    }
-                  />
-                </div>
-
-                <p className="mono-xs text-muted-foreground/60 text-center text-[9px] pt-1">
-                  / DO NOT CLOSE THIS WINDOW
-                </p>
-              </div>
-            )}
-
-            {step === "success" && !isNewUser && (
-              // ─── RETURNING USER ────────────────────────────────────────
-              // Compact, fast confirmation — they've seen this before.
-              <div className="py-6 flex flex-col items-center gap-3">
-                <div className="w-12 h-12 flex items-center justify-center rounded-full border border-border">
-                  <Check className="w-5 h-5 text-primary" />
-                </div>
-                <div className="text-center">
-                  <p className="mono-sm text-foreground text-[11px] mb-1 tracking-wider">
-                    WELCOME BACK
-                  </p>
-                  {callsign && (
-                    <p className="font-mono text-[10px] text-primary tracking-[0.15em]">
-                      {callsign}
-                    </p>
-                  )}
-                  <p className="mono-xs text-muted-foreground/60 text-[9px] mt-2">
-                    / SESSION RESTORED
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {step === "success" && isNewUser && (
-              // ─── NEW USER ──────────────────────────────────────────────
-              // Onboarding moment: callsign reveal, wallet reveal, mission
-              // statement. Longer dwell so they can absorb the credentials.
-              <div className="py-2 space-y-4">
-                {/* Hero badge */}
-                <div className="flex flex-col items-center gap-3 pb-1">
-                  <div className="w-14 h-14 flex items-center justify-center rounded-full border border-border">
-                    <Check className="w-6 h-6 text-primary" strokeWidth={2} />
-                  </div>
-                  <div className="text-center space-y-1">
-                    <p className="mono-xs text-primary/80 text-[9px] tracking-[0.25em]">
-                      / IDENTITY FORGED
-                    </p>
-                    <p className="mono-sm text-foreground text-[12px] tracking-wider">
-                      WELCOME TO GREENV1N3
-                    </p>
-                  </div>
-                </div>
-
-                {/* Callsign card */}
-                {callsign && (
-                  <div className="px-3.5 py-3 bg-secondary border border-border rounded-[2px]">
-                    <span className="mono-xs text-muted-foreground/70 text-[9px] block mb-1.5">
-                      / YOUR CALLSIGN
+                  <div className="px-3 py-2.5 bg-secondary border border-border rounded-[2px]">
+                    <span className="mono-xs text-muted-foreground/70 text-[9px] block mb-1">
+                      / WALLET ADDRESS
                     </span>
-                    <p className="font-mono text-[13px] text-primary tracking-[0.2em] font-medium">
-                      {callsign}
+                    <p className="font-mono text-[10px] text-primary truncate tracking-wide">
+                      {pendingWallet}
                     </p>
                   </div>
-                )}
 
-                {/* Wallet card */}
-                {mintedAddress && (
-                  <div className="px-3.5 py-2.5 bg-secondary border border-border rounded-[2px]">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="mono-xs text-muted-foreground/70 text-[9px]">
-                        / SOLANA WALLET MINTED
-                      </span>
-                      <span className="status-dot status-dot-pulse" />
+                  <div>
+                    <label className="mono-xs text-muted-foreground mb-2 block text-[9px]">
+                      / EMAIL ADDRESS
+                    </label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="w-full px-3 py-2.5 bg-input border border-border rounded-[2px] font-mono text-[12px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/60 transition-colors tracking-wide"
+                      autoFocus
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleWalletEmailSubmit}
+                    disabled={!email || loading}
+                    className="w-full py-3 bg-primary text-primary-foreground mono-sm rounded-[2px] hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-[11px] tracking-wider"
+                  >
+                    {loading ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <>
+                        <span>LINK & SEND CODE</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {step === "otp-verify" && (
+                <div className="space-y-4">
+                  <p className="mono-xs text-muted-foreground/80 leading-relaxed text-[10px] tracking-wide">
+                    ENTER THE 6-DIGIT CODE SENT TO
+                    <br />
+                    <span className="text-foreground/90">{email.toUpperCase()}</span>
+                  </p>
+
+                  <div>
+                    <label className="mono-xs text-muted-foreground mb-2 block text-[9px]">
+                      / VERIFICATION CODE
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={otp}
+                      onChange={(e) =>
+                        setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+                      }
+                      placeholder="000000"
+                      maxLength={6}
+                      className="w-full px-3 py-3.5 bg-input border border-border rounded-[2px] text-base text-foreground text-center font-mono tracking-[0.6em] placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/60 transition-colors"
+                      autoFocus
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleOtpVerify}
+                    disabled={otp.length !== 6 || loading}
+                    className="w-full py-3 bg-primary text-primary-foreground mono-sm rounded-[2px] hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-[11px] tracking-wider"
+                  >
+                    {loading ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <>
+                        <span>VERIFY</span>
+                        <Check className="w-3.5 h-3.5" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {step === "provisioning" && (
+                <div className="py-2 space-y-4">
+                  {/* Spinning ring with center dot */}
+                  <div className="flex justify-center pt-2">
+                    <div className="relative w-14 h-14">
+                      <div className="absolute inset-0 rounded-full border border-border" />
+                      <div className="absolute inset-0 rounded-full border-t border-primary animate-spin" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="status-dot status-dot-pulse" />
+                      </div>
                     </div>
-                    <p className="font-mono text-[10px] text-foreground/90 truncate tracking-wide">
-                      {mintedAddress}
-                    </p>
                   </div>
-                )}
 
-                {walletWarning && (
-                  <div className="px-3 py-2 bg-destructive/10 border border-destructive/30 rounded-[2px]">
-                    <p className="mono-xs text-destructive text-[9px] leading-relaxed">
-                      WALLET PROVISIONING DEFERRED — WILL RETRY ON NEXT SIGN IN
+                  {/* Stage list */}
+                  <div className="space-y-1.5 px-1">
+                    <ProvisionLine
+                      index={1}
+                      label="VERIFYING CODE"
+                      state={
+                        provisionStage === "verifying"
+                          ? "active"
+                          : "done"
+                      }
+                    />
+                    <ProvisionLine
+                      index={2}
+                      label="MINTING SOLANA WALLET"
+                      state={
+                        provisionStage === "verifying"
+                          ? "pending"
+                          : provisionStage === "minting"
+                            ? "active"
+                            : "done"
+                      }
+                    />
+                    <ProvisionLine
+                      index={3}
+                      label="LINKING TO PROFILE"
+                      state={
+                        provisionStage === "verifying" ||
+                        provisionStage === "minting"
+                          ? "pending"
+                          : provisionStage === "linking"
+                            ? "active"
+                            : "done"
+                      }
+                    />
+                  </div>
+
+                  <p className="mono-xs text-muted-foreground/60 text-center text-[9px] pt-1 tracking-wider">
+                    / DO NOT CLOSE THIS WINDOW
+                  </p>
+                </div>
+              )}
+
+              {step === "success" && !isNewUser && (
+                <div className="py-6 flex flex-col items-center gap-3">
+                  <div className="w-12 h-12 flex items-center justify-center rounded-[2px] bg-primary/10 border border-primary/40">
+                    <Check className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="text-center">
+                    <p className="mono-sm text-foreground text-[11px] mb-1 tracking-wider">
+                      WELCOME BACK
+                    </p>
+                    {callsign && (
+                      <p className="font-mono text-[10px] text-primary tracking-[0.15em]">
+                        {callsign}
+                      </p>
+                    )}
+                    <p className="mono-xs text-muted-foreground/60 text-[9px] mt-2 tracking-wider">
+                      / SESSION RESTORED
                     </p>
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+
+              {step === "success" && isNewUser && (
+                <div className="py-2 space-y-4">
+                  {/* Hero badge */}
+                  <div className="flex flex-col items-center gap-3 pb-1">
+                    <div className="w-14 h-14 flex items-center justify-center rounded-[2px] bg-primary/10 border border-primary/40">
+                      <Check className="w-6 h-6 text-primary" strokeWidth={2} />
+                    </div>
+                    <div className="text-center space-y-1">
+                      <p className="mono-xs text-primary/80 text-[9px] tracking-[0.25em]">
+                        / IDENTITY FORGED
+                      </p>
+                      <p className="mono-sm text-foreground text-[12px] tracking-wider">
+                        WELCOME TO GREENV1N3
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Callsign card */}
+                  {callsign && (
+                    <div className="px-3.5 py-3 bg-secondary border border-border rounded-[2px]">
+                      <span className="mono-xs text-muted-foreground/70 text-[9px] block mb-1.5">
+                        / YOUR CALLSIGN
+                      </span>
+                      <p className="font-mono text-[13px] text-primary tracking-[0.2em] font-medium">
+                        {callsign}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Wallet card */}
+                  {mintedAddress && (
+                    <div className="px-3.5 py-2.5 bg-secondary border border-border rounded-[2px]">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="mono-xs text-muted-foreground/70 text-[9px]">
+                          / SOLANA WALLET MINTED
+                        </span>
+                        <span className="status-dot status-dot-pulse" />
+                      </div>
+                      <p className="font-mono text-[10px] text-foreground/90 truncate tracking-wide">
+                        {mintedAddress}
+                      </p>
+                    </div>
+                  )}
+
+                  {walletWarning && (
+                    <div className="px-3 py-2 bg-destructive/10 border border-destructive/30 rounded-[2px]">
+                      <p className="mono-xs text-destructive text-[9px] leading-relaxed">
+                        WALLET PROVISIONING DEFERRED — WILL RETRY ON NEXT SIGN IN
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer marker bar */}
+            <div className="border-t border-border bg-secondary/40 px-4 h-6 flex items-center justify-between">
+              <span className="mono-xs text-muted-foreground/50 text-[8.5px] tracking-[0.2em]">
+                GREENV1N3 / AUTH
+              </span>
+              <span className="mono-xs text-muted-foreground/50 text-[8.5px] tracking-[0.2em]">
+                V1.0
+              </span>
+            </div>
           </div>
         </motion.div>
       </div>
     </AnimatePresence>
+  )
+}
+
+function MethodRow({
+  index,
+  icon,
+  label,
+  hint,
+  onClick,
+}: {
+  index: string
+  icon: React.ReactNode
+  label: string
+  hint?: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-3 px-3 py-3 hover:bg-primary/5 group transition-colors border-b border-border last:border-b-0"
+    >
+      <span className="mono-xs text-muted-foreground/50 text-[9px] w-5">
+        {index}
+      </span>
+      <span className="text-muted-foreground group-hover:text-primary transition-colors">
+        {icon}
+      </span>
+      <span className="mono-sm text-foreground/80 group-hover:text-foreground text-[10.5px] tracking-wider transition-colors flex-1 text-left">
+        {label}
+      </span>
+      {hint && (
+        <span className="mono-xs text-muted-foreground/40 group-hover:text-primary/70 text-[8.5px] tracking-wider transition-colors">
+          {hint}
+        </span>
+      )}
+      <ChevronRight className="w-3 h-3 text-muted-foreground/60 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+    </button>
   )
 }
 
