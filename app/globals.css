@@ -250,16 +250,19 @@
 @keyframes v1n3Pulse {
   0%, 100% { 
     opacity: 1;
-    transform: scale(1);
   }
   50% { 
-    opacity: 0.5;
-    transform: scale(0.98);
+    opacity: 0.4;
   }
 }
 
 .v1n3-loader-pulse {
-  animation: v1n3Pulse 1.5s ease-in-out infinite;
+  animation: v1n3Pulse 2s ease-in-out infinite;
+}
+
+@keyframes progressBar {
+  0% { width: 0%; }
+  100% { width: 100%; }
 }
 
 /* Background Glow Effect */

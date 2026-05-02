@@ -11,6 +11,7 @@ export function V1n3Loader({ minDisplayTime = 1000 }: V1n3LoaderProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [pageLoaded, setPageLoaded] = useState(false)
   const [minTimeElapsed, setMinTimeElapsed] = useState(false)
+  const [progress, setProgress] = useState(0)
 
   useEffect(() => {
     // Track page load
@@ -33,6 +34,26 @@ export function V1n3Loader({ minDisplayTime = 1000 }: V1n3LoaderProps) {
   }, [minDisplayTime])
 
   useEffect(() => {
+    // Animate progress bar
+    const duration = minDisplayTime
+    const interval = 30
+    const steps = duration / interval
+    let currentStep = 0
+
+    const progressTimer = setInterval(() => {
+      currentStep++
+      const newProgress = Math.min((currentStep / steps) * 100, 100)
+      setProgress(newProgress)
+      
+      if (currentStep >= steps) {
+        clearInterval(progressTimer)
+      }
+    }, interval)
+
+    return () => clearInterval(progressTimer)
+  }, [minDisplayTime])
+
+  useEffect(() => {
     // Dismiss loader when both conditions are met
     if (pageLoaded && minTimeElapsed) {
       setIsLoading(false)
@@ -45,73 +66,34 @@ export function V1n3Loader({ minDisplayTime = 1000 }: V1n3LoaderProps) {
         <motion.div
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.4, ease: 'easeInOut' }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
           className="fixed inset-0 z-[9999] flex items-center justify-center"
           style={{
-            backgroundColor: 'rgba(2, 3, 2, 0.92)',
-            backdropFilter: 'blur(8px)',
+            backgroundColor: 'rgba(2, 10, 2, 0.95)',
           }}
         >
-          {/* Subtle green glow behind text */}
-          <div 
-            className="absolute w-64 h-64 rounded-full"
-            style={{
-              background: 'radial-gradient(circle, rgba(0, 200, 83, 0.15) 0%, transparent 70%)',
-              filter: 'blur(40px)',
-            }}
-          />
-          
-          {/* Loader Content */}
-          <div className="relative flex flex-col items-center gap-4">
-            {/* Pulsing Text */}
-            <div className="v1n3-loader-pulse">
-              <span 
-                className="font-mono text-2xl sm:text-3xl md:text-4xl tracking-[0.15em] font-medium"
-                style={{ 
-                  color: 'var(--primary)',
-                  textShadow: '0 0 30px rgba(0, 200, 83, 0.5), 0 0 60px rgba(0, 200, 83, 0.3)',
-                }}
-              >
-                V1N3TECH
+          {/* Content */}
+          <div className="flex flex-col items-center">
+            {/* V1n3Tech Text */}
+            <div className="v1n3-loader-pulse mb-8">
+              <span className="font-mono text-2xl sm:text-3xl tracking-[0.25em]">
+                <span className="text-foreground">V1n3</span>
+                <span className="text-primary">Tech</span>
               </span>
             </div>
             
-            {/* Loading indicator dots */}
-            <div className="flex items-center gap-1.5 mt-2">
-              {[0, 1, 2].map((i) => (
-                <motion.div
-                  key={i}
-                  className="w-1.5 h-1.5 rounded-full bg-primary"
-                  animate={{
-                    opacity: [0.3, 1, 0.3],
-                    scale: [0.8, 1, 0.8],
-                  }}
-                  transition={{
-                    duration: 1.2,
-                    repeat: Infinity,
-                    delay: i * 0.2,
-                  }}
-                />
-              ))}
+            {/* Progress Bar */}
+            <div className="w-48 sm:w-64 h-[2px] bg-border mb-6">
+              <div 
+                className="h-full bg-primary transition-all duration-100 ease-out"
+                style={{ width: `${progress}%` }}
+              />
             </div>
-          </div>
-
-          {/* Corner brackets */}
-          <div className="absolute top-6 left-6 w-6 h-6 sm:w-8 sm:h-8 md:top-8 md:left-8">
-            <div className="absolute top-0 left-0 w-full h-[2px] bg-primary/50" />
-            <div className="absolute top-0 left-0 w-[2px] h-full bg-primary/50" />
-          </div>
-          <div className="absolute top-6 right-6 w-6 h-6 sm:w-8 sm:h-8 md:top-8 md:right-8">
-            <div className="absolute top-0 right-0 w-full h-[2px] bg-primary/50" />
-            <div className="absolute top-0 right-0 w-[2px] h-full bg-primary/50" />
-          </div>
-          <div className="absolute bottom-6 left-6 w-6 h-6 sm:w-8 sm:h-8 md:bottom-8 md:left-8">
-            <div className="absolute bottom-0 left-0 w-full h-[2px] bg-primary/50" />
-            <div className="absolute bottom-0 left-0 w-[2px] h-full bg-primary/50" />
-          </div>
-          <div className="absolute bottom-6 right-6 w-6 h-6 sm:w-8 sm:h-8 md:bottom-8 md:right-8">
-            <div className="absolute bottom-0 right-0 w-full h-[2px] bg-primary/50" />
-            <div className="absolute bottom-0 right-0 w-[2px] h-full bg-primary/50" />
+            
+            {/* Loading Text */}
+            <span className="font-mono text-[10px] sm:text-xs tracking-[0.4em] text-muted-foreground">
+              LOADING
+            </span>
           </div>
         </motion.div>
       )}
