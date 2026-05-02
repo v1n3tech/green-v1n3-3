@@ -1,7 +1,6 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   ArrowLeft,
@@ -73,8 +72,6 @@ export function OnboardingFlow({
   walletAddress,
   defaults,
 }: OnboardingFlowProps) {
-  const router = useRouter()
-
   const [form, setForm] = useState<FormState>({
     firstName: defaults.firstName,
     lastName: defaults.lastName,
@@ -165,11 +162,12 @@ export function OnboardingFlow({
     setDone(true)
     setSubmitting(false)
 
-    // Brief celebration, then route to dashboard.
+    // Hard-navigate so middleware re-runs against the freshly persisted
+    // session/profile row. router.push + refresh races the cookie write and
+    // can leave the user stranded on /onboarding with a blank page.
     setTimeout(() => {
-      router.push("/dashboard")
-      router.refresh()
-    }, 2400)
+      window.location.assign("/dashboard")
+    }, 2200)
   }
 
   // ---------- success / done state ----------
@@ -207,9 +205,18 @@ export function OnboardingFlow({
             </SummaryCard>
           )}
 
-          <p className="mono-xs text-muted-foreground/60 text-center text-[9px] tracking-wider pt-1">
-            / ROUTING TO DASHBOARD
-          </p>
+          <div className="pt-2 flex flex-col items-center gap-2.5">
+            <a
+              href="/dashboard"
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-[2px] mono-xs hover:bg-primary/90 transition-colors text-[10.5px] tracking-wider"
+            >
+              ENTER DASHBOARD
+              <ArrowRight className="w-3.5 h-3.5" />
+            </a>
+            <p className="mono-xs text-muted-foreground/55 text-center text-[9px] tracking-wider">
+              / AUTO-ROUTING IN A MOMENT
+            </p>
+          </div>
         </div>
       </Shell>
     )

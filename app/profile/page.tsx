@@ -6,6 +6,7 @@ import { COMMUNITIES, PLATEAU_LGAS } from "@/components/onboarding/data"
 import {
   Activity,
   Calendar,
+  Coins,
   Hash,
   Layers,
   Mail,
@@ -14,9 +15,11 @@ import {
   Settings as SettingsIcon,
   ShieldCheck,
   Sparkles,
+  TrendingUp,
   User as UserIcon,
 } from "lucide-react"
 import { ProfileWalletCard } from "@/components/profile/profile-wallet-card"
+import { UsernameEditor } from "@/components/profile/username-editor"
 
 export const metadata = {
   title: "Profile — GreenV1n3",
@@ -71,7 +74,7 @@ export default async function ProfilePage() {
       `
       id, email, wallet_address, display_name, first_name, last_name, phone,
       avatar_url, bio, agro_id, role, community, secondary_communities,
-      state, lga, address, weekly_rating, operational_rating, total_earnings,
+      state, lga, address,       weekly_rating, operational_rating, total_earnings, v1n3_balance,
       followers_count, following_count, posts_count,
       verification_status, is_active, created_at, last_active_at
       `,
@@ -152,14 +155,7 @@ export default async function ProfilePage() {
 
             {/* Identity */}
             <div className="flex-1 min-w-0 space-y-3">
-              <div>
-                <p className="mono-xs text-primary/80 text-[9px] tracking-[0.25em] mb-1.5">
-                  / CALLSIGN
-                </p>
-                <h1 className="font-mono text-2xl sm:text-3xl text-foreground tracking-[0.18em] truncate">
-                  {callsign}
-                </h1>
-              </div>
+              <UsernameEditor initial={profile.display_name} />
 
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <RoleBadge label={roleLabel} accent={isExecutive} />
@@ -325,8 +321,13 @@ export default async function ProfilePage() {
             )}
           </div>
 
-          {/* Right column — wallet + ratings */}
+          {/* Right column — V1n3 balance + wallet + ratings */}
           <div className="lg:col-span-1 space-y-3">
+            <V1n3BalancePanel
+              balance={Number(profile.v1n3_balance ?? 0)}
+              earnings={Number(profile.total_earnings ?? 0)}
+            />
+
             <ProfileWalletCard walletAddress={profile.wallet_address} />
 
             {/* Ratings */}
@@ -497,6 +498,63 @@ function DetailRow({
         >
           {value}
         </span>
+      </div>
+    </div>
+  )
+}
+
+function V1n3BalancePanel({
+  balance,
+  earnings,
+}: {
+  balance: number
+  earnings: number
+}) {
+  const formattedBalance = balance.toLocaleString(undefined, {
+    minimumFractionDigits: balance < 1 ? 4 : 2,
+    maximumFractionDigits: 4,
+  })
+
+  return (
+    <div className="border border-border rounded-[2px] overflow-hidden">
+      <div className="border-b border-border px-4 h-8 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Coins className="w-3 h-3 text-primary" />
+          <span className="mono-xs text-muted-foreground text-[9px] tracking-[0.2em]">
+            / V1N3 BALANCE
+          </span>
+        </div>
+        <span className="mono-xs text-primary text-[9px] tracking-wider">
+          TOKEN
+        </span>
+      </div>
+
+      <div className="p-5 space-y-4">
+        <div>
+          <p className="mono-xs text-muted-foreground/70 text-[9px] mb-2 tracking-[0.2em]">
+            / AVAILABLE
+          </p>
+          <div className="flex items-baseline gap-2">
+            <span className="font-mono text-3xl text-foreground tracking-tight">
+              {formattedBalance}
+            </span>
+            <span className="mono-xs text-primary/80 text-[10px] tracking-[0.2em]">
+              V1N3
+            </span>
+          </div>
+        </div>
+
+        <div className="pt-3 border-t border-border flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <TrendingUp className="w-3 h-3 text-muted-foreground shrink-0" />
+            <span className="mono-xs text-muted-foreground/70 text-[9px] tracking-[0.18em] truncate">
+              / EARNINGS
+            </span>
+          </div>
+          <span className="font-mono text-foreground/85 text-[12px] tracking-wider whitespace-nowrap">
+            N{earnings.toLocaleString()}
+          </span>
+        </div>
       </div>
     </div>
   )

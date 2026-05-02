@@ -221,6 +221,40 @@ export async function completeOnboarding(input: {
   return { success: true, profile: data }
 }
 
+/**
+ * Updates the authed user's display_name (callsign) via the SECURITY DEFINER
+ * `update_display_name` RPC. The RPC enforces format + case-insensitive
+ * uniqueness, and atomically promotes the first user to claim the handle
+ * 'mantim' (case-insensitive) to the admin role.
+ *
+ * Returns the updated profile row on success, or `{ error }` on failure.
+ */
+export async function updateDisplayName(newName: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated" }
+
+  const { data, error } = await supabase.rpc("update_display_name", {
+    p_new_name: newName,
+  })
+
+  if (error) {
+    console.log("[v0] updateDisplayName failed:", error.message)
+    // Map raw Postgres uniqueness violation to a friendlier message in case
+    // the unique index trips before our pre-check (race condition).
+    if (error.message.includes("profiles_display_name_lower_key")) {
+      return { error: "username is already taken" }
+    }
+    return { error: error.message }
+  }
+
+  revalidatePath("/", "layout")
+  return { success: true, profile: data }
+}
+
 export async function getProfile(userId: string) {
   const supabase = await createClient()
   const { data, error } = await supabase
