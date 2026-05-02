@@ -45,19 +45,19 @@ export function CommunitiesSection() {
   const [selected, setSelected] = useState(communities[4])
 
   return (
-    <section id="communities" className="py-20 relative">
-      <div className="max-w-[1440px] mx-auto px-5">
+    <section id="communities" className="py-12 sm:py-16 md:py-20 relative">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="flex items-center gap-2.5 mb-12">
-          <div className="w-1 h-5 bg-primary" />
+        <div className="flex items-center gap-2 sm:gap-2.5 mb-8 sm:mb-10 md:mb-12">
+          <div className="w-1 h-4 sm:h-5 bg-primary" />
           <span className="mono-xs text-primary">/ 03 — COMMUNITIES</span>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
+        <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 items-start">
           {/* Hexagonal Grid */}
-          <div className="flex-1 py-4 max-w-[620px]">
+          <div className="flex-1 py-2 sm:py-4 w-full max-w-full lg:max-w-[620px]">
             {/* Row 1 - 5 items */}
-            <div className="flex flex-wrap justify-center gap-1 mb-[-16px]">
+            <div className="flex flex-wrap justify-center gap-0.5 sm:gap-1 mb-[-12px] sm:mb-[-16px]">
               {communities.slice(0, 5).map((community) => (
                 <HexCard
                   key={community.id}
@@ -69,7 +69,7 @@ export function CommunitiesSection() {
             </div>
 
             {/* Row 2 - 4 items (offset) */}
-            <div className="flex flex-wrap justify-center gap-1 mb-[-16px]">
+            <div className="flex flex-wrap justify-center gap-0.5 sm:gap-1 mb-[-12px] sm:mb-[-16px]">
               {communities.slice(5, 9).map((community) => (
                 <HexCard
                   key={community.id}
@@ -81,7 +81,7 @@ export function CommunitiesSection() {
             </div>
 
             {/* Row 3 - 5 items */}
-            <div className="flex flex-wrap justify-center gap-1">
+            <div className="flex flex-wrap justify-center gap-0.5 sm:gap-1">
               {communities.slice(9, 14).map((community) => (
                 <HexCard
                   key={community.id}
@@ -94,8 +94,8 @@ export function CommunitiesSection() {
           </div>
 
           {/* Selected Community Panel - Beside Hex Grid */}
-          <div className="w-full lg:w-[340px] border border-border rounded-[3px] bg-card/50 flex-shrink-0 lg:sticky lg:top-[140px]">
-            <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+          <div className="w-full lg:w-[320px] xl:w-[340px] border border-border rounded-[3px] bg-card/50 flex-shrink-0 lg:sticky lg:top-[140px]">
+            <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-border flex items-center justify-between">
               <span className="mono-xs text-muted-foreground">SELECTED : V1N3</span>
               <span className="mono-xs text-primary">{selected.id}</span>
             </div>
@@ -107,41 +107,41 @@ export function CommunitiesSection() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.15 }}
-                className="p-5"
+                className="p-4 sm:p-5"
               >
                 {/* Icon and Title */}
-                <div className="flex items-start gap-4 mb-6">
-                  <div className="w-11 h-11 rounded-[3px] bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
-                    <selected.icon className="w-5 h-5 text-primary" />
+                <div className="flex items-start gap-3 sm:gap-4 mb-5 sm:mb-6">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-[3px] bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
+                    <selected.icon className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                   </div>
-                  <div>
-                    <h3 className="mono text-lg text-foreground leading-tight">{selected.name}</h3>
-                    <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="mono text-base sm:text-lg text-foreground leading-tight">{selected.name}</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-1.5 leading-relaxed">
                       {communityDescriptions[selected.id]}
                     </p>
                   </div>
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-3 gap-3 mb-6">
-                  <div className="p-3 border border-border rounded-[2px] bg-background/50">
-                    <div className="mono text-base text-foreground">{selected.members}</div>
-                    <div className="mono-xs text-muted-foreground mt-0.5">MEMBERS</div>
+                <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-5 sm:mb-6">
+                  <div className="p-2.5 sm:p-3 border border-border rounded-[2px] bg-background/50">
+                    <div className="mono text-sm sm:text-base text-foreground">{selected.members}</div>
+                    <div className="mono-xs text-muted-foreground mt-0.5 text-[9px] sm:text-[10px]">MEMBERS</div>
                   </div>
-                  <div className="p-3 border border-border rounded-[2px] bg-background/50">
-                    <div className="mono text-base text-foreground">{selected.gcms}</div>
-                    <div className="mono-xs text-muted-foreground mt-0.5">GCMS</div>
+                  <div className="p-2.5 sm:p-3 border border-border rounded-[2px] bg-background/50">
+                    <div className="mono text-sm sm:text-base text-foreground">{selected.gcms}</div>
+                    <div className="mono-xs text-muted-foreground mt-0.5 text-[9px] sm:text-[10px]">GCMS</div>
                   </div>
-                  <div className="p-3 border border-border rounded-[2px] bg-background/50">
-                    <div className="mono text-base text-foreground">{selected.rating}</div>
-                    <div className="mono-xs text-muted-foreground mt-0.5">AVG RATING</div>
+                  <div className="p-2.5 sm:p-3 border border-border rounded-[2px] bg-background/50">
+                    <div className="mono text-sm sm:text-base text-foreground">{selected.rating}</div>
+                    <div className="mono-xs text-muted-foreground mt-0.5 text-[9px] sm:text-[10px]">AVG RATING</div>
                   </div>
                 </div>
 
                 {/* Register Button */}
-                <button className="w-full flex items-center justify-center gap-2.5 px-5 py-3 border border-border hover:border-primary/50 hover:bg-primary/5 rounded-[2px] mono-sm text-foreground/90 transition-all group">
-                  REGISTER HERE
-                  <ArrowRight className="w-4 h-4 text-primary group-hover:translate-x-0.5 transition-transform" />
+                <button className="w-full flex items-center justify-center gap-2 sm:gap-2.5 px-4 sm:px-5 py-2.5 sm:py-3 border border-border hover:border-primary/50 hover:bg-primary/5 rounded-[2px] mono-sm text-foreground/90 transition-all group">
+                  <span className="text-xs sm:text-sm">REGISTER HERE</span>
+                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary group-hover:translate-x-0.5 transition-transform" />
                 </button>
               </motion.div>
             </AnimatePresence>
@@ -164,7 +164,7 @@ function HexCard({ community, isSelected, onClick }: HexCardProps) {
   return (
     <button
       onClick={onClick}
-      className="relative w-[95px] h-[110px] flex flex-col items-center justify-center transition-transform hover:scale-105 active:scale-100"
+      className="relative w-[70px] h-[82px] sm:w-[85px] sm:h-[98px] md:w-[95px] md:h-[110px] flex flex-col items-center justify-center transition-transform hover:scale-105 active:scale-100"
     >
       {/* Hexagon Shape */}
       <svg
@@ -185,12 +185,12 @@ function HexCard({ community, isSelected, onClick }: HexCardProps) {
       </svg>
 
       {/* Content */}
-      <div className="relative z-10 flex flex-col items-center gap-1 px-3 text-center">
-        <Icon className={`w-5 h-5 ${isSelected ? 'text-background' : 'text-foreground/70'} transition-colors`} />
-        <span className={`mono-xs leading-tight ${isSelected ? 'text-background' : 'text-foreground/80'}`}>
+      <div className="relative z-10 flex flex-col items-center gap-0.5 sm:gap-1 px-2 sm:px-3 text-center">
+        <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${isSelected ? 'text-background' : 'text-foreground/70'} transition-colors`} />
+        <span className={`mono-xs leading-tight text-[8px] sm:text-[9px] md:text-[10px] ${isSelected ? 'text-background' : 'text-foreground/80'}`}>
           {community.name}
         </span>
-        <span className={`mono-xs ${isSelected ? 'text-background/60' : 'text-muted-foreground'}`}>
+        <span className={`mono-xs text-[8px] sm:text-[9px] md:text-[10px] ${isSelected ? 'text-background/60' : 'text-muted-foreground'}`}>
           {community.id}
         </span>
       </div>

@@ -245,3 +245,39 @@
   writing-mode: vertical-rl;
   text-orientation: mixed;
 }
+
+/* V1n3 Loader Styles */
+@keyframes v1n3Pulse {
+  0%, 100% { 
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.5;
+    transform: scale(0.98);
+  }
+}
+
+.v1n3-loader-pulse {
+  animation: v1n3Pulse 1.5s ease-in-out infinite;
+}
+
+/* Background Glow Effect */
+.bg-green-glow {
+  position: relative;
+}
+
+.bg-green-glow::before {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  right: -50%;
+  bottom: -50%;
+  background: 
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(0, 200, 83, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 50%, rgba(0, 200, 83, 0.05) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 50% at 20% 80%, rgba(0, 200, 83, 0.06) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}

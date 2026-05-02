@@ -21,15 +21,15 @@ const utilities = [
 
 export function TokenSection() {
   return (
-    <section id="chain" className="py-20 relative border-t border-border">
-      <div className="max-w-[1440px] mx-auto px-5">
+    <section id="chain" className="py-12 sm:py-16 md:py-20 relative border-t border-border">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="flex items-center gap-2.5 mb-12">
-          <div className="w-1 h-5 bg-primary" />
+        <div className="flex items-center gap-2 sm:gap-2.5 mb-8 sm:mb-10 md:mb-12">
+          <div className="w-1 h-4 sm:h-5 bg-primary" />
           <span className="mono-xs text-primary">/ 05 — V1N3 TOKEN</span>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
+        <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12">
           {/* Left - Token Info */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -37,48 +37,48 @@ export function TokenSection() {
             viewport={{ once: true }}
           >
             {/* Token Card */}
-            <div className="p-5 border border-border rounded-[3px] bg-card/30 mb-4">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="relative w-14 h-14 rounded-[2px] border border-primary/30 bg-primary/10 flex items-center justify-center">
+            <div className="p-4 sm:p-5 border border-border rounded-[3px] bg-card/30 mb-3 sm:mb-4">
+              <div className="flex items-center gap-3 sm:gap-4 mb-5 sm:mb-6">
+                <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-[2px] border border-primary/30 bg-primary/10 flex items-center justify-center">
                   <Image
                     src="/logo.png"
                     alt="V1n3 Token"
                     width={40}
                     height={40}
-                    className="object-contain w-auto h-auto"
+                    className="object-contain w-8 h-8 sm:w-10 sm:h-10"
                   />
                 </div>
                 <div>
-                  <div className="mono-xs text-muted-foreground mb-0.5">SOLANA SPL TOKEN</div>
-                  <div className="mono text-2xl text-foreground">V1N3</div>
-                  <div className="mono-xs text-muted-foreground">Green V1n3 Utility Token</div>
+                  <div className="mono-xs text-muted-foreground mb-0.5 text-[9px] sm:text-[10px]">SOLANA SPL TOKEN</div>
+                  <div className="mono text-xl sm:text-2xl text-foreground">V1N3</div>
+                  <div className="mono-xs text-muted-foreground text-[9px] sm:text-[10px]">Green V1n3 Utility Token</div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 bg-background/50 border border-border rounded-[2px]">
-                  <div className="mono-xs text-muted-foreground mb-1">TOTAL SUPPLY</div>
-                  <div className="mono text-base text-foreground">100,000,000</div>
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                <div className="p-2.5 sm:p-3 bg-background/50 border border-border rounded-[2px]">
+                  <div className="mono-xs text-muted-foreground mb-0.5 sm:mb-1 text-[9px] sm:text-[10px]">TOTAL SUPPLY</div>
+                  <div className="mono text-sm sm:text-base text-foreground">100,000,000</div>
                 </div>
-                <div className="p-3 bg-background/50 border border-border rounded-[2px]">
-                  <div className="mono-xs text-muted-foreground mb-1">STATUS</div>
-                  <div className="mono text-base text-primary">PRE-LAUNCH</div>
+                <div className="p-2.5 sm:p-3 bg-background/50 border border-border rounded-[2px]">
+                  <div className="mono-xs text-muted-foreground mb-0.5 sm:mb-1 text-[9px] sm:text-[10px]">STATUS</div>
+                  <div className="mono text-sm sm:text-base text-primary">PRE-LAUNCH</div>
                 </div>
               </div>
             </div>
 
             {/* Tokenomics */}
-            <div className="p-5 border border-border rounded-[3px] bg-card/30">
-              <div className="flex items-center gap-2 mb-5">
-                <Coins className="w-4 h-4 text-primary" />
-                <span className="mono-sm text-foreground">TOKENOMICS</span>
+            <div className="p-4 sm:p-5 border border-border rounded-[3px] bg-card/30">
+              <div className="flex items-center gap-2 mb-4 sm:mb-5">
+                <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+                <span className="mono-sm text-foreground text-xs sm:text-sm">TOKENOMICS</span>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {tokenomics.map((item) => (
                   <div key={item.label}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-sm text-foreground/70">{item.label}</span>
-                      <span className="mono-sm text-foreground">{item.percentage}%</span>
+                    <div className="flex items-center justify-between mb-1 sm:mb-1.5">
+                      <span className="text-xs sm:text-sm text-foreground/70">{item.label}</span>
+                      <span className="mono-sm text-foreground text-xs sm:text-sm">{item.percentage}%</span>
                     </div>
                     <div className="h-1 bg-border rounded-full overflow-hidden">
                       <div className={`h-full ${item.color} rounded-full`} style={{ width: `${item.percentage}%` }} />
@@ -96,15 +96,15 @@ export function TokenSection() {
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
           >
-            <div className="mb-6">
-              <h3 className="mono text-lg text-foreground mb-2 tracking-wide">TOKEN UTILITY</h3>
-              <p className="text-sm text-foreground/50 leading-relaxed">
+            <div className="mb-5 sm:mb-6">
+              <h3 className="mono text-base sm:text-lg text-foreground mb-1.5 sm:mb-2 tracking-wide">TOKEN UTILITY</h3>
+              <p className="text-xs sm:text-sm text-foreground/50 leading-relaxed">
                 V1n3 powers the entire AgroV1n3 ecosystem, enabling seamless transactions, 
                 governance participation, and rewards distribution across all 14 communities.
               </p>
             </div>
 
-            <div className="grid gap-3 mb-6">
+            <div className="grid gap-2 sm:gap-3 mb-5 sm:mb-6">
               {utilities.map((utility, i) => (
                 <motion.div
                   key={utility.title}
@@ -112,15 +112,15 @@ export function TokenSection() {
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.05 }}
-                  className="p-4 border border-border rounded-[2px] bg-card/30 card-hover"
+                  className="p-3 sm:p-4 border border-border rounded-[2px] bg-card/30 card-hover"
                 >
-                  <div className="flex items-start gap-4">
-                    <div className="w-9 h-9 rounded-[2px] bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
-                      <utility.icon className="w-4 h-4 text-primary" />
+                  <div className="flex items-start gap-3 sm:gap-4">
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-[2px] bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
+                      <utility.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
                     </div>
-                    <div>
-                      <h4 className="mono-sm text-foreground mb-0.5">{utility.title}</h4>
-                      <p className="text-xs text-muted-foreground">{utility.description}</p>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="mono-sm text-foreground mb-0.5 text-xs sm:text-sm">{utility.title}</h4>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">{utility.description}</p>
                     </div>
                   </div>
                 </motion.div>
@@ -128,15 +128,15 @@ export function TokenSection() {
             </div>
 
             {/* Pre-launch CTA */}
-            <div className="p-5 border border-primary/30 rounded-[2px] bg-primary/5">
-              <div className="flex items-center gap-2.5 mb-3">
-                <Lock className="w-4 h-4 text-primary" />
-                <span className="mono-sm text-foreground">PRE-LAUNCH ALLOCATION</span>
+            <div className="p-4 sm:p-5 border border-primary/30 rounded-[2px] bg-primary/5">
+              <div className="flex items-center gap-2 sm:gap-2.5 mb-2 sm:mb-3">
+                <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+                <span className="mono-sm text-foreground text-xs sm:text-sm">PRE-LAUNCH ALLOCATION</span>
               </div>
-              <p className="text-sm text-foreground/50 mb-4">
+              <p className="text-xs sm:text-sm text-foreground/50 mb-3 sm:mb-4">
                 Early adopters who register during the pre-launch phase receive bonus V1n3 allocation.
               </p>
-              <button className="w-full px-5 py-3 bg-primary text-background rounded-[2px] mono-sm hover:bg-primary/90 transition-colors">
+              <button className="w-full px-4 sm:px-5 py-2.5 sm:py-3 bg-primary text-background rounded-[2px] mono-sm hover:bg-primary/90 transition-colors text-xs sm:text-sm">
                 JOIN WHITELIST
               </button>
             </div>
