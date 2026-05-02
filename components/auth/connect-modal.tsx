@@ -295,28 +295,8 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.97, y: 8 }}
           transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-          className="relative w-full max-w-[360px] mx-4 bg-card border border-border rounded-[3px] overflow-hidden glow-md"
+          className="relative w-full max-w-[360px] mx-4 bg-card border border-border rounded-[3px] overflow-hidden shadow-2xl shadow-black/40"
         >
-          {/* Subtle grid pattern background */}
-          <div className="absolute inset-0 grid-pattern opacity-40 pointer-events-none" />
-
-          {/* Corner Brackets */}
-          <div className="absolute top-0 left-0 w-3 h-3 z-20 pointer-events-none">
-            <div className="absolute top-0 left-0 w-full h-[1.5px] bg-primary" />
-            <div className="absolute top-0 left-0 w-[1.5px] h-full bg-primary" />
-          </div>
-          <div className="absolute top-0 right-0 w-3 h-3 z-20 pointer-events-none">
-            <div className="absolute top-0 right-0 w-full h-[1.5px] bg-primary" />
-            <div className="absolute top-0 right-0 w-[1.5px] h-full bg-primary" />
-          </div>
-          <div className="absolute bottom-0 left-0 w-3 h-3 z-20 pointer-events-none">
-            <div className="absolute bottom-0 left-0 w-full h-[1.5px] bg-primary" />
-            <div className="absolute bottom-0 left-0 w-[1.5px] h-full bg-primary" />
-          </div>
-          <div className="absolute bottom-0 right-0 w-3 h-3 z-20 pointer-events-none">
-            <div className="absolute bottom-0 right-0 w-full h-[1.5px] bg-primary" />
-            <div className="absolute bottom-0 right-0 w-[1.5px] h-full bg-primary" />
-          </div>
 
           {/* Header */}
           <div className="relative flex items-center justify-between px-4 py-3 border-b border-border">
@@ -560,11 +540,10 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
                 <div className="flex justify-center pt-2">
                   <div className="relative w-14 h-14">
                     <div className="absolute inset-0 rounded-full border border-border" />
-                    <div className="absolute inset-0 rounded-full border-t border-r border-primary animate-spin" />
+                    <div className="absolute inset-0 rounded-full border-t border-primary animate-spin" />
                     <div className="absolute inset-0 flex items-center justify-center">
                       <span className="status-dot status-dot-pulse" />
                     </div>
-                    <div className="absolute -inset-2 bg-primary/10 blur-xl rounded-full -z-10" />
                   </div>
                 </div>
 
@@ -614,11 +593,8 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
               // ─── RETURNING USER ────────────────────────────────────────
               // Compact, fast confirmation — they've seen this before.
               <div className="py-6 flex flex-col items-center gap-3">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
-                  <div className="relative w-12 h-12 flex items-center justify-center rounded-full bg-primary/10 border border-primary/40">
-                    <Check className="w-5 h-5 text-primary" />
-                  </div>
+                <div className="w-12 h-12 flex items-center justify-center rounded-full border border-border">
+                  <Check className="w-5 h-5 text-primary" />
                 </div>
                 <div className="text-center">
                   <p className="mono-sm text-foreground text-[11px] mb-1 tracking-wider">
@@ -643,11 +619,8 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
               <div className="py-2 space-y-4">
                 {/* Hero badge */}
                 <div className="flex flex-col items-center gap-3 pb-1">
-                  <div className="relative">
-                    <div className="absolute -inset-3 bg-primary/15 blur-2xl rounded-full" />
-                    <div className="relative w-14 h-14 flex items-center justify-center rounded-full bg-primary/10 border border-primary/50">
-                      <Check className="w-6 h-6 text-primary" strokeWidth={2.5} />
-                    </div>
+                  <div className="w-14 h-14 flex items-center justify-center rounded-full border border-border">
+                    <Check className="w-6 h-6 text-primary" strokeWidth={2} />
                   </div>
                   <div className="text-center space-y-1">
                     <p className="mono-xs text-primary/80 text-[9px] tracking-[0.25em]">
@@ -661,15 +634,7 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
 
                 {/* Callsign card */}
                 {callsign && (
-                  <div className="relative px-3.5 py-3 bg-primary/5 border border-primary/40 rounded-[2px] overflow-hidden">
-                    <div className="absolute top-0 left-0 w-2 h-2">
-                      <div className="absolute top-0 left-0 w-full h-[1px] bg-primary" />
-                      <div className="absolute top-0 left-0 w-[1px] h-full bg-primary" />
-                    </div>
-                    <div className="absolute bottom-0 right-0 w-2 h-2">
-                      <div className="absolute bottom-0 right-0 w-full h-[1px] bg-primary" />
-                      <div className="absolute bottom-0 right-0 w-[1px] h-full bg-primary" />
-                    </div>
+                  <div className="px-3.5 py-3 bg-secondary border border-border rounded-[2px]">
                     <span className="mono-xs text-muted-foreground/70 text-[9px] block mb-1.5">
                       / YOUR CALLSIGN
                     </span>
