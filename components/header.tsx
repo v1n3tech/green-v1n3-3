@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -37,38 +37,41 @@ export function Header() {
     return () => clearInterval(interval)
   }, [])
 
+  // Lifted out so the connect-modal's onSuccess can force a refresh.
+  // Server actions (verifyOtp) set auth cookies but don't fire the client
+  // onAuthStateChange listener, so we must re-fetch manually after sign-in.
+  const checkUser = useCallback(async () => {
+    const supabase = createClient()
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    if (authUser) {
+      const { data: row } = await supabase
+        .from('profiles')
+        .select('wallet_address, display_name, agro_id, role')
+        .eq('id', authUser.id)
+        .single()
+
+      setProfile({
+        email: authUser.email,
+        walletAddress: row?.wallet_address ?? null,
+        displayName: row?.display_name ?? null,
+        agroId: row?.agro_id ?? null,
+        role: row?.role ?? null,
+      })
+    } else {
+      setProfile(null)
+    }
+  }, [])
+
   useEffect(() => {
     const supabase = createClient()
-    
-    const checkUser = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (authUser) {
-        const { data: row } = await supabase
-          .from('profiles')
-          .select('wallet_address, display_name, agro_id, role')
-          .eq('id', authUser.id)
-          .single()
-
-        setProfile({
-          email: authUser.email,
-          walletAddress: row?.wallet_address ?? null,
-          displayName: row?.display_name ?? null,
-          agroId: row?.agro_id ?? null,
-          role: row?.role ?? null,
-        })
-      } else {
-        setProfile(null)
-      }
-    }
-    
     checkUser()
-    
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
       checkUser()
     })
-    
+
     return () => subscription.unsubscribe()
-  }, [])
+  }, [checkUser])
 
   const handleSignOut = async () => {
     await signOut()
@@ -214,7 +217,12 @@ export function Header() {
       <ConnectModal 
         isOpen={connectOpen} 
         onClose={() => setConnectOpen(false)}
-        onSuccess={() => setConnectOpen(false)}
+        onSuccess={async () => {
+          setConnectOpen(false)
+          // Server-action-set cookies don't trigger onAuthStateChange,
+          // so we explicitly re-fetch the session + profile here.
+          await checkUser()
+        }}
       />
     </>
   )
