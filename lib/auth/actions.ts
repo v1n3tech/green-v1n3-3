@@ -40,14 +40,20 @@ export async function verifyOtp(email: string, token: string) {
   // Provision custodial wallet + display name. Both are idempotent: existing
   // values are preserved, missing values are filled in. Wallet mint failure
   // is non-fatal (we still authenticate); name generation failure is silent.
+  //
+  // We use `alreadyExisted` from the wallet mint as the canonical signal for
+  // sign-up vs sign-in: if a wallet was JUST minted, this is a brand-new
+  // account; otherwise the user has signed in before.
   let walletAddress: string | null = null
   let walletWarning: string | null = null
   let displayName: string | null = null
+  let isNewUser = false
 
   if (data.user) {
     try {
       const result = await ensureCustodialWallet(data.user.id)
       walletAddress = result.publicKey
+      isNewUser = !result.alreadyExisted
     } catch (err) {
       walletWarning =
         err instanceof Error ? err.message : "Failed to provision wallet"
@@ -65,12 +71,20 @@ export async function verifyOtp(email: string, token: string) {
   }
 
   revalidatePath("/", "layout")
+
+  // Return tokens so the BROWSER client can call setSession() and reliably
+  // persist auth cookies via @supabase/ssr's browser cookie storage. This
+  // sidesteps the well-known issue where server-action Set-Cookie responses
+  // don't always reach document.cookie before the next client read.
   return {
     success: true,
     user: data.user,
     walletAddress,
     walletWarning,
     displayName,
+    isNewUser,
+    accessToken: data.session?.access_token ?? null,
+    refreshToken: data.session?.refresh_token ?? null,
   }
 }
 

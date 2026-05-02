@@ -55,6 +55,8 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
   const [provisionStage, setProvisionStage] =
     useState<ProvisionStage>("verifying")
   const [walletWarning, setWalletWarning] = useState<string | null>(null)
+  const [isNewUser, setIsNewUser] = useState(false)
+  const [callsign, setCallsign] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isOpen) {
@@ -66,6 +68,8 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
       setMintedAddress(null)
       setProvisionStage("verifying")
       setWalletWarning(null)
+      setIsNewUser(false)
+      setCallsign(null)
     }
   }, [isOpen])
 
@@ -193,23 +197,42 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
       return
     }
 
-    if (result.walletAddress) {
-      setMintedAddress(result.walletAddress)
+    // CRITICAL: explicitly set the session on the BROWSER Supabase client.
+    // This persists the auth cookies via @supabase/ssr's browser cookie
+    // storage and fires the onAuthStateChange listener — the server action's
+    // Set-Cookie response alone is not always reliably picked up by the
+    // browser SDK's in-memory state.
+    if (result.accessToken && result.refreshToken) {
+      try {
+        const supabase = createClient()
+        await supabase.auth.setSession({
+          access_token: result.accessToken,
+          refresh_token: result.refreshToken,
+        })
+      } catch (err) {
+        console.log("[v0] setSession failed:", err)
+      }
     }
-    if (result.walletWarning) {
-      setWalletWarning(result.walletWarning)
-    }
+
+    if (result.walletAddress) setMintedAddress(result.walletAddress)
+    if (result.walletWarning) setWalletWarning(result.walletWarning)
+    if (result.displayName) setCallsign(result.displayName)
+    setIsNewUser(Boolean(result.isNewUser))
 
     setProvisionStage("done")
 
-    // Brief beat on "done" before transitioning to success.
+    // Returning users see a brief "welcome back" then close; new users get
+    // a longer dwell on the success screen so they can read their callsign
+    // and copy their wallet address before the modal dismisses.
+    const dwellMs = result.isNewUser ? 3200 : 1500
+
     setTimeout(() => {
       setStep("success")
       setLoading(false)
       setTimeout(() => {
         onSuccess?.()
         onClose()
-      }, 1800)
+      }, dwellMs)
     }, 500)
   }
 
@@ -250,7 +273,7 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
       case "wallet-email":
         return "/ LINK EMAIL"
       case "success":
-        return "/ CONNECTED"
+        return isNewUser ? "/ INITIATED" : "/ AUTHENTICATED"
     }
   }
 
@@ -587,8 +610,10 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
               </div>
             )}
 
-            {step === "success" && (
-              <div className="py-6 flex flex-col items-center gap-4">
+            {step === "success" && !isNewUser && (
+              // ─── RETURNING USER ────────────────────────────────────────
+              // Compact, fast confirmation — they've seen this before.
+              <div className="py-6 flex flex-col items-center gap-3">
                 <div className="relative">
                   <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
                   <div className="relative w-12 h-12 flex items-center justify-center rounded-full bg-primary/10 border border-primary/40">
@@ -596,28 +621,82 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
                   </div>
                 </div>
                 <div className="text-center">
-                  <p className="mono-sm text-foreground text-[11px] mb-1">
-                    SUCCESSFULLY CONNECTED
+                  <p className="mono-sm text-foreground text-[11px] mb-1 tracking-wider">
+                    WELCOME BACK
                   </p>
-                  <p className="mono-xs text-muted-foreground text-[9px]">
-                    / WELCOME TO GREENV1N3
+                  {callsign && (
+                    <p className="font-mono text-[10px] text-primary tracking-[0.15em]">
+                      {callsign}
+                    </p>
+                  )}
+                  <p className="mono-xs text-muted-foreground/60 text-[9px] mt-2">
+                    / SESSION RESTORED
                   </p>
                 </div>
+              </div>
+            )}
 
-                {mintedAddress && (
-                  <div className="w-full px-3 py-2.5 bg-primary/5 border border-primary/30 rounded-[2px]">
-                    <span className="mono-xs text-muted-foreground/70 text-[9px] block mb-1">
-                      / YOUR WALLET
+            {step === "success" && isNewUser && (
+              // ─── NEW USER ──────────────────────────────────────────────
+              // Onboarding moment: callsign reveal, wallet reveal, mission
+              // statement. Longer dwell so they can absorb the credentials.
+              <div className="py-2 space-y-4">
+                {/* Hero badge */}
+                <div className="flex flex-col items-center gap-3 pb-1">
+                  <div className="relative">
+                    <div className="absolute -inset-3 bg-primary/15 blur-2xl rounded-full" />
+                    <div className="relative w-14 h-14 flex items-center justify-center rounded-full bg-primary/10 border border-primary/50">
+                      <Check className="w-6 h-6 text-primary" strokeWidth={2.5} />
+                    </div>
+                  </div>
+                  <div className="text-center space-y-1">
+                    <p className="mono-xs text-primary/80 text-[9px] tracking-[0.25em]">
+                      / IDENTITY FORGED
+                    </p>
+                    <p className="mono-sm text-foreground text-[12px] tracking-wider">
+                      WELCOME TO GREENV1N3
+                    </p>
+                  </div>
+                </div>
+
+                {/* Callsign card */}
+                {callsign && (
+                  <div className="relative px-3.5 py-3 bg-primary/5 border border-primary/40 rounded-[2px] overflow-hidden">
+                    <div className="absolute top-0 left-0 w-2 h-2">
+                      <div className="absolute top-0 left-0 w-full h-[1px] bg-primary" />
+                      <div className="absolute top-0 left-0 w-[1px] h-full bg-primary" />
+                    </div>
+                    <div className="absolute bottom-0 right-0 w-2 h-2">
+                      <div className="absolute bottom-0 right-0 w-full h-[1px] bg-primary" />
+                      <div className="absolute bottom-0 right-0 w-[1px] h-full bg-primary" />
+                    </div>
+                    <span className="mono-xs text-muted-foreground/70 text-[9px] block mb-1.5">
+                      / YOUR CALLSIGN
                     </span>
-                    <p className="font-mono text-[10px] text-primary truncate tracking-wide">
+                    <p className="font-mono text-[13px] text-primary tracking-[0.2em] font-medium">
+                      {callsign}
+                    </p>
+                  </div>
+                )}
+
+                {/* Wallet card */}
+                {mintedAddress && (
+                  <div className="px-3.5 py-2.5 bg-secondary border border-border rounded-[2px]">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="mono-xs text-muted-foreground/70 text-[9px]">
+                        / SOLANA WALLET MINTED
+                      </span>
+                      <span className="status-dot status-dot-pulse" />
+                    </div>
+                    <p className="font-mono text-[10px] text-foreground/90 truncate tracking-wide">
                       {mintedAddress}
                     </p>
                   </div>
                 )}
 
                 {walletWarning && (
-                  <div className="w-full px-3 py-2 bg-destructive/10 border border-destructive/30 rounded-[2px]">
-                    <p className="mono-xs text-destructive text-[9px]">
+                  <div className="px-3 py-2 bg-destructive/10 border border-destructive/30 rounded-[2px]">
+                    <p className="mono-xs text-destructive text-[9px] leading-relaxed">
                       WALLET PROVISIONING DEFERRED — WILL RETRY ON NEXT SIGN IN
                     </p>
                   </div>
