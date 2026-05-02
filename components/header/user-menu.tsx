@@ -133,13 +133,13 @@ export function UserMenu({ profile, onSignOut }: UserMenuProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute right-0 top-[calc(100%+8px)] w-[300px] z-50"
+            className="absolute right-0 top-[calc(100%+8px)] w-[300px] z-50 max-h-[calc(100vh-96px)] overflow-y-auto rounded-[2px]"
             role="menu"
           >
-            {/* Sleek system panel — clean borders, no corner accents */}
-            <div className="relative bg-card border border-border rounded-[2px] shadow-xl shadow-black/40 overflow-hidden">
+            {/* Sleek system panel — flush with app background, no milky lift */}
+            <div className="relative bg-background border border-border rounded-[2px] shadow-xl shadow-black/60">
               {/* Identity header */}
-              <div className="px-4 pt-4 pb-3 border-b border-border bg-secondary/40">
+              <div className="px-4 pt-4 pb-3 border-b border-border">
                 <div className="flex items-center gap-3">
                   <div className="relative">
                     <div className="absolute inset-0 bg-primary/30 blur-md rounded-[2px]" />

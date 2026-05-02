@@ -302,10 +302,10 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
           transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
           className="relative w-full max-w-[380px]"
         >
-          {/* Sleek system panel — clean borders, no corner accents */}
-          <div className="relative bg-card border border-border rounded-[2px] overflow-hidden">
+          {/* Sleek system panel — flush with app background, no milky lift */}
+          <div className="relative bg-background border border-border rounded-[2px] overflow-hidden">
             {/* Status bar — top */}
-            <div className="border-b border-border bg-secondary/40">
+            <div className="border-b border-border">
               <div className="flex items-center justify-between px-4 h-8">
                 <div className="flex items-center gap-2.5">
                   <span className="status-dot status-dot-pulse" />
@@ -672,7 +672,7 @@ export function ConnectModal({ isOpen, onClose, onSuccess }: ConnectModalProps) 
             </div>
 
             {/* Footer marker bar */}
-            <div className="border-t border-border bg-secondary/40 px-4 h-6 flex items-center justify-between">
+            <div className="border-t border-border px-4 h-6 flex items-center justify-between">
               <span className="mono-xs text-muted-foreground/50 text-[8.5px] tracking-[0.2em]">
                 GREENV1N3 / AUTH
               </span>

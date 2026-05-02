@@ -344,9 +344,9 @@ function Shell({
         transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
         className="relative w-full max-w-[560px]"
       >
-        <div className="relative bg-card border border-border rounded-[2px] overflow-hidden">
-          {/* status bar */}
-          <div className="border-b border-border bg-secondary/40">
+              <div className="relative bg-background border border-border rounded-[2px] overflow-hidden">
+                {/* Status bar — top */}
+                <div className="border-b border-border">
             <div className="flex items-center justify-between px-4 h-8">
               <div className="flex items-center gap-2.5">
                 <span className="status-dot status-dot-pulse" />
@@ -383,7 +383,7 @@ function Shell({
           <div className="relative p-5 sm:p-6">{children}</div>
 
           {/* footer marker */}
-          <div className="border-t border-border bg-secondary/40 px-4 h-6 flex items-center justify-between">
+                <div className="border-t border-border px-4 h-6 flex items-center justify-between">
             <span className="mono-xs text-muted-foreground/50 text-[8.5px] tracking-[0.2em]">
               GREENV1N3 / ONBOARDING
             </span>
@@ -438,7 +438,7 @@ function IdentityCell({
   highlight?: boolean
 }) {
   return (
-    <div className="bg-secondary/60 px-3 py-2">
+                        <div className="bg-input px-3 py-2 border-b border-border">
       <p className="mono-xs text-muted-foreground/60 text-[8.5px] mb-1 tracking-[0.15em]">
         {label}
       </p>
@@ -890,7 +890,7 @@ function SummaryRow({
   secondary?: string
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 px-3 py-2.5 bg-secondary/60 border border-border rounded-[2px]">
+              <div className="flex items-center justify-between gap-3 px-3 py-2.5 bg-input border border-border rounded-[2px]">
       <div className="flex items-center gap-3 min-w-0">
         <span className="mono-xs text-muted-foreground/60 text-[9px] tracking-wider w-5">
           {index}

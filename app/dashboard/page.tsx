@@ -101,8 +101,8 @@ export default async function DashboardPage() {
         {/* Two-column section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           {/* Wallet */}
-          <div className="lg:col-span-1 bg-card border border-border rounded-[2px] overflow-hidden">
-            <div className="border-b border-border bg-secondary/40 px-4 h-8 flex items-center justify-between">
+          <div className="lg:col-span-1 bg-background border border-border rounded-[2px] overflow-hidden">
+            <div className="border-b border-border px-4 h-8 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="status-dot status-dot-pulse" />
                 <span className="mono-xs text-muted-foreground text-[9px] tracking-[0.18em]">
@@ -139,8 +139,8 @@ export default async function DashboardPage() {
           </div>
 
           {/* Ratings */}
-          <div className="lg:col-span-2 bg-card border border-border rounded-[2px] overflow-hidden">
-            <div className="border-b border-border bg-secondary/40 px-4 h-8 flex items-center justify-between">
+          <div className="lg:col-span-2 bg-background border border-border rounded-[2px] overflow-hidden">
+            <div className="border-b border-border px-4 h-8 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Activity className="w-3 h-3 text-muted-foreground" />
                 <span className="mono-xs text-muted-foreground text-[9px] tracking-[0.18em]">
@@ -165,7 +165,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Empty-state hint */}
-        <div className="mt-8 px-4 py-3 bg-secondary/40 border border-border rounded-[2px] flex items-center gap-3">
+        <div className="mt-8 px-4 py-3 border border-border rounded-[2px] flex items-center gap-3">
           <Wallet className="w-4 h-4 text-primary shrink-0" />
           <p className="mono-xs text-foreground/70 text-[10px] tracking-wider leading-relaxed">
             / FIELD MODULES COMING ONLINE — SHOP, INVESTORS, MEDIA, AND TRAINING
@@ -193,7 +193,7 @@ function StatTile({
   accent?: boolean
 }) {
   return (
-    <div className="bg-card border border-border rounded-[2px] p-3.5">
+    <div className="bg-background border border-border rounded-[2px] p-3.5">
       <div className="flex items-center justify-between mb-3">
         <span className="mono-xs text-muted-foreground/60 text-[9px] tracking-wider">
           {index}
@@ -217,7 +217,7 @@ function StatTile({
 function RatingTile({ label, value }: { label: string; value: number }) {
   const pct = Math.max(0, Math.min(100, value))
   return (
-    <div className="bg-secondary/50 border border-border rounded-[2px] p-3.5">
+    <div className="border border-border rounded-[2px] p-3.5">
       <div className="flex items-center justify-between mb-2">
         <span className="mono-xs text-muted-foreground/70 text-[9px] tracking-[0.18em]">
           / {label}
