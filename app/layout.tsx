@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Abel, Aldrich } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { V1n3Loader } from '@/components/v1n3-loader'
+import { WalletProvider } from '@/components/providers/wallet-provider'
 import './globals.css'
 
 const _abel = Abel({ 
@@ -48,9 +49,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark bg-background">
       <body className={`${_abel.variable} ${_aldrich.variable} font-sans antialiased bg-green-glow`}>
-        <V1n3Loader minDisplayTime={1000} />
-        {children}
-        {process.env.NODE_ENV === 'production' && <Analytics />}
+        <WalletProvider>
+          <V1n3Loader minDisplayTime={1000} />
+          {children}
+          {process.env.NODE_ENV === 'production' && <Analytics />}
+        </WalletProvider>
       </body>
     </html>
   )

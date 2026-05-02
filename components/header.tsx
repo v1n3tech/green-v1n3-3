@@ -5,6 +5,9 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Wallet, Menu, X } from 'lucide-react'
+import { ConnectModal } from '@/components/auth/connect-modal'
+import { createClient } from '@/lib/supabase/client'
+import { signOut } from '@/lib/auth/actions'
 
 const navItems = [
   { id: '01', label: 'Doctrine' },
@@ -18,6 +21,8 @@ const navItems = [
 export function Header() {
   const [time, setTime] = useState('')
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [connectOpen, setConnectOpen] = useState(false)
+  const [user, setUser] = useState<{ email?: string | null; wallet?: string | null } | null>(null)
 
   useEffect(() => {
     const updateTime = () => {
@@ -31,134 +36,199 @@ export function Header() {
     return () => clearInterval(interval)
   }, [])
 
+  useEffect(() => {
+    const supabase = createClient()
+    
+    const checkUser = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (authUser) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('wallet_address')
+          .eq('id', authUser.id)
+          .single()
+        
+        setUser({
+          email: authUser.email,
+          wallet: profile?.wallet_address
+        })
+      } else {
+        setUser(null)
+      }
+    }
+    
+    checkUser()
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      checkUser()
+    })
+    
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const handleSignOut = async () => {
+    await signOut()
+    setUser(null)
+  }
+
+  const truncateAddress = (address: string) => {
+    return `${address.slice(0, 4)}...${address.slice(-4)}`
+  }
+
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/98 backdrop-blur-sm">
-      {/* Status Bar */}
-      <div className="border-b border-border">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 h-7 sm:h-8 flex items-center justify-between">
-          <div className="flex items-center gap-3 sm:gap-5 overflow-x-auto scrollbar-hide">
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-              <span className="status-dot status-dot-pulse" />
-              <span className="mono-xs text-muted-foreground text-[9px] sm:text-[10px] whitespace-nowrap">NETWORK : SOLANA</span>
+    <>
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background/98 backdrop-blur-sm">
+        {/* Status Bar */}
+        <div className="border-b border-border">
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 h-7 sm:h-8 flex items-center justify-between">
+            <div className="flex items-center gap-3 sm:gap-5 overflow-x-auto scrollbar-hide">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                <span className="status-dot status-dot-pulse" />
+                <span className="mono-xs text-muted-foreground text-[9px] sm:text-[10px] whitespace-nowrap">NETWORK : SOLANA</span>
+              </div>
+              <span className="hidden md:inline text-border-strong">/</span>
+              <div className="hidden md:flex items-center gap-2">
+                <span className="mono-xs text-foreground/90">V1N3 : N3,002.40</span>
+                <span className="mono-xs text-primary">+2.4%</span>
+              </div>
+              <span className="hidden lg:inline text-border-strong">/</span>
+              <div className="hidden lg:flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+                <span className="mono-xs text-muted-foreground">PHASE 01 : PLATEAU</span>
+              </div>
             </div>
-            <span className="hidden md:inline text-border-strong">/</span>
-            <div className="hidden md:flex items-center gap-2">
-              <span className="mono-xs text-foreground/90">V1N3 : N3,002.40</span>
-              <span className="mono-xs text-primary">+2.4%</span>
+            <div className="flex items-center gap-3 sm:gap-5 flex-shrink-0">
+              <span className="mono-xs text-muted-foreground text-[9px] sm:text-[10px]">{time}</span>
+              <span className="hidden sm:inline mono-xs text-primary hover:text-primary/80 cursor-pointer transition-colors">V1N3TECH.IO</span>
             </div>
-            <span className="hidden lg:inline text-border-strong">/</span>
-            <div className="hidden lg:flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-              <span className="mono-xs text-muted-foreground">PHASE 01 : PLATEAU</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 sm:gap-5 flex-shrink-0">
-            <span className="mono-xs text-muted-foreground text-[9px] sm:text-[10px]">{time}</span>
-            <span className="hidden sm:inline mono-xs text-primary hover:text-primary/80 cursor-pointer transition-colors">V1N3TECH.IO</span>
           </div>
         </div>
-      </div>
 
-      {/* Main Navigation */}
-      <div className="border-b border-border">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 h-12 sm:h-14 flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 sm:gap-2.5 group flex-shrink-0">
-            <Image
-              src="/logo.png"
-              alt="GreenV1n3"
-              width={36}
-              height={36}
-              className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9"
-            />
-            <span className="mono text-sm sm:text-base tracking-wider">
-              <span className="text-foreground">GREEN</span>
-              <span className="text-primary">V1N3</span>
-            </span>
-          </Link>
-
-          {/* Desktop Nav */}
-          <nav className="hidden lg:flex items-center">
-            {navItems.map((item) => (
-              <Link
-                key={item.id}
-                href={`#${item.label.toLowerCase()}`}
-                className="flex items-center gap-1.5 px-3 xl:px-5 py-2 group"
-              >
-                <span className="mono-xs text-muted-foreground/70 group-hover:text-primary transition-colors">{item.id}</span>
-                <span className="mono-sm text-foreground/70 group-hover:text-foreground transition-colors">{item.label}</span>
-              </Link>
-            ))}
-          </nav>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2 sm:gap-3 lg:gap-5">
-            <Link href="/signin" className="hidden md:block mono-sm text-foreground/70 hover:text-foreground transition-colors text-xs sm:text-sm">
-              SIGN IN
+        {/* Main Navigation */}
+        <div className="border-b border-border">
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 h-12 sm:h-14 flex items-center justify-between">
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-2 sm:gap-2.5 group flex-shrink-0">
+              <Image
+                src="/logo.png"
+                alt="GreenV1n3"
+                width={36}
+                height={36}
+                className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9"
+              />
+              <span className="mono text-sm sm:text-base tracking-wider">
+                <span className="text-foreground">GREEN</span>
+                <span className="text-primary">V1N3</span>
+              </span>
             </Link>
-            <button className="hidden sm:flex items-center gap-1.5 sm:gap-2.5 px-2.5 sm:px-4 py-1.5 sm:py-2 border border-primary/50 rounded-[2px] hover:border-primary hover:bg-primary/5 transition-all group">
-              <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
-              <span className="mono-sm text-primary text-[10px] sm:text-xs">CONNECT</span>
-            </button>
-            <button
-              onClick={() => setMobileOpen(!mobileOpen)}
-              className="lg:hidden p-1.5 sm:p-2 text-foreground/70 hover:text-foreground transition-colors"
-            >
-              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
+
+            {/* Desktop Nav */}
+            <nav className="hidden lg:flex items-center">
+              {navItems.map((item) => (
+                <Link
+                  key={item.id}
+                  href={`#${item.label.toLowerCase()}`}
+                  className="flex items-center gap-1.5 px-3 xl:px-5 py-2 group"
+                >
+                  <span className="mono-xs text-muted-foreground/70 group-hover:text-primary transition-colors">{item.id}</span>
+                  <span className="mono-sm text-foreground/70 group-hover:text-foreground transition-colors">{item.label}</span>
+                </Link>
+              ))}
+            </nav>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2 sm:gap-3 lg:gap-5">
+              {user ? (
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 border border-primary/30 rounded-[2px] bg-primary/5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    <span className="mono-xs text-primary text-[10px]">
+                      {user.wallet ? truncateAddress(user.wallet) : user.email?.split('@')[0]}
+                    </span>
+                  </div>
+                  <button 
+                    onClick={handleSignOut}
+                    className="mono-xs text-foreground/50 hover:text-foreground transition-colors text-[10px] sm:text-xs"
+                  >
+                    EXIT
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => setConnectOpen(true)}
+                  className="flex items-center gap-1.5 sm:gap-2.5 px-2.5 sm:px-4 py-1.5 sm:py-2 border border-primary/50 rounded-[2px] hover:border-primary hover:bg-primary/5 transition-all group"
+                >
+                  <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+                  <span className="mono-sm text-primary text-[10px] sm:text-xs">CONNECT</span>
+                </button>
+              )}
+              <button
+                onClick={() => setMobileOpen(!mobileOpen)}
+                className="lg:hidden p-1.5 sm:p-2 text-foreground/70 hover:text-foreground transition-colors"
+              >
+                {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Mobile Menu */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden absolute top-full left-0 right-0 bg-background border-b border-border overflow-hidden"
-          >
-            <nav className="flex flex-col p-4 sm:p-5 gap-1">
-              {navItems.map((item, i) => (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                >
-                  <Link
-                    href={`#${item.label.toLowerCase()}`}
-                    onClick={() => setMobileOpen(false)}
-                    className="flex items-center gap-3 px-3 sm:px-4 py-3 sm:py-3.5 border border-border rounded-[2px] card-hover"
+        {/* Mobile Menu */}
+        <AnimatePresence>
+          {mobileOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="lg:hidden absolute top-full left-0 right-0 bg-background border-b border-border overflow-hidden"
+            >
+              <nav className="flex flex-col p-4 sm:p-5 gap-1">
+                {navItems.map((item, i) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05 }}
                   >
-                    <span className="mono-xs text-muted-foreground">{item.id}</span>
-                    <span className="mono-sm text-foreground">{item.label}</span>
-                  </Link>
-                </motion.div>
-              ))}
-              <motion.div
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: navItems.length * 0.05 }}
-                className="flex flex-col gap-2 mt-3"
-              >
-                <button className="sm:hidden flex items-center justify-center gap-2.5 px-4 py-3 bg-primary text-background rounded-[2px] mono-sm">
-                  <Wallet className="w-4 h-4" />
-                  CONNECT WALLET
-                </button>
-                <Link
-                  href="/signin"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center justify-center px-4 py-3 border border-border rounded-[2px] mono-sm text-foreground card-hover"
-                >
-                  SIGN IN
-                </Link>
-              </motion.div>
-            </nav>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </header>
+                    <Link
+                      href={`#${item.label.toLowerCase()}`}
+                      onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-3 px-3 sm:px-4 py-3 sm:py-3.5 border border-border rounded-[2px] card-hover"
+                    >
+                      <span className="mono-xs text-muted-foreground">{item.id}</span>
+                      <span className="mono-sm text-foreground">{item.label}</span>
+                    </Link>
+                  </motion.div>
+                ))}
+                {!user && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: navItems.length * 0.05 }}
+                    className="mt-3"
+                  >
+                    <button 
+                      onClick={() => {
+                        setMobileOpen(false)
+                        setConnectOpen(true)
+                      }}
+                      className="w-full flex items-center justify-center gap-2.5 px-4 py-3 bg-primary text-background rounded-[2px] mono-sm"
+                    >
+                      <Wallet className="w-4 h-4" />
+                      CONNECT
+                    </button>
+                  </motion.div>
+                )}
+              </nav>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </header>
+
+      <ConnectModal 
+        isOpen={connectOpen} 
+        onClose={() => setConnectOpen(false)}
+        onSuccess={() => setConnectOpen(false)}
+      />
+    </>
   )
 }
