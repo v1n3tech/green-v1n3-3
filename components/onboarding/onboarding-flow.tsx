@@ -11,7 +11,6 @@ import {
   Sprout,
   User,
   MapPin,
-  Compass,
   Layers,
   ClipboardCheck,
 } from "lucide-react"
@@ -29,7 +28,6 @@ interface FormState {
   lastName: string
   phone: string
   lga: string
-  role: Role | null
   community: AgroCommunityKey | null
   secondaryCommunities: AgroCommunityKey[]
   bio: string
@@ -39,21 +37,27 @@ interface OnboardingFlowProps {
   email: string | null
   callsign: string | null
   walletAddress: string | null
+  /**
+   * True when no other user has completed onboarding yet. The first user is
+   * automatically promoted to 'agro_executive' (founding executive) and is
+   * the only one shown the COMMUNITY step. All subsequent users are forced
+   * to 'user' role and admin promotes them later.
+   */
+  isFirstUser: boolean
   defaults: {
     firstName: string
     lastName: string
     phone: string
     lga: string
-    role: Role | null
     community: string | null
     secondaryCommunities: string[]
     bio: string
   }
 }
 
-// Step ids in canonical order. COMMUNITY is conditionally skipped for the
-// "user" (Explorer) role — see `visibleSteps` below.
-type StepId = "identity" | "location" | "path" | "community" | "confirm"
+// Step ids in canonical order. COMMUNITY is only included for the founding
+// Agro Executive (the very first user to sign up); see `visibleSteps` below.
+type StepId = "identity" | "location" | "community" | "confirm"
 
 const STEP_META: Record<
   StepId,
@@ -61,7 +65,6 @@ const STEP_META: Record<
 > = {
   identity:  { label: "/ IDENTITY",  title: "Tell us who you are.",     icon: <User className="w-3.5 h-3.5" /> },
   location:  { label: "/ LOCATION",  title: "Where do you operate?",     icon: <MapPin className="w-3.5 h-3.5" /> },
-  path:      { label: "/ PATH",      title: "Choose your trajectory.",   icon: <Compass className="w-3.5 h-3.5" /> },
   community: { label: "/ COMMUNITY", title: "Pick your value chain.",    icon: <Layers className="w-3.5 h-3.5" /> },
   confirm:   { label: "/ CONFIRM",   title: "Review and forge identity.", icon: <ClipboardCheck className="w-3.5 h-3.5" /> },
 }
@@ -70,14 +73,19 @@ export function OnboardingFlow({
   email,
   callsign,
   walletAddress,
+  isFirstUser,
   defaults,
 }: OnboardingFlowProps) {
+  // Role is no longer self-selected: it's deterministic from `isFirstUser`.
+  // The server-side complete_onboarding RPC double-checks this under an
+  // advisory lock, so the client value is purely UX.
+  const role: Role = isFirstUser ? "agro_executive" : "user"
+
   const [form, setForm] = useState<FormState>({
     firstName: defaults.firstName,
     lastName: defaults.lastName,
     phone: defaults.phone,
     lga: defaults.lga,
-    role: defaults.role,
     community: (defaults.community as AgroCommunityKey | null) ?? null,
     secondaryCommunities:
       (defaults.secondaryCommunities as AgroCommunityKey[]) ?? [],
@@ -90,11 +98,12 @@ export function OnboardingFlow({
   const [done, setDone] = useState(false)
   const [agroId, setAgroId] = useState<string | null>(null)
 
-  // Skip /community when role is "user" — they don't need a primary community.
+  // Only the founding Agro Executive picks a value chain on signup.
   const visibleSteps: StepId[] = useMemo(() => {
-    const base: StepId[] = ["identity", "location", "path", "community", "confirm"]
-    return form.role === "user" ? base.filter((s) => s !== "community") : base
-  }, [form.role])
+    return isFirstUser
+      ? ["identity", "location", "community", "confirm"]
+      : ["identity", "location", "confirm"]
+  }, [isFirstUser])
 
   const currentStep = visibleSteps[stepIndex]
   const totalSteps = visibleSteps.length
@@ -112,10 +121,8 @@ export function OnboardingFlow({
         )
       case "location":
         return form.lga.trim().length > 0
-      case "path":
-        return form.role !== null
       case "community":
-        return form.role !== "agro_executive" || form.community !== null
+        return form.community !== null
       case "confirm":
         return true
     }
@@ -134,7 +141,6 @@ export function OnboardingFlow({
   }
 
   const submit = async () => {
-    if (!form.role) return
     setSubmitting(true)
     setError(null)
 
@@ -143,10 +149,9 @@ export function OnboardingFlow({
       lastName: form.lastName,
       phone: form.phone,
       lga: form.lga,
-      role: form.role,
-      community: form.role === "agro_executive" ? form.community : null,
-      secondaryCommunities:
-        form.role === "agro_executive" ? form.secondaryCommunities : [],
+      role, // server-side RPC re-validates and may override based on race
+      community: isFirstUser ? form.community : null,
+      secondaryCommunities: isFirstUser ? form.secondaryCommunities : [],
       bio: form.bio || null,
     })
 
@@ -269,13 +274,12 @@ export function OnboardingFlow({
             {currentStep === "location" && (
               <StepLocation form={form} update={update} />
             )}
-            {currentStep === "path" && (
-              <StepPath form={form} update={update} />
-            )}
             {currentStep === "community" && (
               <StepCommunity form={form} update={update} />
             )}
-            {currentStep === "confirm" && <StepConfirm form={form} />}
+            {currentStep === "confirm" && (
+              <StepConfirm form={form} role={role} isFirstUser={isFirstUser} />
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -608,101 +612,6 @@ function StepLocation({
   )
 }
 
-function StepPath({
-  form,
-  update,
-}: {
-  form: FormState
-  update: <K extends keyof FormState>(key: K, value: FormState[K]) => void
-}) {
-  return (
-    <div className="space-y-2.5">
-      <PathOption
-        index="01"
-        title="EXPLORE"
-        subtitle="REGULAR USER"
-        description="Browse the network, follow Agro Executives, hold V1n3, and engage with content. No commitments."
-        active={form.role === "user"}
-        onClick={() => update("role", "user")}
-      />
-      <PathOption
-        index="02"
-        title="OPERATE"
-        subtitle="AGRO EXECUTIVE"
-        description="Register in one of fourteen agriculture communities, earn weekly ratings, and participate in the value chain."
-        active={form.role === "agro_executive"}
-        onClick={() => update("role", "agro_executive")}
-        highlight
-      />
-    </div>
-  )
-}
-
-function PathOption({
-  index,
-  title,
-  subtitle,
-  description,
-  active,
-  onClick,
-  highlight,
-}: {
-  index: string
-  title: string
-  subtitle: string
-  description: string
-  active: boolean
-  onClick: () => void
-  highlight?: boolean
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full text-left rounded-[2px] border transition-colors p-3.5 ${
-        active
-          ? "bg-primary/10 border-primary/60"
-          : "bg-input/40 border-border hover:border-primary/40 hover:bg-primary/5"
-      }`}
-    >
-      <div className="flex items-start gap-3">
-        <span className="mono-xs text-muted-foreground/60 text-[9px] tracking-wider mt-0.5">
-          {index}
-        </span>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span
-              className={`mono-sm text-[12px] tracking-[0.15em] ${
-                active ? "text-primary" : "text-foreground"
-              }`}
-            >
-              {title}
-            </span>
-            {highlight && (
-              <span className="px-1.5 py-0.5 border border-accent/50 rounded-[2px] mono-xs text-accent text-[8px] tracking-wider">
-                FIELD
-              </span>
-            )}
-          </div>
-          <p className="mono-xs text-muted-foreground/70 text-[8.5px] tracking-[0.18em] mb-2">
-            {subtitle}
-          </p>
-          <p className="text-[12px] leading-relaxed text-foreground/65">
-            {description}
-          </p>
-        </div>
-        <div
-          className={`w-4 h-4 rounded-[2px] border flex items-center justify-center shrink-0 transition-colors ${
-            active ? "border-primary bg-primary" : "border-border"
-          }`}
-        >
-          {active && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
-        </div>
-      </div>
-    </button>
-  )
-}
-
 function StepCommunity({
   form,
   update,
@@ -792,11 +701,23 @@ function StepCommunity({
   )
 }
 
-function StepConfirm({ form }: { form: FormState }) {
+function StepConfirm({
+  form,
+  role,
+  isFirstUser,
+}: {
+  form: FormState
+  role: Role
+  isFirstUser: boolean
+}) {
   const community = COMMUNITIES.find((c) => c.key === form.community)
   const secondaryLabels = form.secondaryCommunities
     .map((k) => COMMUNITIES.find((c) => c.key === k)?.label)
     .filter(Boolean) as string[]
+
+  const roleValue =
+    role === "agro_executive" ? "AGRO EXECUTIVE" : "REGULAR USER"
+  const roleSecondary = isFirstUser ? "FOUNDING / AUTO-ASSIGNED" : "DEFAULT"
 
   return (
     <div className="space-y-2">
@@ -817,13 +738,11 @@ function StepConfirm({ form }: { form: FormState }) {
       />
       <SummaryRow
         index="03"
-        label="PATH"
-        value={form.role === "agro_executive" ? "OPERATE" : "EXPLORE"}
-        secondary={
-          form.role === "agro_executive" ? "AGRO EXECUTIVE" : "REGULAR USER"
-        }
+        label="ROLE"
+        value={roleValue}
+        secondary={roleSecondary}
       />
-      {form.role === "agro_executive" && (
+      {role === "agro_executive" && (
         <SummaryRow
           index="04"
           label="COMMUNITY"

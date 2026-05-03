@@ -33,17 +33,31 @@ export default async function OnboardingPage() {
     redirect("/dashboard")
   }
 
+  // First-user detection: only the very first user to complete onboarding
+  // becomes the founding Agro Executive. Everyone else registers as a regular
+  // 'user' and an admin can promote them later. The RPC enforces this server-
+  // side; we read it here purely to drive the UX (whether to render the
+  // /COMMUNITY step). A race is harmless: if two users tie, the RPC's
+  // advisory lock will force the loser to role='user' and clear community.
+  const { count: onboardedOthers } = await supabase
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("onboarding_completed", true)
+    .neq("id", user.id)
+
+  const isFirstUser = (onboardedOthers ?? 0) === 0
+
   return (
     <OnboardingFlow
       email={user.email ?? null}
       callsign={profile?.display_name ?? null}
       walletAddress={profile?.wallet_address ?? null}
+      isFirstUser={isFirstUser}
       defaults={{
         firstName: profile?.first_name ?? "",
         lastName: profile?.last_name ?? "",
         phone: profile?.phone ?? "",
         lga: profile?.lga ?? "",
-        role: (profile?.role as "user" | "agro_executive" | null) ?? null,
         community: (profile?.community as string | null) ?? null,
         secondaryCommunities:
           (profile?.secondary_communities as string[] | null) ?? [],
