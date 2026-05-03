@@ -11,12 +11,12 @@ import { createClient } from '@/lib/supabase/client'
 import { signOut } from '@/lib/auth/actions'
 
 const navItems = [
-  { id: '01', label: 'Doctrine' },
-  { id: '02', label: 'Infra' },
-  { id: '03', label: 'Communities' },
-  { id: '04', label: 'Chain' },
-  { id: '05', label: 'V1n3' },
-  { id: '06', label: 'Horizon' },
+  { id: '01', label: 'Doctrine', href: '#doctrine' },
+  { id: '02', label: 'Infra', href: '#infra' },
+  { id: '03', label: 'Communities', href: '/communities' },
+  { id: '04', label: 'Chain', href: '#chain' },
+  { id: '05', label: 'V1n3', href: '#v1n3' },
+  { id: '06', label: 'Horizon', href: '#horizon' },
 ]
 
 export function Header() {
@@ -130,7 +130,7 @@ export function Header() {
               {navItems.map((item) => (
                 <Link
                   key={item.id}
-                  href={`#${item.label.toLowerCase()}`}
+                  href={item.href}
                   className="flex items-center gap-1.5 px-3 xl:px-5 py-2 group"
                 >
                   <span className="mono-xs text-muted-foreground/70 group-hover:text-primary transition-colors">{item.id}</span>
@@ -180,7 +180,7 @@ export function Header() {
                     transition={{ delay: i * 0.05 }}
                   >
                     <Link
-                      href={`#${item.label.toLowerCase()}`}
+                      href={item.href}
                       onClick={() => setMobileOpen(false)}
                       className="flex items-center gap-3 px-3 sm:px-4 py-3 sm:py-3.5 border border-border rounded-[2px] card-hover"
                     >

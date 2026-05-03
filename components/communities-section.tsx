@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Leaf, Bird, ShoppingBag, Factory, Scale, Palmtree, Cpu, Heart,
@@ -162,7 +163,8 @@ export function CommunitiesSection() {
                 </div>
 
                 {/* Register Button */}
-                <button
+                <Link
+                  href="/communities"
                   className={`w-full flex items-center justify-center gap-2 sm:gap-2.5 px-4 sm:px-5 py-2.5 sm:py-3 border rounded-[4px] mono-sm text-foreground/90 transition-all group ${
                     selectedAccent === 'orange'
                       ? 'border-orange/30 hover:border-orange/60 hover:bg-orange-soft'
@@ -175,7 +177,7 @@ export function CommunitiesSection() {
                       selectedAccent === 'orange' ? 'text-orange' : 'text-primary'
                     }`}
                   />
-                </button>
+                </Link>
               </motion.div>
             </AnimatePresence>
           </div>
