@@ -23,6 +23,7 @@ export interface UserMenuProfile {
   walletAddress?: string | null
   agroId?: string | null
   role?: string | null
+  avatarUrl?: string | null
 }
 
 interface UserMenuProps {
@@ -113,10 +114,18 @@ export function UserMenu({ profile, onSignOut }: UserMenuProps) {
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        {/* Avatar tile with initials */}
-        <span className="hidden sm:flex items-center justify-center w-5 h-5 bg-primary/15 border border-primary/40 rounded-[2px] mono-xs text-primary text-[9px] font-bold">
-          {initialsFor(handle)}
-        </span>
+        {/* Avatar tile with image or initials */}
+        {profile.avatarUrl ? (
+          <img 
+            src={profile.avatarUrl} 
+            alt={handle}
+            className="hidden sm:block w-5 h-5 rounded-[2px] border border-primary/40 object-cover"
+          />
+        ) : (
+          <span className="hidden sm:flex items-center justify-center w-5 h-5 bg-primary/15 border border-primary/40 rounded-[2px] mono-xs text-primary text-[9px] font-bold">
+            {initialsFor(handle)}
+          </span>
+        )}
         <span className="status-dot status-dot-pulse sm:hidden" />
         <span className="mono-xs text-primary text-[10px] tracking-wider max-w-[110px] sm:max-w-[160px] truncate">
           {handle}
@@ -144,9 +153,17 @@ export function UserMenu({ profile, onSignOut }: UserMenuProps) {
                 <div className="flex items-center gap-3">
                   <div className="relative">
                     <div className="absolute inset-0 bg-primary/30 blur-md rounded-[2px]" />
-                    <div className="relative w-10 h-10 flex items-center justify-center bg-primary/10 border border-primary/50 rounded-[2px] mono text-primary text-sm font-bold">
-                      {initialsFor(handle)}
-                    </div>
+                    {profile.avatarUrl ? (
+                      <img 
+                        src={profile.avatarUrl} 
+                        alt={handle}
+                        className="relative w-10 h-10 rounded-[2px] border border-primary/50 object-cover"
+                      />
+                    ) : (
+                      <div className="relative w-10 h-10 flex items-center justify-center bg-primary/10 border border-primary/50 rounded-[2px] mono text-primary text-sm font-bold">
+                        {initialsFor(handle)}
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="mono-sm text-foreground text-[11px] truncate">

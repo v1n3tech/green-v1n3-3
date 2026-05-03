@@ -46,7 +46,7 @@ export function Header() {
     if (authUser) {
       const { data: row } = await supabase
         .from('profiles')
-        .select('wallet_address, display_name, agro_id, role')
+        .select('wallet_address, display_name, agro_id, role, avatar_url')
         .eq('id', authUser.id)
         .single()
 
@@ -56,6 +56,7 @@ export function Header() {
         displayName: row?.display_name ?? null,
         agroId: row?.agro_id ?? null,
         role: row?.role ?? null,
+        avatarUrl: row?.avatar_url ?? null,
       })
     } else {
       setProfile(null)
