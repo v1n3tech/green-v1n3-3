@@ -77,6 +77,7 @@ export function DashboardOverview({ profile }: DashboardOverviewProps) {
           value={profile.agroId ?? '—'}
           mono
           icon={<Sparkles className="w-3.5 h-3.5" />}
+          href="/dashboard/id"
         />
         <StatTile
           index="02"
@@ -286,6 +287,7 @@ function StatTile({
   icon,
   mono,
   accent,
+  href,
 }: {
   index: string
   label: string
@@ -293,9 +295,10 @@ function StatTile({
   icon: React.ReactNode
   mono?: boolean
   accent?: boolean
+  href?: string
 }) {
-  return (
-    <div className="bg-background border border-border rounded-[2px] p-3.5">
+  const content = (
+    <>
       <div className="flex items-center justify-between mb-3">
         <span className="mono-xs text-muted-foreground/60 text-[9px] tracking-wider">{index}</span>
         <span className={accent ? 'text-accent' : 'text-primary/70'}>{icon}</span>
@@ -304,6 +307,29 @@ function StatTile({
       <p className={`text-foreground tracking-wider truncate ${mono ? 'font-mono text-[13px]' : 'mono-sm text-[11px]'}`}>
         {value}
       </p>
+      {href && (
+        <div className="mt-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <span className="mono-xs text-primary text-[8px] tracking-wider">VIEW ID</span>
+          <ArrowUpRight className="w-2.5 h-2.5 text-primary" />
+        </div>
+      )}
+    </>
+  )
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="group bg-background border border-border rounded-[2px] p-3.5 transition-all hover:border-primary/40 hover:bg-primary/5 cursor-pointer"
+      >
+        {content}
+      </Link>
+    )
+  }
+
+  return (
+    <div className="bg-background border border-border rounded-[2px] p-3.5">
+      {content}
     </div>
   )
 }
