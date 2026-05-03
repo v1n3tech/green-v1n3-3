@@ -123,7 +123,7 @@ export function VisionSection() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: 0.25 }}
-                className="flex-1 border border-border/50 rounded-[3px] bg-card/20 p-3 sm:p-4 relative overflow-hidden"
+                className="flex-1 border border-border/50 rounded-[4px] bg-card/20 p-3 sm:p-4 relative overflow-hidden"
               >
                 <div className="absolute top-0 left-0 h-full w-px bg-orange/50" />
                 <div className="mono text-lg sm:text-2xl text-orange mb-0.5 sm:mb-1 tracking-wide">17 LGAS</div>

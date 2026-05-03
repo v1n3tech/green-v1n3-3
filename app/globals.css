@@ -26,7 +26,7 @@
   --border-strong: rgba(0, 200, 83, 0.40);
   --input: #0a0f0a;
   --ring: #00c853;
-  --radius: 3px;
+  --radius: 4px;
 }
 
 @theme inline {
@@ -54,9 +54,9 @@
   --color-border-strong: var(--border-strong);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-sm: 2px;
-  --radius-md: 3px;
-  --radius-lg: 3.5px;
+  --radius-sm: 4px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
 }
 
 @layer base {
@@ -233,7 +233,7 @@
   border: 1px solid var(--border-strong);
   padding: 5px 10px;
   font-size: 10px;
-  border-radius: 2px;
+  border-radius: 4px;
 }
 
 .badge-fill {
@@ -241,7 +241,7 @@
   color: var(--background);
   padding: 5px 10px;
   font-size: 10px;
-  border-radius: 2px;
+  border-radius: 4px;
 }
 
 /* Vertical text */
@@ -275,7 +275,7 @@
   padding: 10px 12px;
   background: var(--input);
   border: 1px solid var(--border);
-  border-radius: 2px;
+  border-radius: 4px;
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: 13px;
@@ -293,28 +293,17 @@
   background: var(--input);
 }
 
-/* Sleek media frame — unified image container language (≤5dp radius) */
+/* Sleek media frame — unified image container language (4dp radius) */
 .media-frame {
   position: relative;
-  border-radius: 5px;
+  border-radius: 4px;
   background: var(--card);
-  /* Layered hairlines: outer ring + inner highlight for sleek depth */
+  overflow: hidden;
   box-shadow:
     0 0 0 1px rgba(0, 200, 83, 0.14),
     inset 0 0 0 1px rgba(232, 240, 232, 0.04),
     0 30px 60px -30px rgba(0, 0, 0, 0.65);
   transition: box-shadow 0.5s ease;
-}
-.media-frame::before {
-  /* Soft top highlight — adds dimensionality without noise */
-  content: '';
-  position: absolute;
-  inset: 1px 1px auto 1px;
-  height: 50%;
-  border-radius: 4px 4px 0 0;
-  background: linear-gradient(180deg, rgba(232, 240, 232, 0.035), transparent);
-  pointer-events: none;
-  z-index: 1;
 }
 .media-frame:hover {
   box-shadow:
@@ -327,7 +316,6 @@
 /* Inner image plate — sits inside .media-frame */
 .media-plate {
   position: relative;
-  border-radius: 3px;
   overflow: hidden;
   background: var(--background);
 }
@@ -336,17 +324,23 @@
 .media-chrome {
   display: flex;
   align-items: center;
-  gap: 12px;
+  flex-wrap: nowrap;
+  gap: 10px;
   padding: 8px 12px;
+  min-width: 0;
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--foreground);
   background: linear-gradient(180deg, rgba(6, 9, 6, 0.6), rgba(6, 9, 6, 0.3));
+  white-space: nowrap;
+  overflow: hidden;
 }
-.media-chrome.top    { border-bottom: 1px solid var(--border); border-radius: 4px 4px 0 0; }
-.media-chrome.bottom { border-top: 1px solid var(--border);    border-radius: 0 0 4px 4px; }
+.media-chrome > * { flex-shrink: 0; }
+.media-chrome .chrome-spacer { flex: 1; min-width: 8px; flex-shrink: 1; }
+.media-chrome.top    { border-bottom: 1px solid var(--border); }
+.media-chrome.bottom { border-top: 1px solid var(--border); }
 
 /* Frame scanline overlay (very subtle, optional) */
 .frame-scanlines {

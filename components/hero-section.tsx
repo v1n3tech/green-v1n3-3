@@ -45,7 +45,7 @@ export function HeroSection() {
           <div className="px-2 sm:px-3 py-1 sm:py-1.5 border border-primary/50 rounded-[2px]">
             <span className="mono-xs text-primary">BUILT ON SOLANA</span>
           </div>
-          <div className="hidden sm:flex items-center gap-2.5 px-2.5 py-1 rounded-[3px] border border-orange/30 bg-orange-soft">
+          <div className="hidden sm:flex items-center gap-2.5 px-2.5 py-1 rounded-[4px] border border-orange/30 bg-orange-soft">
             <span className="relative flex h-1.5 w-1.5 items-center justify-center">
               <span className="absolute inset-0 rounded-full bg-orange rec-ping" />
               <span className="relative h-1.5 w-1.5 rounded-full bg-orange" />
@@ -137,14 +137,13 @@ export function HeroSection() {
                   <span className="text-orange text-[10px]">REC</span>
                 </div>
                 <span className="h-3 w-px bg-border" />
-                <span className="text-foreground/70 text-[10px]">EXEC—0001</span>
-                <span className="h-3 w-px bg-border" />
-                <span className="hidden sm:inline text-muted-foreground text-[10px]">CROP / 04</span>
-
-                <div className="ml-auto flex items-center gap-3">
-                  <span className="hidden sm:inline text-muted-foreground text-[10px]">FRAME {captureTime}</span>
-                  <span className="text-foreground/60 text-[10px]">01 / 14</span>
-                </div>
+                <span className="text-foreground/80 text-[10px]">EXEC—0001</span>
+                <span className="hidden md:inline h-3 w-px bg-border" />
+                <span className="hidden md:inline text-muted-foreground text-[10px]">CROP / 04</span>
+                <span className="chrome-spacer" />
+                <span className="hidden lg:inline text-muted-foreground text-[10px]">FRAME {captureTime}</span>
+                <span className="hidden lg:inline h-3 w-px bg-border" />
+                <span className="text-foreground/60 text-[10px]">01 / 14</span>
               </div>
 
               {/* Image plate */}
