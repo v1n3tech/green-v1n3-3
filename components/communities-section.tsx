@@ -41,8 +41,13 @@ const communityDescriptions: Record<string, string> = {
   'C-14': 'Transport, cold chain, warehousing.',
 }
 
+// Alternating filamental accent — even index = green, odd = orange
+const accentForIndex = (i: number): 'green' | 'orange' => (i % 2 === 0 ? 'green' : 'orange')
+
 export function CommunitiesSection() {
-  const [selected, setSelected] = useState(communities[4])
+  const [selectedIndex, setSelectedIndex] = useState(7)
+  const selected = communities[selectedIndex]
+  const selectedAccent = accentForIndex(selectedIndex)
 
   return (
     <section id="communities" className="py-12 sm:py-16 md:py-20 relative">
@@ -58,46 +63,58 @@ export function CommunitiesSection() {
           <div className="flex-1 py-2 sm:py-4 w-full max-w-full lg:max-w-[620px]">
             {/* Row 1 - 5 items */}
             <div className="flex flex-wrap justify-center gap-0.5 sm:gap-1 mb-[-12px] sm:mb-[-16px]">
-              {communities.slice(0, 5).map((community) => (
-                <HexCard
-                  key={community.id}
-                  community={community}
-                  isSelected={selected.id === community.id}
-                  onClick={() => setSelected(community)}
-                />
-              ))}
+              {communities.slice(0, 5).map((community, i) => {
+                const idx = i
+                return (
+                  <HexCard
+                    key={community.id}
+                    community={community}
+                    accent={accentForIndex(idx)}
+                    isSelected={selectedIndex === idx}
+                    onClick={() => setSelectedIndex(idx)}
+                  />
+                )
+              })}
             </div>
 
             {/* Row 2 - 4 items (offset) */}
             <div className="flex flex-wrap justify-center gap-0.5 sm:gap-1 mb-[-12px] sm:mb-[-16px]">
-              {communities.slice(5, 9).map((community) => (
-                <HexCard
-                  key={community.id}
-                  community={community}
-                  isSelected={selected.id === community.id}
-                  onClick={() => setSelected(community)}
-                />
-              ))}
+              {communities.slice(5, 9).map((community, i) => {
+                const idx = i + 5
+                return (
+                  <HexCard
+                    key={community.id}
+                    community={community}
+                    accent={accentForIndex(idx)}
+                    isSelected={selectedIndex === idx}
+                    onClick={() => setSelectedIndex(idx)}
+                  />
+                )
+              })}
             </div>
 
             {/* Row 3 - 5 items */}
             <div className="flex flex-wrap justify-center gap-0.5 sm:gap-1">
-              {communities.slice(9, 14).map((community) => (
-                <HexCard
-                  key={community.id}
-                  community={community}
-                  isSelected={selected.id === community.id}
-                  onClick={() => setSelected(community)}
-                />
-              ))}
+              {communities.slice(9, 14).map((community, i) => {
+                const idx = i + 9
+                return (
+                  <HexCard
+                    key={community.id}
+                    community={community}
+                    accent={accentForIndex(idx)}
+                    isSelected={selectedIndex === idx}
+                    onClick={() => setSelectedIndex(idx)}
+                  />
+                )
+              })}
             </div>
           </div>
 
           {/* Selected Community Panel - Beside Hex Grid */}
-          <div className="w-full lg:w-[320px] xl:w-[340px] border border-border rounded-[3px] bg-card/50 flex-shrink-0 lg:sticky lg:top-[140px]">
+          <div className="w-full lg:w-[320px] xl:w-[340px] border border-border rounded-[4px] bg-card/50 flex-shrink-0 lg:sticky lg:top-[140px]">
             <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-border flex items-center justify-between">
               <span className="mono-xs text-muted-foreground">SELECTED : V1N3</span>
-              <span className="mono-xs text-orange">{selected.id}</span>
+              <span className={`mono-xs ${selectedAccent === 'orange' ? 'text-orange' : 'text-primary'}`}>{selected.id}</span>
             </div>
 
             <AnimatePresence mode="wait">
@@ -111,8 +128,14 @@ export function CommunitiesSection() {
               >
                 {/* Icon and Title */}
                 <div className="flex items-start gap-3 sm:gap-4 mb-5 sm:mb-6">
-                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-[4px] bg-orange-soft border border-orange/25 flex items-center justify-center flex-shrink-0">
-                    <selected.icon className="w-4 h-4 sm:w-5 sm:h-5 text-orange" />
+                  <div
+                    className={`w-10 h-10 sm:w-11 sm:h-11 rounded-[4px] flex items-center justify-center flex-shrink-0 border ${
+                      selectedAccent === 'orange'
+                        ? 'bg-orange-soft border-orange/25'
+                        : 'bg-primary/10 border-primary/25'
+                    }`}
+                  >
+                    <selected.icon className={`w-4 h-4 sm:w-5 sm:h-5 ${selectedAccent === 'orange' ? 'text-orange' : 'text-primary'}`} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="mono text-base sm:text-lg text-foreground leading-tight">{selected.name}</h3>
@@ -124,24 +147,34 @@ export function CommunitiesSection() {
 
                 {/* Stats */}
                 <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-5 sm:mb-6">
-                  <div className="p-2.5 sm:p-3 border border-border rounded-[2px] bg-background/50">
+                  <div className="p-2.5 sm:p-3 border border-border rounded-[4px] bg-background/50">
                     <div className="mono text-sm sm:text-base text-foreground">{selected.members}</div>
                     <div className="mono-xs text-muted-foreground mt-0.5 text-[9px] sm:text-[10px]">MEMBERS</div>
                   </div>
-                  <div className="p-2.5 sm:p-3 border border-border rounded-[2px] bg-background/50">
+                  <div className="p-2.5 sm:p-3 border border-border rounded-[4px] bg-background/50">
                     <div className="mono text-sm sm:text-base text-foreground">{selected.gcms}</div>
                     <div className="mono-xs text-muted-foreground mt-0.5 text-[9px] sm:text-[10px]">GCMS</div>
                   </div>
-                  <div className="p-2.5 sm:p-3 border border-border rounded-[2px] bg-background/50">
+                  <div className="p-2.5 sm:p-3 border border-border rounded-[4px] bg-background/50">
                     <div className="mono text-sm sm:text-base text-foreground">{selected.rating}</div>
                     <div className="mono-xs text-muted-foreground mt-0.5 text-[9px] sm:text-[10px]">AVG RATING</div>
                   </div>
                 </div>
 
                 {/* Register Button */}
-                <button className="w-full flex items-center justify-center gap-2 sm:gap-2.5 px-4 sm:px-5 py-2.5 sm:py-3 border border-border hover:border-primary/50 hover:bg-primary/5 rounded-[2px] mono-sm text-foreground/90 transition-all group">
+                <button
+                  className={`w-full flex items-center justify-center gap-2 sm:gap-2.5 px-4 sm:px-5 py-2.5 sm:py-3 border rounded-[4px] mono-sm text-foreground/90 transition-all group ${
+                    selectedAccent === 'orange'
+                      ? 'border-orange/30 hover:border-orange/60 hover:bg-orange-soft'
+                      : 'border-border hover:border-primary/50 hover:bg-primary/5'
+                  }`}
+                >
                   <span className="text-xs sm:text-sm">REGISTER HERE</span>
-                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary group-hover:translate-x-0.5 transition-transform" />
+                  <ArrowRight
+                    className={`w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-0.5 transition-transform ${
+                      selectedAccent === 'orange' ? 'text-orange' : 'text-primary'
+                    }`}
+                  />
                 </button>
               </motion.div>
             </AnimatePresence>
@@ -154,43 +187,64 @@ export function CommunitiesSection() {
 
 interface HexCardProps {
   community: typeof communities[0]
+  accent: 'green' | 'orange'
   isSelected: boolean
   onClick: () => void
 }
 
-function HexCard({ community, isSelected, onClick }: HexCardProps) {
+function HexCard({ community, accent, isSelected, onClick }: HexCardProps) {
   const Icon = community.icon
+  const isOrange = accent === 'orange'
+
+  // Filamental palette — thin threads, low-opacity strokes, near-transparent fills
+  const stroke = isSelected
+    ? (isOrange ? '#ff6b1a' : '#00c853')
+    : (isOrange ? 'rgba(255, 107, 26, 0.32)' : 'rgba(0, 200, 83, 0.30)')
+
+  const fill = isSelected
+    ? (isOrange ? 'rgba(255, 107, 26, 0.10)' : 'rgba(0, 200, 83, 0.08)')
+    : '#060906'
+
+  const idColor = isSelected
+    ? (isOrange ? 'text-orange' : 'text-primary')
+    : 'text-muted-foreground'
+
+  const iconColor = isSelected
+    ? (isOrange ? 'text-orange' : 'text-primary')
+    : (isOrange ? 'text-orange/70' : 'text-primary/70')
 
   return (
     <button
       onClick={onClick}
-      className="relative w-[70px] h-[82px] sm:w-[85px] sm:h-[98px] md:w-[95px] md:h-[110px] flex flex-col items-center justify-center transition-transform hover:scale-105 active:scale-100"
+      className="relative w-[70px] h-[82px] sm:w-[85px] sm:h-[98px] md:w-[95px] md:h-[110px] flex flex-col items-center justify-center transition-transform hover:scale-105 active:scale-100 group"
     >
-      {/* Hexagon Shape */}
+      {/* Hexagon Shape — filamental thread */}
       <svg
         viewBox="0 0 100 115"
         className="absolute inset-0 w-full h-full"
       >
         <polygon
           points="50,0 100,28.75 100,86.25 50,115 0,86.25 0,28.75"
-          className={`
-            transition-all duration-200
-            ${isSelected
-              ? 'fill-[rgba(255,107,26,0.14)] stroke-orange'
-              : 'fill-[#060906] stroke-[rgba(0,200,83,0.15)] hover:stroke-primary/40'
-            }
-          `}
-          strokeWidth="1.5"
+          fill={fill}
+          stroke={stroke}
+          strokeWidth={isSelected ? 1.5 : 1}
+          className={`transition-all duration-200 ${
+            !isSelected
+              ? isOrange
+                ? 'group-hover:[stroke:#ff6b1a]'
+                : 'group-hover:[stroke:#00c853]'
+              : ''
+          }`}
         />
       </svg>
 
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center gap-0.5 sm:gap-1 px-2 sm:px-3 text-center">
-        <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${isSelected ? 'text-orange' : 'text-foreground/70'} transition-colors`} />
-        <span className={`mono-xs leading-tight text-[8px] sm:text-[9px] md:text-[10px] ${isSelected ? 'text-foreground' : 'text-foreground/80'}`}>
+        <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${iconColor} transition-colors`} />
+        <span className={`mono-xs leading-tight text-[8px] sm:text-[9px] md:text-[10px] ${isSelected ? 'text-foreground' : 'text-foreground/75'}`}>
           {community.name}
         </span>
-        <span className={`mono-xs text-[8px] sm:text-[9px] md:text-[10px] ${isSelected ? 'text-orange/80' : 'text-muted-foreground'}`}>
+        <span className={`mono-xs text-[8px] sm:text-[9px] md:text-[10px] ${idColor}`}>
           {community.id}
         </span>
       </div>
