@@ -115,7 +115,7 @@ export function HeroSection() {
             </div>
           </motion.div>
 
-          {/* Right: Featured Image */}
+          {/* Right: Featured Image — Field Credential Viewer */}
           <motion.div
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -124,76 +124,130 @@ export function HeroSection() {
           >
             {/* Vertical Label */}
             <div className="absolute -left-8 lg:-left-10 top-1/2 -translate-y-1/2 hidden xl:block">
-              <span 
-                className="mono-xs text-muted-foreground/50 tracking-widest"
+              <span
+                className="mono-xs text-muted-foreground/40 tracking-[0.3em]"
                 style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
               >
-                EXEC : 01 / PLATEAU PILOT
+                EXEC—01 / PLATEAU PILOT
               </span>
             </div>
 
-            {/* Image Container with Sleek Frame */}
+            {/* Top Meta Strip */}
+            <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-border">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-1.5 w-1.5 items-center justify-center">
+                    <span className="absolute inset-0 rounded-full bg-orange rec-ping" />
+                    <span className="relative h-1.5 w-1.5 rounded-full bg-orange" />
+                  </span>
+                  <span className="mono-xs text-orange tracking-[0.12em]">REC</span>
+                </div>
+                <span className="mono-xs text-muted-foreground hidden sm:inline">FRAME / {captureTime}</span>
+              </div>
+              <div className="flex items-center gap-3 sm:gap-4">
+                <span className="mono-xs text-muted-foreground hidden sm:inline">CH—01</span>
+                <span className="mono-xs text-foreground/70">AGV—0001.A</span>
+              </div>
+            </div>
+
+            {/* Image Frame */}
             <div className="relative group">
-              {/* Main Frame Border - Clean Green */}
-              <div className="absolute -inset-[2px] border border-primary/80 rounded-[2px] z-0" />
-              
-              {/* Corner Brackets - Refined */}
-              <div className="absolute -top-1 -left-1 sm:-top-1.5 sm:-left-1.5 w-3 h-3 sm:w-4 sm:h-4 z-20">
-                <div className="absolute top-0 left-0 w-full h-[1.5px] sm:h-[2px] bg-primary" />
-                <div className="absolute top-0 left-0 w-[1.5px] sm:w-[2px] h-full bg-primary" />
-              </div>
-              <div className="absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 w-3 h-3 sm:w-4 sm:h-4 z-20">
-                <div className="absolute top-0 right-0 w-full h-[1.5px] sm:h-[2px] bg-primary" />
-                <div className="absolute top-0 right-0 w-[1.5px] sm:w-[2px] h-full bg-primary" />
-              </div>
-              <div className="absolute -bottom-1 -left-1 sm:-bottom-1.5 sm:-left-1.5 w-3 h-3 sm:w-4 sm:h-4 z-20">
-                <div className="absolute bottom-0 left-0 w-full h-[1.5px] sm:h-[2px] bg-primary" />
-                <div className="absolute bottom-0 left-0 w-[1.5px] sm:w-[2px] h-full bg-primary" />
-              </div>
-              <div className="absolute -bottom-1 -right-1 sm:-bottom-1.5 sm:-right-1.5 w-3 h-3 sm:w-4 sm:h-4 z-20">
-                <div className="absolute bottom-0 right-0 w-full h-[1.5px] sm:h-[2px] bg-primary" />
-                <div className="absolute bottom-0 right-0 w-[1.5px] sm:w-[2px] h-full bg-primary" />
-              </div>
+              {/* Outer offset hairline (subtle depth) */}
+              <div className="pointer-events-none absolute -inset-2 sm:-inset-2.5 border border-border rounded-[3px] z-0" />
 
-              {/* Glow Effect on Hover */}
-              <div className="absolute -inset-1 bg-primary/5 rounded-[3px] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-0" />
+              {/* Side accent bars — sleek green/orange anchors */}
+              <div className="pointer-events-none absolute -left-2 sm:-left-2.5 top-1/2 -translate-y-1/2 h-10 w-px bg-primary/60 z-10" />
+              <div className="pointer-events-none absolute -right-2 sm:-right-2.5 top-1/2 -translate-y-1/2 h-10 w-px bg-orange/70 z-10" />
 
-              <div className="relative aspect-[4/3] overflow-hidden rounded-[2px] bg-card">
+              {/* Crosshair corner ticks */}
+              <span className="crosshair-tick tl" aria-hidden />
+              <span className="crosshair-tick tr" aria-hidden />
+              <span className="crosshair-tick bl" aria-hidden />
+              <span className="crosshair-tick br" aria-hidden />
+
+              {/* Hover glow */}
+              <div className="pointer-events-none absolute -inset-3 bg-primary/[0.06] rounded-[4px] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 z-0" />
+
+              <div className="relative aspect-[4/3] overflow-hidden rounded-[2px] bg-card border border-border-strong">
                 <Image
                   src="/images/hero-farmer.jpg"
-                  alt="Agro Executive - Bukola O."
+                  alt="Agro Executive — Amina Yusuf"
                   fill
-                  className="object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+                  className="object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-[1.03]"
                   priority
                 />
-                
-                {/* Vignette Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-background/20" />
-                <div className="absolute inset-0 bg-gradient-to-r from-background/20 via-transparent to-background/20" />
-                
-                {/* Top Labels */}
-                <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 bg-background/90 backdrop-blur-md rounded-[2px] border border-border/50">
-                    <span className="status-dot status-dot-pulse" />
-                    <span className="mono-xs text-foreground text-[9px] sm:text-[10px]">LIVE / {captureTime}</span>
-                  </div>
-                  <div className="px-2 sm:px-3 py-1.5 sm:py-2 bg-card/90 backdrop-blur-md rounded-[2px] border border-border/50 hidden sm:block">
-                    <span className="mono-xs text-foreground/80">PHOTO : BUKOLA O.</span>
+
+                {/* Subtle scanlines */}
+                <div className="pointer-events-none absolute inset-0 frame-scanlines opacity-40 mix-blend-overlay" />
+
+                {/* Vignette / cinematic falloff */}
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-background/30" />
+
+                {/* Top-right: frame counter chip */}
+                <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10">
+                  <div className="flex items-center gap-2 px-2 py-1 bg-background/70 backdrop-blur-md border border-border rounded-[2px]">
+                    <span className="mono-xs text-foreground/80 text-[9px] sm:text-[10px]">01 / 14</span>
+                    <span className="h-2.5 w-px bg-border" />
+                    <span className="mono-xs text-orange text-[9px] sm:text-[10px]">LIVE</span>
                   </div>
                 </div>
 
-                {/* Bottom Info */}
-                <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 right-2 sm:right-4">
-                  <div className="mono-xs text-primary mb-1 sm:mb-1.5 text-[9px] sm:text-[10px]">AGRO EXECUTIVE #0001</div>
-                  <div className="text-sm sm:text-lg font-mono text-foreground tracking-wide">Amina Yusuf</div>
-                  <div className="mono-xs text-foreground/40 mt-0.5 sm:mt-1 text-[9px] sm:text-[10px]">CROP FARMING • JOS SOUTH</div>
+                {/* Top-left: discipline tag */}
+                <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10">
+                  <div className="flex items-center gap-1.5 px-2 py-1 bg-background/70 backdrop-blur-md border border-border rounded-[2px]">
+                    <span className="w-1 h-1 rounded-full bg-primary" />
+                    <span className="mono-xs text-foreground/80 text-[9px] sm:text-[10px]">CROP / 04</span>
+                  </div>
+                </div>
+
+                {/* Bottom credential block */}
+                <div className="absolute inset-x-0 bottom-0 px-3 pb-3 sm:px-5 sm:pb-5 pt-10 z-10">
+                  <div className="flex items-end justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 mb-1.5 sm:mb-2">
+                        <span className="h-px w-4 sm:w-6 bg-orange" />
+                        <span className="mono-xs text-orange text-[9px] sm:text-[10px] tracking-[0.14em]">EXEC // 0001</span>
+                      </div>
+                      <div className="font-mono text-base sm:text-xl text-foreground tracking-wide leading-none">
+                        Amina Yusuf
+                      </div>
+                      <div className="mono-xs text-foreground/45 mt-1.5 text-[9px] sm:text-[10px]">
+                        CROP FARMING — JOS SOUTH
+                      </div>
+                    </div>
+
+                    {/* Right ID block (hidden on small) */}
+                    <div className="hidden sm:flex flex-col items-end gap-0.5 shrink-0">
+                      <span className="mono-xs text-muted-foreground text-[9px]">ID—HASH</span>
+                      <span className="mono-xs text-foreground/70 text-[10px]">0xA7F…91D</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Recording Coordinates */}
-            <div className="absolute -bottom-5 sm:-bottom-6 right-0 hidden sm:block">
-              <span className="mono-xs text-muted-foreground">RECORDING  N 9°58&apos; / E 8°53&apos;</span>
+            {/* Bottom Telemetry Strip */}
+            <div className="mt-2.5 grid grid-cols-4 gap-px bg-border border border-border rounded-[2px] overflow-hidden">
+              <div className="bg-background px-2.5 py-2 sm:px-3 sm:py-2.5">
+                <div className="mono-xs text-muted-foreground text-[8px] sm:text-[9px]">LAT</div>
+                <div className="mono-xs text-foreground/85 mt-1 text-[10px] sm:text-[11px]">N 9°58&apos;</div>
+              </div>
+              <div className="bg-background px-2.5 py-2 sm:px-3 sm:py-2.5">
+                <div className="mono-xs text-muted-foreground text-[8px] sm:text-[9px]">LON</div>
+                <div className="mono-xs text-foreground/85 mt-1 text-[10px] sm:text-[11px]">E 8°53&apos;</div>
+              </div>
+              <div className="bg-background px-2.5 py-2 sm:px-3 sm:py-2.5">
+                <div className="mono-xs text-muted-foreground text-[8px] sm:text-[9px]">ELEV</div>
+                <div className="mono-xs text-foreground/85 mt-1 text-[10px] sm:text-[11px]">1,217 M</div>
+              </div>
+              <div className="bg-background px-2.5 py-2 sm:px-3 sm:py-2.5">
+                <div className="mono-xs text-muted-foreground text-[8px] sm:text-[9px]">STATUS</div>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="h-1 w-1 rounded-full bg-orange" />
+                  <span className="mono-xs text-orange text-[10px] sm:text-[11px]">ACTIVE</span>
+                </div>
+              </div>
             </div>
           </motion.div>
         </div>
