@@ -45,7 +45,7 @@ export function HeroSection() {
           <div className="px-2 sm:px-3 py-1 sm:py-1.5 border border-primary/50 rounded-[2px]">
             <span className="mono-xs text-primary">BUILT ON SOLANA</span>
           </div>
-          <div className="hidden sm:flex items-center gap-2.5 px-2.5 py-1 rounded-full border border-orange/25 bg-orange-soft">
+          <div className="hidden sm:flex items-center gap-2.5 px-2.5 py-1 rounded-[3px] border border-orange/30 bg-orange-soft">
             <span className="relative flex h-1.5 w-1.5 items-center justify-center">
               <span className="absolute inset-0 rounded-full bg-orange rec-ping" />
               <span className="relative h-1.5 w-1.5 rounded-full bg-orange" />
@@ -118,42 +118,36 @@ export function HeroSection() {
             </div>
           </motion.div>
 
-          {/* Right: Featured Image — Sleek Media Frame */}
+          {/* Right: Featured Image — Sleek Instrument Frame */}
           <motion.div
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.4, duration: 0.6 }}
             className="relative"
           >
-            {/* Visible vertical spec rail (replaces faint floating text) */}
-            <div className="absolute -left-7 lg:-left-9 top-8 hidden xl:flex spec-rail">
-              <span className="spec-dot orange" />
-              <span className="spec-text">EXEC—01</span>
-              <span className="h-3 w-px bg-border" />
-              <span className="spec-text">PLATEAU</span>
-              <span className="spec-dot" />
-            </div>
-
-            {/* Top Meta Strip */}
-            <div className="flex items-center justify-between pb-3 mb-3">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-orange-soft border border-orange/30">
+            {/* Single sleek instrument frame: titlebar + image + footer */}
+            <div className="media-frame group">
+              {/* Inset titlebar */}
+              <div className="media-chrome top">
+                <div className="flex items-center gap-2">
                   <span className="relative flex h-1.5 w-1.5 items-center justify-center">
                     <span className="absolute inset-0 rounded-full bg-orange rec-ping" />
                     <span className="relative h-1.5 w-1.5 rounded-full bg-orange" />
                   </span>
-                  <span className="mono-xs text-orange tracking-[0.14em] text-[9px] sm:text-[10px]">REC</span>
+                  <span className="text-orange text-[10px]">REC</span>
                 </div>
-                <span className="mono-xs text-muted-foreground hidden sm:inline">FRAME / {captureTime}</span>
-              </div>
-              <div className="flex items-center gap-3 sm:gap-4">
-                <span className="mono-xs text-muted-foreground hidden sm:inline">CH—01</span>
-                <span className="mono-xs text-foreground/70">AGV—0001.A</span>
-              </div>
-            </div>
+                <span className="h-3 w-px bg-border" />
+                <span className="text-foreground/70 text-[10px]">EXEC—0001</span>
+                <span className="h-3 w-px bg-border" />
+                <span className="hidden sm:inline text-muted-foreground text-[10px]">CROP / 04</span>
 
-            {/* Sleek Media Frame */}
-            <div className="media-frame group p-1.5 sm:p-2">
+                <div className="ml-auto flex items-center gap-3">
+                  <span className="hidden sm:inline text-muted-foreground text-[10px]">FRAME {captureTime}</span>
+                  <span className="text-foreground/60 text-[10px]">01 / 14</span>
+                </div>
+              </div>
+
+              {/* Image plate */}
               <div className="media-plate aspect-[4/3]">
                 <Image
                   src="/images/hero-farmer.jpg"
@@ -162,81 +156,59 @@ export function HeroSection() {
                   className="object-cover transition-transform duration-[1.4s] ease-out group-hover:scale-[1.04]"
                   priority
                 />
-
                 {/* Subtle scanlines */}
-                <div className="pointer-events-none absolute inset-0 frame-scanlines opacity-30 mix-blend-overlay" />
+                <div className="pointer-events-none absolute inset-0 frame-scanlines opacity-25 mix-blend-overlay" />
+                {/* Bottom cinematic falloff */}
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-background/60 to-transparent" />
 
-                {/* Cinematic falloff */}
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background via-background/10 to-transparent" />
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-background/40" />
+                {/* Inset name overlay (anchored, doesn't violate radius) */}
+                <div className="absolute inset-x-0 bottom-0 px-4 pb-4 sm:px-5 sm:pb-5 z-10">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="h-px w-6 bg-orange" />
+                    <span className="mono-xs text-orange tracking-[0.18em] text-[10px]">EXEC // 0001</span>
+                  </div>
+                  <div className="font-mono text-xl sm:text-2xl text-foreground tracking-wide leading-none">
+                    Amina Yusuf
+                  </div>
+                  <div className="mono-xs text-foreground/55 mt-1.5 text-[10px]">
+                    CROP FARMING — JOS SOUTH
+                  </div>
+                </div>
+              </div>
 
-                {/* Top-right: frame counter chip */}
-                <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10">
-                  <div className="flex items-center gap-2 px-2.5 py-1 bg-background/60 backdrop-blur-md border border-border rounded-full">
-                    <span className="mono-xs text-foreground/80 text-[9px] sm:text-[10px]">01 / 14</span>
-                    <span className="h-2.5 w-px bg-border" />
-                    <span className="flex items-center gap-1">
+              {/* Inset footer telemetry */}
+              <div className="media-chrome bottom !py-0 !gap-0 !px-0">
+                <div className="grid grid-cols-4 w-full divide-x divide-border">
+                  <div className="px-3 py-2.5">
+                    <div className="text-muted-foreground text-[9px]">LAT</div>
+                    <div className="text-foreground/85 mt-0.5 text-[10px] normal-case tracking-normal">N 9°58&apos;</div>
+                  </div>
+                  <div className="px-3 py-2.5">
+                    <div className="text-muted-foreground text-[9px]">LON</div>
+                    <div className="text-foreground/85 mt-0.5 text-[10px] normal-case tracking-normal">E 8°53&apos;</div>
+                  </div>
+                  <div className="px-3 py-2.5">
+                    <div className="text-muted-foreground text-[9px]">ELEV</div>
+                    <div className="text-foreground/85 mt-0.5 text-[10px] normal-case tracking-normal">1,217 M</div>
+                  </div>
+                  <div className="px-3 py-2.5">
+                    <div className="text-muted-foreground text-[9px]">STATUS</div>
+                    <div className="flex items-center gap-1.5 mt-0.5">
                       <span className="h-1 w-1 rounded-full bg-orange" />
-                      <span className="mono-xs text-orange text-[9px] sm:text-[10px]">LIVE</span>
-                    </span>
-                  </div>
-                </div>
-
-                {/* Top-left: discipline tag */}
-                <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10">
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 bg-background/60 backdrop-blur-md border border-border rounded-full">
-                    <span className="w-1 h-1 rounded-full bg-primary" />
-                    <span className="mono-xs text-foreground/80 text-[9px] sm:text-[10px]">CROP / 04</span>
-                  </div>
-                </div>
-
-                {/* Bottom credential block */}
-                <div className="absolute inset-x-0 bottom-0 px-4 pb-4 sm:px-6 sm:pb-5 pt-12 z-10">
-                  <div className="flex items-end justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-2 sm:mb-2.5">
-                        <span className="h-px w-5 sm:w-7 bg-orange" />
-                        <span className="mono-xs text-orange text-[9px] sm:text-[10px] tracking-[0.18em]">EXEC // 0001</span>
-                      </div>
-                      <div className="font-mono text-lg sm:text-2xl text-foreground tracking-wide leading-none">
-                        Amina Yusuf
-                      </div>
-                      <div className="mono-xs text-foreground/55 mt-2 text-[9px] sm:text-[10px]">
-                        CROP FARMING — JOS SOUTH
-                      </div>
-                    </div>
-
-                    {/* Right ID block (hidden on small) */}
-                    <div className="hidden sm:flex flex-col items-end gap-1 shrink-0">
-                      <span className="mono-xs text-muted-foreground text-[9px]">ID—HASH</span>
-                      <span className="mono-xs text-foreground/70 text-[10px]">0xA7F…91D</span>
+                      <span className="text-orange text-[10px]">ACTIVE</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Bottom Telemetry Strip */}
-            <div className="mt-3 grid grid-cols-4 gap-px bg-border/60 border border-border rounded-lg overflow-hidden">
-              <div className="bg-card/40 px-3 py-2.5">
-                <div className="mono-xs text-muted-foreground text-[8px] sm:text-[9px]">LAT</div>
-                <div className="mono-xs text-foreground/85 mt-1 text-[10px] sm:text-[11px]">N 9°58&apos;</div>
+            {/* Clean caption below — fully visible, no awkward floating text */}
+            <div className="mt-3 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="h-px w-5 bg-orange shrink-0" />
+                <span className="mono-xs text-foreground/70 truncate">PHASE 01 — PLATEAU PILOT</span>
               </div>
-              <div className="bg-card/40 px-3 py-2.5">
-                <div className="mono-xs text-muted-foreground text-[8px] sm:text-[9px]">LON</div>
-                <div className="mono-xs text-foreground/85 mt-1 text-[10px] sm:text-[11px]">E 8°53&apos;</div>
-              </div>
-              <div className="bg-card/40 px-3 py-2.5">
-                <div className="mono-xs text-muted-foreground text-[8px] sm:text-[9px]">ELEV</div>
-                <div className="mono-xs text-foreground/85 mt-1 text-[10px] sm:text-[11px]">1,217 M</div>
-              </div>
-              <div className="bg-card/40 px-3 py-2.5">
-                <div className="mono-xs text-muted-foreground text-[8px] sm:text-[9px]">STATUS</div>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <span className="h-1 w-1 rounded-full bg-orange" />
-                  <span className="mono-xs text-orange text-[10px] sm:text-[11px]">ACTIVE</span>
-                </div>
-              </div>
+              <span className="mono-xs text-muted-foreground hidden sm:inline">ID 0xA7F…91D</span>
             </div>
           </motion.div>
         </div>

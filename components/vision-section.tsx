@@ -23,7 +23,16 @@ export function VisionSection() {
             viewport={{ once: true }}
             className="w-full lg:w-[45%] flex-shrink-0"
           >
-            <div className="media-frame group p-1.5 sm:p-2">
+            <div className="media-frame group">
+              {/* Inset titlebar */}
+              <div className="media-chrome top">
+                <span className="w-1 h-1 rounded-full bg-primary" />
+                <span className="text-foreground/70 text-[10px]">FIELD / 01</span>
+                <span className="h-3 w-px bg-border" />
+                <span className="text-muted-foreground text-[10px] hidden sm:inline">MECHANIZATION</span>
+                <span className="ml-auto text-muted-foreground text-[10px]">PLATEAU</span>
+              </div>
+
               <div className="media-plate aspect-[4/5] sm:aspect-[3/4] lg:aspect-[4/5]">
                 <Image
                   src="/images/tractor-farm.jpg"
@@ -31,13 +40,7 @@ export function VisionSection() {
                   fill
                   className="object-cover transition-transform duration-[1.4s] ease-out group-hover:scale-[1.04]"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-background/10" />
-
-                {/* Bottom inline tag */}
-                <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 z-10 flex items-center gap-2 px-2.5 py-1 bg-background/60 backdrop-blur-md border border-border rounded-full">
-                  <span className="w-1 h-1 rounded-full bg-primary" />
-                  <span className="mono-xs text-foreground/80 text-[9px] sm:text-[10px]">FIELD / 01</span>
-                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-background/50 via-transparent to-transparent" />
               </div>
             </div>
           </motion.div>
@@ -55,7 +58,14 @@ export function VisionSection() {
                 transition={{ delay: 0.1 }}
                 className="w-full sm:w-[55%] relative"
               >
-                <div className="media-frame group p-1.5">
+                <div className="media-frame group">
+                  <div className="media-chrome top">
+                    <span className="w-1 h-1 rounded-full bg-orange" />
+                    <span className="text-orange text-[10px]">TECH / 07</span>
+                    <span className="h-3 w-px bg-border" />
+                    <span className="text-muted-foreground text-[10px] hidden sm:inline">PRECISION</span>
+                    <span className="ml-auto text-muted-foreground text-[10px]">DRONE—04</span>
+                  </div>
                   <div className="media-plate aspect-[16/10]">
                     <Image
                       src="/images/agro-tech.jpg"
@@ -63,13 +73,6 @@ export function VisionSection() {
                       fill
                       className="object-cover transition-transform duration-[1.4s] ease-out group-hover:scale-[1.04]"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-transparent to-background/30" />
-
-                    {/* Top-right tag */}
-                    <div className="absolute top-2.5 right-2.5 z-10 flex items-center gap-1.5 px-2 py-1 bg-background/60 backdrop-blur-md border border-border rounded-full">
-                      <span className="w-1 h-1 rounded-full bg-orange" />
-                      <span className="mono-xs text-orange text-[9px]">TECH / 07</span>
-                    </div>
                   </div>
                 </div>
               </motion.div>

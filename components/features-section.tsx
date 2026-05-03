@@ -36,7 +36,7 @@ export function FeaturesSection() {
               {/* Profile Preview - 3 Panel Gallery with Real Images */}
               <div className="flex gap-1.5 sm:gap-2 mb-4 sm:mb-5 h-[120px] sm:h-[140px] md:h-[160px]">
                 {/* Left - Muted Farm Panel */}
-                <div className="flex-[0.8] rounded-md relative overflow-hidden ring-1 ring-border opacity-60">
+                <div className="flex-[0.8] rounded-[3px] relative overflow-hidden ring-1 ring-border opacity-60">
                   <Image
                     src="/images/hero-farmer.jpg"
                     alt="Farm gallery"
@@ -47,7 +47,7 @@ export function FeaturesSection() {
                 </div>
 
                 {/* Center - Active Profile Image */}
-                <div className="flex-[1.4] rounded-md relative overflow-hidden ring-1 ring-primary/50 shadow-[0_0_24px_-8px_rgba(0,200,83,0.35)]">
+                <div className="flex-[1.4] rounded-[3px] relative overflow-hidden ring-1 ring-primary/50 shadow-[0_0_24px_-8px_rgba(0,200,83,0.35)]">
                   <Image
                     src="/images/farm-field.jpg"
                     alt="Agro Executive Profile Preview"
@@ -56,14 +56,14 @@ export function FeaturesSection() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent" />
                   {/* Active indicator */}
-                  <div className="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-background/70 backdrop-blur-md border border-orange/30">
+                  <div className="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 rounded-[3px] bg-background/70 backdrop-blur-md border border-orange/30">
                     <span className="h-1 w-1 rounded-full bg-orange" />
                     <span className="mono-xs text-orange text-[8px] tracking-wider">ACTIVE</span>
                   </div>
                 </div>
 
                 {/* Right - Muted Tech Panel */}
-                <div className="flex-[0.8] rounded-md relative overflow-hidden ring-1 ring-border opacity-60">
+                <div className="flex-[0.8] rounded-[3px] relative overflow-hidden ring-1 ring-border opacity-60">
                   <Image
                     src="/images/agro-tech.jpg"
                     alt="Agro tech"
