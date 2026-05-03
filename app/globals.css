@@ -293,7 +293,50 @@
   background: var(--input);
 }
 
-/* Hero frame scanline overlay (very subtle) */
+/* Sleek media frame — unified image container language across the app */
+.media-frame {
+  position: relative;
+  border-radius: 10px;
+  background: var(--card);
+  /* Layered hairlines: subtle outer ring + inner highlight for depth */
+  box-shadow:
+    0 0 0 1px rgba(0, 200, 83, 0.12),
+    inset 0 0 0 1px rgba(232, 240, 232, 0.04),
+    0 24px 48px -24px rgba(0, 0, 0, 0.6);
+  transition: box-shadow 0.4s ease, transform 0.4s ease;
+}
+.media-frame::before {
+  /* Soft top highlight (sleek, not sharp) */
+  content: '';
+  position: absolute;
+  inset: 1px 1px auto 1px;
+  height: 40%;
+  border-radius: 9px 9px 0 0;
+  background: linear-gradient(
+    180deg,
+    rgba(232, 240, 232, 0.04) 0%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+.media-frame:hover {
+  box-shadow:
+    0 0 0 1px rgba(255, 107, 26, 0.35),
+    inset 0 0 0 1px rgba(232, 240, 232, 0.06),
+    0 30px 60px -24px rgba(0, 0, 0, 0.7),
+    0 0 40px -8px rgba(255, 107, 26, 0.15);
+}
+
+/* Inner image plate — sits inside .media-frame */
+.media-plate {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--background);
+}
+
+/* Frame scanline overlay (very subtle) */
 .frame-scanlines {
   background-image: repeating-linear-gradient(
     0deg,
@@ -304,39 +347,6 @@
   );
 }
 
-/* Hero frame crosshair tick */
-.crosshair-tick {
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  pointer-events: none;
-  z-index: 30;
-}
-.crosshair-tick::before,
-.crosshair-tick::after {
-  content: '';
-  position: absolute;
-  background: var(--primary);
-}
-.crosshair-tick::before { width: 14px; height: 1px; }
-.crosshair-tick::after  { width: 1px; height: 14px; }
-
-.crosshair-tick.tl { top: -1px; left: -1px; }
-.crosshair-tick.tl::before { top: 0; left: 0; }
-.crosshair-tick.tl::after  { top: 0; left: 0; }
-
-.crosshair-tick.tr { top: -1px; right: -1px; }
-.crosshair-tick.tr::before { top: 0; right: 0; }
-.crosshair-tick.tr::after  { top: 0; right: 0; }
-
-.crosshair-tick.bl { bottom: -1px; left: -1px; }
-.crosshair-tick.bl::before { bottom: 0; left: 0; }
-.crosshair-tick.bl::after  { bottom: 0; left: 0; }
-
-.crosshair-tick.br { bottom: -1px; right: -1px; }
-.crosshair-tick.br::before { bottom: 0; right: 0; }
-.crosshair-tick.br::after  { bottom: 0; right: 0; }
-
 /* Pulse ring for REC indicator (orange) */
 @keyframes orangePing {
   0%   { transform: scale(1);   opacity: 0.8; }
@@ -344,6 +354,39 @@
 }
 .rec-ping {
   animation: orangePing 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Spec rail — vertical sleek meta strip used beside media frames */
+.spec-rail {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(6, 9, 6, 0.7), rgba(6, 9, 6, 0.4));
+  backdrop-filter: blur(8px);
+}
+.spec-rail .spec-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+.spec-rail .spec-dot.orange {
+  background: var(--orange);
+  box-shadow: 0 0 8px rgba(255, 107, 26, 0.6);
+}
+.spec-rail .spec-text {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--foreground);
+  opacity: 0.7;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
 }
 
 /* Background Glow Effect */

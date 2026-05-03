@@ -36,7 +36,7 @@ export function FeaturesSection() {
               {/* Profile Preview - 3 Panel Gallery with Real Images */}
               <div className="flex gap-1.5 sm:gap-2 mb-4 sm:mb-5 h-[120px] sm:h-[140px] md:h-[160px]">
                 {/* Left - Muted Farm Panel */}
-                <div className="flex-[0.8] rounded-[2px] relative overflow-hidden border border-border/30 opacity-60">
+                <div className="flex-[0.8] rounded-md relative overflow-hidden ring-1 ring-border opacity-60">
                   <Image
                     src="/images/hero-farmer.jpg"
                     alt="Farm gallery"
@@ -45,9 +45,9 @@ export function FeaturesSection() {
                   />
                   <div className="absolute inset-0 bg-background/40" />
                 </div>
-                
+
                 {/* Center - Active Profile Image */}
-                <div className="flex-[1.4] rounded-[2px] relative overflow-hidden border-2 border-primary/60">
+                <div className="flex-[1.4] rounded-md relative overflow-hidden ring-1 ring-primary/50 shadow-[0_0_24px_-8px_rgba(0,200,83,0.35)]">
                   <Image
                     src="/images/farm-field.jpg"
                     alt="Agro Executive Profile Preview"
@@ -55,10 +55,15 @@ export function FeaturesSection() {
                     className="object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent" />
+                  {/* Active indicator */}
+                  <div className="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-background/70 backdrop-blur-md border border-orange/30">
+                    <span className="h-1 w-1 rounded-full bg-orange" />
+                    <span className="mono-xs text-orange text-[8px] tracking-wider">ACTIVE</span>
+                  </div>
                 </div>
-                
+
                 {/* Right - Muted Tech Panel */}
-                <div className="flex-[0.8] rounded-[2px] relative overflow-hidden border border-border/30 opacity-60">
+                <div className="flex-[0.8] rounded-md relative overflow-hidden ring-1 ring-border opacity-60">
                   <Image
                     src="/images/agro-tech.jpg"
                     alt="Agro tech"
@@ -133,8 +138,8 @@ export function FeaturesSection() {
           >
             <div className="border border-border/50 rounded-[3px] bg-card/20 p-3 sm:p-4 md:p-5 min-h-[120px] sm:min-h-[140px] md:min-h-[160px] flex flex-col">
               <div className="flex items-start justify-between">
-                <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-[3px] bg-accent/15 flex items-center justify-center border border-accent/20">
-                  <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent" />
+                <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-[3px] bg-orange-soft flex items-center justify-center border border-orange/25">
+                  <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange" />
                 </div>
                 <span className="mono-xs text-muted-foreground/40 text-[9px] sm:text-[10px]">03</span>
               </div>
@@ -155,8 +160,8 @@ export function FeaturesSection() {
           >
             <div className="border border-border/50 rounded-[3px] bg-card/20 p-3 sm:p-4 md:p-5 min-h-[110px] sm:min-h-[130px] md:min-h-[150px] flex flex-col">
               <div className="flex items-start justify-between">
-                <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-[3px] bg-accent/15 flex items-center justify-center border border-accent/20">
-                  <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent" />
+                <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-[3px] bg-orange-soft flex items-center justify-center border border-orange/25">
+                  <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange" />
                 </div>
                 <span className="mono-xs text-muted-foreground/40 text-[9px] sm:text-[10px]">05</span>
               </div>

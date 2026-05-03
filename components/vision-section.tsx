@@ -23,19 +23,21 @@ export function VisionSection() {
             viewport={{ once: true }}
             className="w-full lg:w-[45%] flex-shrink-0"
           >
-            <div className="relative aspect-[4/5] sm:aspect-[3/4] lg:aspect-[4/5] rounded-[2px] overflow-hidden border border-border/50">
-              <Image
-                src="/images/tractor-farm.jpg"
-                alt="Nigerian farmer on tractor"
-                fill
-                className="object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-background/20" />
-              
-              {/* Bottom Corner Bracket */}
-              <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 w-6 sm:w-8 h-6 sm:h-8">
-                <div className="absolute bottom-0 left-0 w-full h-[1.5px] sm:h-[2px] bg-primary" />
-                <div className="absolute bottom-0 left-0 w-[1.5px] sm:w-[2px] h-full bg-primary" />
+            <div className="media-frame group p-1.5 sm:p-2">
+              <div className="media-plate aspect-[4/5] sm:aspect-[3/4] lg:aspect-[4/5]">
+                <Image
+                  src="/images/tractor-farm.jpg"
+                  alt="Nigerian farmer on tractor"
+                  fill
+                  className="object-cover transition-transform duration-[1.4s] ease-out group-hover:scale-[1.04]"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-background/10" />
+
+                {/* Bottom inline tag */}
+                <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 z-10 flex items-center gap-2 px-2.5 py-1 bg-background/60 backdrop-blur-md border border-border rounded-full">
+                  <span className="w-1 h-1 rounded-full bg-primary" />
+                  <span className="mono-xs text-foreground/80 text-[9px] sm:text-[10px]">FIELD / 01</span>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -53,23 +55,21 @@ export function VisionSection() {
                 transition={{ delay: 0.1 }}
                 className="w-full sm:w-[55%] relative"
               >
-                <div className="relative aspect-[16/10] rounded-[2px] overflow-hidden">
-                  <Image
-                    src="/images/agro-tech.jpg"
-                    alt="Agricultural technology"
-                    fill
-                    className="object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-b from-background/30 to-transparent" />
-                  
-                  {/* Frame Corners */}
-                  <div className="absolute top-2 sm:top-3 right-2 sm:right-3 w-5 sm:w-6 h-5 sm:h-6">
-                    <div className="absolute top-0 right-0 w-full h-[1.5px] bg-primary" />
-                    <div className="absolute top-0 right-0 w-[1.5px] h-full bg-primary" />
-                  </div>
-                  <div className="absolute bottom-2 sm:bottom-3 left-2 sm:left-3 w-5 sm:w-6 h-5 sm:h-6">
-                    <div className="absolute bottom-0 left-0 w-full h-[1.5px] bg-primary" />
-                    <div className="absolute bottom-0 left-0 w-[1.5px] h-full bg-primary" />
+                <div className="media-frame group p-1.5">
+                  <div className="media-plate aspect-[16/10]">
+                    <Image
+                      src="/images/agro-tech.jpg"
+                      alt="Agricultural technology"
+                      fill
+                      className="object-cover transition-transform duration-[1.4s] ease-out group-hover:scale-[1.04]"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-transparent to-background/30" />
+
+                    {/* Top-right tag */}
+                    <div className="absolute top-2.5 right-2.5 z-10 flex items-center gap-1.5 px-2 py-1 bg-background/60 backdrop-blur-md border border-border rounded-full">
+                      <span className="w-1 h-1 rounded-full bg-orange" />
+                      <span className="mono-xs text-orange text-[9px]">TECH / 07</span>
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -120,9 +120,10 @@ export function VisionSection() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: 0.25 }}
-                className="flex-1 border border-border/50 rounded-[2px] bg-card/20 p-3 sm:p-4"
+                className="flex-1 border border-border/50 rounded-[3px] bg-card/20 p-3 sm:p-4 relative overflow-hidden"
               >
-                <div className="mono text-lg sm:text-2xl text-accent mb-0.5 sm:mb-1 tracking-wide">17 LGAS</div>
+                <div className="absolute top-0 left-0 h-full w-px bg-orange/50" />
+                <div className="mono text-lg sm:text-2xl text-orange mb-0.5 sm:mb-1 tracking-wide">17 LGAS</div>
                 <div className="mono-xs text-muted-foreground text-[9px] sm:text-[10px]">FULL COVERAGE</div>
               </motion.div>
             </div>

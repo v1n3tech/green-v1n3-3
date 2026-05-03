@@ -45,9 +45,12 @@ export function HeroSection() {
           <div className="px-2 sm:px-3 py-1 sm:py-1.5 border border-primary/50 rounded-[2px]">
             <span className="mono-xs text-primary">BUILT ON SOLANA</span>
           </div>
-          <div className="hidden sm:flex items-center gap-2.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-            <span className="mono-xs text-foreground/90">PHASE 01 : PLATEAU STATE</span>
+          <div className="hidden sm:flex items-center gap-2.5 px-2.5 py-1 rounded-full border border-orange/25 bg-orange-soft">
+            <span className="relative flex h-1.5 w-1.5 items-center justify-center">
+              <span className="absolute inset-0 rounded-full bg-orange rec-ping" />
+              <span className="relative h-1.5 w-1.5 rounded-full bg-orange" />
+            </span>
+            <span className="mono-xs text-orange tracking-[0.12em]">PHASE 01 : PLATEAU STATE</span>
           </div>
         </motion.div>
 
@@ -115,32 +118,31 @@ export function HeroSection() {
             </div>
           </motion.div>
 
-          {/* Right: Featured Image — Field Credential Viewer */}
+          {/* Right: Featured Image — Sleek Media Frame */}
           <motion.div
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.4, duration: 0.6 }}
             className="relative"
           >
-            {/* Vertical Label */}
-            <div className="absolute -left-8 lg:-left-10 top-1/2 -translate-y-1/2 hidden xl:block">
-              <span
-                className="mono-xs text-muted-foreground/40 tracking-[0.3em]"
-                style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
-              >
-                EXEC—01 / PLATEAU PILOT
-              </span>
+            {/* Visible vertical spec rail (replaces faint floating text) */}
+            <div className="absolute -left-7 lg:-left-9 top-8 hidden xl:flex spec-rail">
+              <span className="spec-dot orange" />
+              <span className="spec-text">EXEC—01</span>
+              <span className="h-3 w-px bg-border" />
+              <span className="spec-text">PLATEAU</span>
+              <span className="spec-dot" />
             </div>
 
             {/* Top Meta Strip */}
-            <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-border">
+            <div className="flex items-center justify-between pb-3 mb-3">
               <div className="flex items-center gap-3 sm:gap-4">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-orange-soft border border-orange/30">
                   <span className="relative flex h-1.5 w-1.5 items-center justify-center">
                     <span className="absolute inset-0 rounded-full bg-orange rec-ping" />
                     <span className="relative h-1.5 w-1.5 rounded-full bg-orange" />
                   </span>
-                  <span className="mono-xs text-orange tracking-[0.12em]">REC</span>
+                  <span className="mono-xs text-orange tracking-[0.14em] text-[9px] sm:text-[10px]">REC</span>
                 </div>
                 <span className="mono-xs text-muted-foreground hidden sm:inline">FRAME / {captureTime}</span>
               </div>
@@ -150,75 +152,62 @@ export function HeroSection() {
               </div>
             </div>
 
-            {/* Image Frame */}
-            <div className="relative group">
-              {/* Outer offset hairline (subtle depth) */}
-              <div className="pointer-events-none absolute -inset-2 sm:-inset-2.5 border border-border rounded-[3px] z-0" />
-
-              {/* Side accent bars — sleek green/orange anchors */}
-              <div className="pointer-events-none absolute -left-2 sm:-left-2.5 top-1/2 -translate-y-1/2 h-10 w-px bg-primary/60 z-10" />
-              <div className="pointer-events-none absolute -right-2 sm:-right-2.5 top-1/2 -translate-y-1/2 h-10 w-px bg-orange/70 z-10" />
-
-              {/* Crosshair corner ticks */}
-              <span className="crosshair-tick tl" aria-hidden />
-              <span className="crosshair-tick tr" aria-hidden />
-              <span className="crosshair-tick bl" aria-hidden />
-              <span className="crosshair-tick br" aria-hidden />
-
-              {/* Hover glow */}
-              <div className="pointer-events-none absolute -inset-3 bg-primary/[0.06] rounded-[4px] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 z-0" />
-
-              <div className="relative aspect-[4/3] overflow-hidden rounded-[2px] bg-card border border-border-strong">
+            {/* Sleek Media Frame */}
+            <div className="media-frame group p-1.5 sm:p-2">
+              <div className="media-plate aspect-[4/3]">
                 <Image
                   src="/images/hero-farmer.jpg"
                   alt="Agro Executive — Amina Yusuf"
                   fill
-                  className="object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-[1.03]"
+                  className="object-cover transition-transform duration-[1.4s] ease-out group-hover:scale-[1.04]"
                   priority
                 />
 
                 {/* Subtle scanlines */}
-                <div className="pointer-events-none absolute inset-0 frame-scanlines opacity-40 mix-blend-overlay" />
+                <div className="pointer-events-none absolute inset-0 frame-scanlines opacity-30 mix-blend-overlay" />
 
-                {/* Vignette / cinematic falloff */}
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-background/30" />
+                {/* Cinematic falloff */}
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background via-background/10 to-transparent" />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-background/40" />
 
                 {/* Top-right: frame counter chip */}
                 <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10">
-                  <div className="flex items-center gap-2 px-2 py-1 bg-background/70 backdrop-blur-md border border-border rounded-[2px]">
+                  <div className="flex items-center gap-2 px-2.5 py-1 bg-background/60 backdrop-blur-md border border-border rounded-full">
                     <span className="mono-xs text-foreground/80 text-[9px] sm:text-[10px]">01 / 14</span>
                     <span className="h-2.5 w-px bg-border" />
-                    <span className="mono-xs text-orange text-[9px] sm:text-[10px]">LIVE</span>
+                    <span className="flex items-center gap-1">
+                      <span className="h-1 w-1 rounded-full bg-orange" />
+                      <span className="mono-xs text-orange text-[9px] sm:text-[10px]">LIVE</span>
+                    </span>
                   </div>
                 </div>
 
                 {/* Top-left: discipline tag */}
                 <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10">
-                  <div className="flex items-center gap-1.5 px-2 py-1 bg-background/70 backdrop-blur-md border border-border rounded-[2px]">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 bg-background/60 backdrop-blur-md border border-border rounded-full">
                     <span className="w-1 h-1 rounded-full bg-primary" />
                     <span className="mono-xs text-foreground/80 text-[9px] sm:text-[10px]">CROP / 04</span>
                   </div>
                 </div>
 
                 {/* Bottom credential block */}
-                <div className="absolute inset-x-0 bottom-0 px-3 pb-3 sm:px-5 sm:pb-5 pt-10 z-10">
+                <div className="absolute inset-x-0 bottom-0 px-4 pb-4 sm:px-6 sm:pb-5 pt-12 z-10">
                   <div className="flex items-end justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 mb-1.5 sm:mb-2">
-                        <span className="h-px w-4 sm:w-6 bg-orange" />
-                        <span className="mono-xs text-orange text-[9px] sm:text-[10px] tracking-[0.14em]">EXEC // 0001</span>
+                      <div className="flex items-center gap-2 mb-2 sm:mb-2.5">
+                        <span className="h-px w-5 sm:w-7 bg-orange" />
+                        <span className="mono-xs text-orange text-[9px] sm:text-[10px] tracking-[0.18em]">EXEC // 0001</span>
                       </div>
-                      <div className="font-mono text-base sm:text-xl text-foreground tracking-wide leading-none">
+                      <div className="font-mono text-lg sm:text-2xl text-foreground tracking-wide leading-none">
                         Amina Yusuf
                       </div>
-                      <div className="mono-xs text-foreground/45 mt-1.5 text-[9px] sm:text-[10px]">
+                      <div className="mono-xs text-foreground/55 mt-2 text-[9px] sm:text-[10px]">
                         CROP FARMING — JOS SOUTH
                       </div>
                     </div>
 
                     {/* Right ID block (hidden on small) */}
-                    <div className="hidden sm:flex flex-col items-end gap-0.5 shrink-0">
+                    <div className="hidden sm:flex flex-col items-end gap-1 shrink-0">
                       <span className="mono-xs text-muted-foreground text-[9px]">ID—HASH</span>
                       <span className="mono-xs text-foreground/70 text-[10px]">0xA7F…91D</span>
                     </div>
@@ -228,20 +217,20 @@ export function HeroSection() {
             </div>
 
             {/* Bottom Telemetry Strip */}
-            <div className="mt-2.5 grid grid-cols-4 gap-px bg-border border border-border rounded-[2px] overflow-hidden">
-              <div className="bg-background px-2.5 py-2 sm:px-3 sm:py-2.5">
+            <div className="mt-3 grid grid-cols-4 gap-px bg-border/60 border border-border rounded-lg overflow-hidden">
+              <div className="bg-card/40 px-3 py-2.5">
                 <div className="mono-xs text-muted-foreground text-[8px] sm:text-[9px]">LAT</div>
                 <div className="mono-xs text-foreground/85 mt-1 text-[10px] sm:text-[11px]">N 9°58&apos;</div>
               </div>
-              <div className="bg-background px-2.5 py-2 sm:px-3 sm:py-2.5">
+              <div className="bg-card/40 px-3 py-2.5">
                 <div className="mono-xs text-muted-foreground text-[8px] sm:text-[9px]">LON</div>
                 <div className="mono-xs text-foreground/85 mt-1 text-[10px] sm:text-[11px]">E 8°53&apos;</div>
               </div>
-              <div className="bg-background px-2.5 py-2 sm:px-3 sm:py-2.5">
+              <div className="bg-card/40 px-3 py-2.5">
                 <div className="mono-xs text-muted-foreground text-[8px] sm:text-[9px]">ELEV</div>
                 <div className="mono-xs text-foreground/85 mt-1 text-[10px] sm:text-[11px]">1,217 M</div>
               </div>
-              <div className="bg-background px-2.5 py-2 sm:px-3 sm:py-2.5">
+              <div className="bg-card/40 px-3 py-2.5">
                 <div className="mono-xs text-muted-foreground text-[8px] sm:text-[9px]">STATUS</div>
                 <div className="flex items-center gap-1.5 mt-1">
                   <span className="h-1 w-1 rounded-full bg-orange" />
