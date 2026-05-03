@@ -27,6 +27,7 @@ import {
   Building2,
   Shield,
   HelpCircle,
+  MessageSquare,
 } from 'lucide-react'
 import { signOut } from '@/lib/auth/actions'
 
@@ -78,16 +79,17 @@ const NAV_ITEMS = [
     section: 'ENGAGE',
     items: [
       { href: '/dashboard/feed', label: 'Feed', icon: Radio, index: '06' },
-      { href: '/dashboard/news', label: 'News', icon: Newspaper, index: '07' },
-      { href: '/dashboard/training', label: 'Training', icon: GraduationCap, index: '08' },
+      { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare, index: '07' },
+      { href: '/dashboard/news', label: 'News', icon: Newspaper, index: '08' },
+      { href: '/dashboard/training', label: 'Training', icon: GraduationCap, index: '09' },
     ]
   },
   {
     section: 'ADMIN',
     items: [
-      { href: '/dashboard/organization', label: 'Organization', icon: Building2, index: '09' },
-      { href: '/dashboard/security', label: 'Security', icon: Shield, index: '10' },
-      { href: '/dashboard/settings', label: 'Settings', icon: Settings, index: '11' },
+      { href: '/dashboard/organization', label: 'Organization', icon: Building2, index: '10' },
+      { href: '/dashboard/security', label: 'Security', icon: Shield, index: '11' },
+      { href: '/dashboard/settings', label: 'Settings', icon: Settings, index: '12' },
     ]
   },
 ]

@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import { ProfileWalletCard } from "@/components/profile/profile-wallet-card"
 import { UsernameEditor } from "@/components/profile/username-editor"
+import { ProfileAvatar } from "@/components/profile/profile-avatar"
 
 export const metadata = {
   title: "Profile — GreenV1n3",
@@ -146,12 +147,10 @@ export default async function ProfilePage() {
 
           <div className="p-5 sm:p-6 flex flex-col sm:flex-row gap-5 sm:gap-6 sm:items-center">
             {/* Avatar */}
-            <div className="relative shrink-0">
-              <div className="absolute inset-0 bg-primary/20 blur-xl rounded-[2px]" />
-              <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center bg-primary/10 border border-primary/40 rounded-[2px] mono text-primary text-xl sm:text-2xl font-bold tracking-wider">
-                {initialsFor(callsign)}
-              </div>
-            </div>
+            <ProfileAvatar 
+              currentAvatar={profile.avatar_url} 
+              displayName={callsign} 
+            />
 
             {/* Identity */}
             <div className="flex-1 min-w-0 space-y-3">

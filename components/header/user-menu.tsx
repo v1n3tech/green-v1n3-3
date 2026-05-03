@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Hash,
   LayoutGrid,
+  ShieldAlert,
 } from "lucide-react"
 
 export interface UserMenuProfile {
@@ -250,6 +251,16 @@ export function UserMenu({ profile, onSignOut }: UserMenuProps) {
                   label="SETTINGS"
                   onClick={() => setOpen(false)}
                 />
+                {profile.role === 'admin' && (
+                  <MenuLink
+                    href="/admin"
+                    index="05"
+                    icon={<ShieldAlert className="w-3.5 h-3.5" />}
+                    label="ADMIN"
+                    onClick={() => setOpen(false)}
+                    accent
+                  />
+                )}
                 {profile.walletAddress && (
                   <a
                     href={`https://solscan.io/account/${profile.walletAddress}`}
@@ -260,7 +271,7 @@ export function UserMenu({ profile, onSignOut }: UserMenuProps) {
                   >
                     <div className="flex items-center gap-3">
                       <span className="mono-xs text-muted-foreground/50 text-[9px] w-5">
-                        05
+                        {profile.role === 'admin' ? '06' : '05'}
                       </span>
                       <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                       <span className="mono-sm text-foreground/80 group-hover:text-foreground text-[10.5px] tracking-wider transition-colors">
@@ -282,7 +293,7 @@ export function UserMenu({ profile, onSignOut }: UserMenuProps) {
                   role="menuitem"
                 >
                   <span className="mono-xs text-muted-foreground/50 text-[9px] w-5">
-                    06
+                    {profile.role === 'admin' ? '07' : (profile.walletAddress ? '06' : '05')}
                   </span>
                   <LogOut className="w-3.5 h-3.5 text-muted-foreground group-hover:text-destructive transition-colors" />
                   <span className="mono-sm text-foreground/70 group-hover:text-destructive text-[10.5px] tracking-wider transition-colors">
@@ -304,27 +315,39 @@ function MenuLink({
   icon,
   label,
   onClick,
+  accent,
 }: {
   href: string
   index: string
   icon: React.ReactNode
   label: string
   onClick: () => void
+  accent?: boolean
 }) {
   return (
     <Link
       href={href}
       onClick={onClick}
-      className="flex items-center gap-3 px-4 py-2 hover:bg-primary/5 group transition-colors"
+      className={`flex items-center gap-3 px-4 py-2 group transition-colors ${
+        accent ? 'hover:bg-orange/10' : 'hover:bg-primary/5'
+      }`}
       role="menuitem"
     >
       <span className="mono-xs text-muted-foreground/50 text-[9px] w-5">
         {index}
       </span>
-      <span className="text-muted-foreground group-hover:text-primary transition-colors">
+      <span className={`transition-colors ${
+        accent 
+          ? 'text-orange group-hover:text-orange' 
+          : 'text-muted-foreground group-hover:text-primary'
+      }`}>
         {icon}
       </span>
-      <span className="mono-sm text-foreground/80 group-hover:text-foreground text-[10.5px] tracking-wider transition-colors">
+      <span className={`mono-sm text-[10.5px] tracking-wider transition-colors ${
+        accent 
+          ? 'text-orange group-hover:text-orange' 
+          : 'text-foreground/80 group-hover:text-foreground'
+      }`}>
         {label}
       </span>
     </Link>
