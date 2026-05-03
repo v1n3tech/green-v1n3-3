@@ -97,7 +97,7 @@ export function CommunitiesSection() {
           <div className="w-full lg:w-[320px] xl:w-[340px] border border-border rounded-[3px] bg-card/50 flex-shrink-0 lg:sticky lg:top-[140px]">
             <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-border flex items-center justify-between">
               <span className="mono-xs text-muted-foreground">SELECTED : V1N3</span>
-              <span className="mono-xs text-primary">{selected.id}</span>
+              <span className="mono-xs text-orange">{selected.id}</span>
             </div>
 
             <AnimatePresence mode="wait">
@@ -111,8 +111,8 @@ export function CommunitiesSection() {
               >
                 {/* Icon and Title */}
                 <div className="flex items-start gap-3 sm:gap-4 mb-5 sm:mb-6">
-                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-[3px] bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
-                    <selected.icon className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-[4px] bg-orange-soft border border-orange/25 flex items-center justify-center flex-shrink-0">
+                    <selected.icon className="w-4 h-4 sm:w-5 sm:h-5 text-orange" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="mono text-base sm:text-lg text-foreground leading-tight">{selected.name}</h3>
@@ -175,8 +175,8 @@ function HexCard({ community, isSelected, onClick }: HexCardProps) {
           points="50,0 100,28.75 100,86.25 50,115 0,86.25 0,28.75"
           className={`
             transition-all duration-200
-            ${isSelected 
-              ? 'fill-primary stroke-primary' 
+            ${isSelected
+              ? 'fill-[rgba(255,107,26,0.14)] stroke-orange'
               : 'fill-[#060906] stroke-[rgba(0,200,83,0.15)] hover:stroke-primary/40'
             }
           `}
@@ -186,11 +186,11 @@ function HexCard({ community, isSelected, onClick }: HexCardProps) {
 
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center gap-0.5 sm:gap-1 px-2 sm:px-3 text-center">
-        <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${isSelected ? 'text-background' : 'text-foreground/70'} transition-colors`} />
-        <span className={`mono-xs leading-tight text-[8px] sm:text-[9px] md:text-[10px] ${isSelected ? 'text-background' : 'text-foreground/80'}`}>
+        <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${isSelected ? 'text-orange' : 'text-foreground/70'} transition-colors`} />
+        <span className={`mono-xs leading-tight text-[8px] sm:text-[9px] md:text-[10px] ${isSelected ? 'text-foreground' : 'text-foreground/80'}`}>
           {community.name}
         </span>
-        <span className={`mono-xs text-[8px] sm:text-[9px] md:text-[10px] ${isSelected ? 'text-background/60' : 'text-muted-foreground'}`}>
+        <span className={`mono-xs text-[8px] sm:text-[9px] md:text-[10px] ${isSelected ? 'text-orange/80' : 'text-muted-foreground'}`}>
           {community.id}
         </span>
       </div>
