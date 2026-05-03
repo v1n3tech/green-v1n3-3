@@ -20,7 +20,7 @@ export default async function DashboardPage() {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "first_name, last_name, display_name, agro_id, role, community, lga, wallet_address, weekly_rating, operational_rating, total_earnings",
+      "first_name, last_name, display_name, agro_id, role, community, lga, wallet_address, weekly_rating, operational_rating, total_earnings, v1n3_balance",
     )
     .eq("id", user.id)
     .single()
@@ -100,7 +100,7 @@ export default async function DashboardPage() {
 
         {/* Two-column section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-          {/* Wallet */}
+          {/* Wallet — V1n3 balance + fiat earnings + on-chain address */}
           <div className="lg:col-span-1 bg-background border border-border rounded-[2px] overflow-hidden">
             <div className="border-b border-border px-4 h-8 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -116,15 +116,30 @@ export default async function DashboardPage() {
             <div className="p-5 space-y-4">
               <div>
                 <p className="mono-xs text-muted-foreground/70 text-[9px] mb-1.5 tracking-[0.18em]">
-                  / BALANCE
+                  / V1N3 BALANCE
                 </p>
-                <p className="font-mono text-3xl text-foreground tracking-tight">
-                  N{(profile.total_earnings ?? 0).toLocaleString()}
-                </p>
-                <p className="mono-xs text-primary/80 text-[10px] tracking-wider mt-1">
-                  V1N3 TOKEN
-                </p>
+                <div className="flex items-baseline gap-2">
+                  <span className="font-mono text-3xl text-foreground tracking-tight">
+                    {Number(profile.v1n3_balance ?? 0).toLocaleString(undefined, {
+                      minimumFractionDigits: Number(profile.v1n3_balance ?? 0) < 1 ? 4 : 2,
+                      maximumFractionDigits: 4,
+                    })}
+                  </span>
+                  <span className="mono-xs text-primary/80 text-[10px] tracking-[0.2em]">
+                    V1N3
+                  </span>
+                </div>
               </div>
+
+              <div className="pt-3 border-t border-border flex items-center justify-between gap-3">
+                <span className="mono-xs text-muted-foreground/70 text-[9px] tracking-[0.18em]">
+                  / EARNINGS
+                </span>
+                <span className="font-mono text-foreground/85 text-[12px] tracking-wider whitespace-nowrap">
+                  N{Number(profile.total_earnings ?? 0).toLocaleString()}
+                </span>
+              </div>
+
               <div className="pt-3 border-t border-border">
                 <p className="mono-xs text-muted-foreground/70 text-[9px] mb-1.5 tracking-[0.18em]">
                   / ADDRESS
