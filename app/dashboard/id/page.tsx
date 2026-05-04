@@ -9,15 +9,13 @@ import {
   Check,
   Sparkles,
   Shield,
-  MapPin,
   Sprout,
-  Calendar,
-  QrCode,
   Download,
   Share2,
   Verified,
   Clock,
   RotateCw,
+  Printer,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -99,13 +97,13 @@ export default function IDPage() {
   const getRoleAccent = (role: string) => {
     switch (role.toLowerCase()) {
       case 'admin':
-        return { color: 'text-orange', bg: 'bg-orange/10', border: 'border-orange/40', dot: 'bg-orange' }
+        return { color: 'text-orange', label: 'ADMIN' }
       case 'lgpa':
-        return { color: 'text-accent', bg: 'bg-accent/10', border: 'border-accent/40', dot: 'bg-accent' }
+        return { color: 'text-accent', label: 'LGPA' }
       case 'gcm':
-        return { color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/40', dot: 'bg-blue-500' }
+        return { color: 'text-blue-400', label: 'GCM' }
       default:
-        return { color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/40', dot: 'bg-primary' }
+        return { color: 'text-primary', label: role.toUpperCase() }
     }
   }
 
@@ -161,10 +159,48 @@ export default function IDPage() {
     .toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
     .toUpperCase()
 
+  const handlePrint = () => {
+    if (typeof window !== 'undefined') window.print()
+  }
+
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
+      {/* Print-only styles: render at true CR80 portrait dimensions */}
+      <style jsx global>{`
+        @media print {
+          @page {
+            size: 53.98mm 85.6mm;
+            margin: 0;
+          }
+          body * {
+            visibility: hidden !important;
+          }
+          .id-print-area, .id-print-area * {
+            visibility: visible !important;
+          }
+          .id-print-area {
+            position: fixed !important;
+            inset: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+          }
+          .id-card-print {
+            width: 53.98mm !important;
+            height: 85.6mm !important;
+            max-width: none !important;
+            box-shadow: none !important;
+            border-radius: 3mm !important;
+            page-break-after: always;
+          }
+          .id-print-hide {
+            display: none !important;
+          }
+        }
+      `}</style>
+
       {/* Back Button + Actions */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between id-print-hide">
         <Link
           href="/dashboard"
           className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"
@@ -184,6 +220,16 @@ export default function IDPage() {
             </span>
           </button>
           <button
+            onClick={handlePrint}
+            className="flex items-center gap-2 px-3 py-2 border border-border rounded-[3px] hover:border-primary/40 hover:bg-primary/5 transition-all"
+            title="Print at actual CR80 size"
+          >
+            <Printer className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="mono-xs text-muted-foreground text-[9px] tracking-wider">
+              PRINT
+            </span>
+          </button>
+          <button
             className="p-2 border border-border rounded-[3px] hover:border-primary/40 hover:bg-primary/5 transition-all"
             title="Download ID"
           >
@@ -199,35 +245,35 @@ export default function IDPage() {
       </div>
 
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between id-print-hide">
         <div className="flex items-center gap-2.5">
           <div className="w-1 h-5 bg-primary" />
           <span className="mono-xs text-primary text-[10px] tracking-wider">/ AGRO EXECUTIVE ID</span>
         </div>
         <span className="mono-xs text-muted-foreground/50 text-[9px] tracking-wider hidden sm:block">
-          ISO/IEC 7810 · CR80 · 85.6 × 53.98 MM
+          ISO/IEC 7810 · CR80 PORTRAIT · 53.98 × 85.6 MM
         </span>
       </div>
 
-      {/* ID Card — CR80 aspect ratio (1.586:1) */}
-      <div className="flex justify-center" style={{ perspective: '1800px' }}>
+      {/* ID Card — vertical CR80 (53.98 × 85.6 mm) */}
+      <div className="id-print-area flex justify-center" style={{ perspective: '1800px' }}>
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, ease: 'easeOut' }}
-          className="relative w-full"
-          style={{ maxWidth: '680px' }}
+          className="relative"
+          style={{ width: '340px' }}
         >
-          {/* Ambient glow */}
-          <div className="absolute -inset-10 bg-gradient-to-br from-primary/15 via-transparent to-accent/10 blur-3xl opacity-60 pointer-events-none" />
+          {/* Ambient glow (screen only) */}
+          <div className="absolute -inset-10 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 blur-3xl opacity-50 pointer-events-none id-print-hide" />
 
           {/* Flip container */}
           <motion.div
             animate={{ rotateY: flipped ? 180 : 0 }}
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="relative w-full"
+            className="relative w-full id-card-print"
             style={{
-              aspectRatio: '1.586 / 1',
+              aspectRatio: '53.98 / 85.6',
               transformStyle: 'preserve-3d',
             }}
           >
@@ -274,7 +320,7 @@ export default function IDPage() {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25, duration: 0.5 }}
-        className="grid grid-cols-2 md:grid-cols-4 gap-3"
+        className="grid grid-cols-2 md:grid-cols-4 gap-3 id-print-hide"
       >
         <StatTile label="WEEKLY" value={`${profile.weeklyRating.toFixed(1)}%`} accent="primary" />
         <StatTile label="OPERATIONAL" value={`${profile.operationalRating.toFixed(1)}%`} accent="accent" />
@@ -287,7 +333,7 @@ export default function IDPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.35 }}
-        className="grid grid-cols-1 sm:grid-cols-3 gap-3"
+        className="grid grid-cols-1 sm:grid-cols-3 gap-3 id-print-hide"
       >
         <InfoCard
           title="ID VERIFICATION"
@@ -310,7 +356,7 @@ export default function IDPage() {
 }
 
 /* ============================================================
-   FRONT OF ID CARD
+   FRONT OF ID CARD — Vertical CR80
    ============================================================ */
 function IDCardFront({
   profile,
@@ -328,7 +374,7 @@ function IDCardFront({
   fullName: string
   joinDate: string
   expiryFormatted: string
-  roleAccent: { color: string; bg: string; border: string; dot: string }
+  roleAccent: { color: string; label: string }
   verificationStyle: { color: string; bg: string; label: string }
   VerificationIcon: React.ComponentType<{ className?: string }>
   getInitials: (name: string | null) => string
@@ -336,191 +382,181 @@ function IDCardFront({
   copyAgroId: () => void
 }) {
   return (
-    <div className="relative w-full h-full overflow-hidden rounded-[6px] border border-primary/30 bg-gradient-to-br from-[#040804] via-[#060a06] to-[#02060a] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8),0_0_0_1px_rgba(0,200,83,0.15)]">
-      {/* Geometric + hexagonal background */}
+    <div
+      className="relative w-full h-full overflow-hidden bg-[#0a120c] border border-primary/25"
+      style={{
+        borderRadius: '3mm',
+        boxShadow:
+          '0 24px 60px -20px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(0,200,83,0.15), inset 0 1px 0 rgba(255,255,255,0.04)',
+      }}
+    >
+      {/* Subtle hex/geo background */}
       <HexGeoBackground />
 
-      {/* Diagonal accent stripe */}
-      <div className="absolute -top-1 -left-1 w-32 h-32 bg-gradient-to-br from-primary/20 to-transparent blur-2xl pointer-events-none" />
-      <div className="absolute -bottom-1 -right-1 w-40 h-40 bg-gradient-to-tl from-accent/15 to-transparent blur-2xl pointer-events-none" />
-
-      {/* Corner brackets */}
-      <CornerBrackets />
-
-      {/* ============== TOP BAR ============== */}
-      <div className="absolute top-0 inset-x-0 px-4 sm:px-5 py-2 sm:py-2.5 flex items-center justify-between border-b border-primary/15 bg-black/30 backdrop-blur-sm">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <div className="flex items-center gap-1.5 shrink-0">
-            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            <span className="font-mono text-primary text-[8px] sm:text-[9px] tracking-[0.25em] font-semibold">
-              GREENV1N3
-            </span>
+      {/* ============== HEADER BAND ============== */}
+      <div className="absolute top-0 inset-x-0 h-[12%]">
+        {/* Solid green band */}
+        <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary to-primary/85" />
+        {/* Subtle hex texture on band */}
+        <svg className="absolute inset-0 w-full h-full opacity-15" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="band-hex" width="14" height="12" patternUnits="userSpaceOnUse">
+              <polygon points="7,1 13,4.5 13,9.5 7,13 1,9.5 1,4.5" fill="none" stroke="#fff" strokeWidth="0.4" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#band-hex)" />
+        </svg>
+        {/* Header content */}
+        <div className="relative h-full px-3 flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            {/* Logo mark */}
+            <div className="w-4 h-4 rounded-[1.5px] bg-[#0a120c] flex items-center justify-center border border-white/30">
+              <Sprout className="w-2.5 h-2.5 text-primary" />
+            </div>
+            <div className="leading-none">
+              <p className="font-mono text-white text-[7px] tracking-[0.25em] font-bold">GREENV1N3</p>
+              <p className="font-mono text-white/70 text-[5.5px] tracking-[0.22em] mt-0.5">NIGERIA</p>
+            </div>
           </div>
-          <div className="h-2.5 w-px bg-primary/20 shrink-0" />
-          <span className="font-mono text-foreground/50 text-[7px] sm:text-[8px] tracking-[0.2em] truncate">
-            FEDERAL REPUBLIC OF NIGERIA
+          <div className="text-right leading-none">
+            <p className="font-mono text-white/70 text-[5.5px] tracking-[0.22em]">PHASE 01</p>
+            <p className="font-mono text-white text-[6.5px] tracking-[0.22em] font-bold mt-0.5">PLATEAU STATE</p>
+          </div>
+        </div>
+        {/* Bottom edge accent */}
+        <div className="absolute bottom-0 inset-x-0 h-[2px] bg-gradient-to-r from-orange/60 via-orange to-orange/60" />
+      </div>
+
+      {/* ============== TITLE STRIP ============== */}
+      <div className="absolute top-[12.5%] inset-x-0 px-3 pt-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-mono text-foreground/45 text-[6px] tracking-[0.3em]">OFFICIAL IDENTIFICATION</p>
+            <h1 className="font-mono text-foreground text-[10px] tracking-[0.18em] font-bold mt-0.5">
+              AGRO EXECUTIVE
+            </h1>
+          </div>
+          <div className="text-right">
+            <p className="font-mono text-foreground/45 text-[5.5px] tracking-[0.25em]">/ SERIES</p>
+            <p className="font-mono text-primary text-[8px] tracking-[0.15em] font-semibold mt-0.5">
+              AV1-{(profile.agroId || 'AE000000').slice(-6)}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ============== PHOTO ============== */}
+      <div className="absolute top-[22%] left-1/2 -translate-x-1/2 w-[42%] aspect-[3/4]">
+        {/* Photo gradient frame */}
+        <div className="absolute -inset-[1.5px] rounded-[3px] bg-gradient-to-br from-primary via-primary/40 to-accent" />
+        <div className="relative w-full h-full rounded-[3px] overflow-hidden bg-[#0c170e] border border-primary/30">
+          {profile.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={profile.avatarUrl}
+              alt={fullName}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-accent/10">
+              <span className="font-mono text-3xl text-primary font-bold tracking-wider">
+                {getInitials(fullName)}
+              </span>
+            </div>
+          )}
+          {/* Photo overlay scanline (very subtle) */}
+          <div className="absolute inset-0 pointer-events-none bg-[repeating-linear-gradient(0deg,rgba(0,200,83,0.025)_0px,rgba(0,200,83,0.025)_1px,transparent_1px,transparent_3px)]" />
+          {/* Photo corner ticks */}
+          <div className="absolute top-1 left-1 w-2 h-2 border-t border-l border-primary/60" />
+          <div className="absolute top-1 right-1 w-2 h-2 border-t border-r border-primary/60" />
+          <div className="absolute bottom-1 left-1 w-2 h-2 border-b border-l border-primary/60" />
+          <div className="absolute bottom-1 right-1 w-2 h-2 border-b border-r border-primary/60" />
+        </div>
+
+        {/* Verification badge under photo */}
+        <div className={`absolute -bottom-2.5 left-1/2 -translate-x-1/2 px-1.5 py-0.5 ${verificationStyle.bg} border border-current ${verificationStyle.color} rounded-[2px] flex items-center gap-1 bg-[#0a120c]`}>
+          <VerificationIcon className="w-2 h-2" />
+          <span className="font-mono text-[6px] tracking-[0.2em] font-semibold whitespace-nowrap">
+            {verificationStyle.label}
           </span>
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <span className="font-mono text-muted-foreground/40 text-[7px] sm:text-[8px] tracking-wider hidden sm:inline">
-            PHASE 01
+      </div>
+
+      {/* ============== NAME + ID ============== */}
+      <div className="absolute top-[57%] inset-x-0 px-3 text-center">
+        <p className="font-mono text-foreground/45 text-[6px] tracking-[0.3em]">/ FULL NAME</p>
+        <p className="font-mono text-foreground text-[12px] tracking-[0.06em] font-bold leading-tight uppercase mt-0.5 truncate">
+          {fullName}
+        </p>
+        <div className="flex items-center justify-center gap-1.5 mt-1">
+          <span className="font-mono text-primary text-[10px] tracking-[0.18em] font-semibold">
+            {profile.agroId}
           </span>
-          <div className="px-1.5 py-0.5 border border-orange/40 bg-orange/5 rounded-[2px]">
-            <span className="font-mono text-orange text-[7px] sm:text-[8px] tracking-[0.18em]">
-              PLATEAU STATE
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* ============== CARD TITLE ============== */}
-      <div className="absolute top-[14%] left-4 sm:left-5">
-        <p className="font-mono text-foreground/40 text-[7px] sm:text-[8px] tracking-[0.3em]">
-          OFFICIAL IDENTIFICATION CARD
-        </p>
-        <h1 className="font-mono text-foreground text-[11px] sm:text-[13px] tracking-[0.18em] font-bold mt-0.5">
-          AGRO EXECUTIVE
-        </h1>
-      </div>
-
-      {/* Phase / Issue strip */}
-      <div className="absolute top-[14%] right-4 sm:right-5 text-right">
-        <p className="font-mono text-foreground/40 text-[7px] sm:text-[8px] tracking-[0.2em]">
-          / SERIES
-        </p>
-        <p className="font-mono text-primary text-[10px] sm:text-[12px] tracking-[0.15em] font-semibold mt-0.5">
-          AV1-{(profile.agroId || 'AE000000').slice(-6)}
-        </p>
-      </div>
-
-      {/* ============== MAIN BODY ============== */}
-      <div className="absolute top-[30%] bottom-[16%] left-4 sm:left-5 right-4 sm:right-5 flex gap-3 sm:gap-4">
-        {/* Left: Photo */}
-        <div className="relative h-full aspect-[3/4] shrink-0">
-          {/* Photo frame with gradient border */}
-          <div className="absolute -inset-[1.5px] bg-gradient-to-br from-primary via-primary/40 to-accent rounded-[3px] opacity-80" />
-          <div className="relative w-full h-full rounded-[3px] overflow-hidden bg-primary/5 border border-primary/30">
-            {profile.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={profile.avatarUrl}
-                alt={fullName}
-                className="w-full h-full object-cover"
-              />
+          <button
+            onClick={copyAgroId}
+            className="p-0.5 hover:bg-primary/10 rounded-[2px] transition-colors id-print-hide"
+            title="Copy ID"
+          >
+            {copied ? (
+              <Check className="w-2.5 h-2.5 text-primary" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/15 to-accent/5">
-                <span className="font-mono text-2xl sm:text-3xl text-primary font-bold tracking-wider">
-                  {getInitials(fullName)}
-                </span>
-              </div>
+              <Copy className="w-2.5 h-2.5 text-muted-foreground" />
             )}
-
-            {/* Photo overlay scanline */}
-            <div className="absolute inset-0 pointer-events-none bg-[repeating-linear-gradient(0deg,rgba(0,200,83,0.04)_0px,rgba(0,200,83,0.04)_1px,transparent_1px,transparent_3px)]" />
-
-            {/* Photo corner ticks */}
-            <div className="absolute top-1 left-1 w-2 h-2 border-t border-l border-primary/60" />
-            <div className="absolute top-1 right-1 w-2 h-2 border-t border-r border-primary/60" />
-            <div className="absolute bottom-1 left-1 w-2 h-2 border-b border-l border-primary/60" />
-            <div className="absolute bottom-1 right-1 w-2 h-2 border-b border-r border-primary/60" />
-          </div>
-
-          {/* Verification micro-badge under photo */}
-          <div className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 px-1.5 py-0.5 ${verificationStyle.bg} border border-current ${verificationStyle.color} rounded-[2px] flex items-center gap-1`}>
-            <VerificationIcon className="w-2 h-2" />
-            <span className="font-mono text-[6px] sm:text-[7px] tracking-[0.2em] font-semibold">
-              {verificationStyle.label}
-            </span>
-          </div>
+          </button>
         </div>
+      </div>
 
-        {/* Right: Identity block */}
-        <div className="flex-1 flex flex-col justify-between min-w-0">
-          {/* Name */}
-          <div className="space-y-2 sm:space-y-2.5">
-            <div>
-              <p className="font-mono text-foreground/40 text-[7px] sm:text-[8px] tracking-[0.25em]">
-                / FULL NAME
-              </p>
-              <p className="font-mono text-foreground text-[13px] sm:text-[17px] md:text-[19px] tracking-tight font-bold leading-tight uppercase truncate">
-                {fullName}
-              </p>
-            </div>
-
-            {/* Agro ID */}
-            <div>
-              <p className="font-mono text-foreground/40 text-[7px] sm:text-[8px] tracking-[0.25em]">
-                / AGRO ID
-              </p>
-              <div className="flex items-center gap-1.5">
-                <span className="font-mono text-primary text-[11px] sm:text-[14px] tracking-[0.15em] font-semibold">
-                  {profile.agroId}
-                </span>
-                <button
-                  onClick={copyAgroId}
-                  className="p-0.5 hover:bg-primary/10 rounded-[2px] transition-colors"
-                  title="Copy ID"
-                >
-                  {copied ? (
-                    <Check className="w-2.5 h-2.5 text-primary" />
-                  ) : (
-                    <Copy className="w-2.5 h-2.5 text-muted-foreground" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Field grid */}
-            <div className="grid grid-cols-2 gap-x-2 sm:gap-x-3 gap-y-1.5 sm:gap-y-2">
-              <FieldMicro
-                label="COMMUNITY"
-                value={profile.community?.replace(/_/g, ' ').toUpperCase() || '—'}
-              />
-              <FieldMicro
-                label="ROLE"
-                value={profile.role.toUpperCase()}
-                valueClass={roleAccent.color}
-              />
-              <FieldMicro
-                label="LGA"
-                value={profile.lga?.toUpperCase() || '—'}
-              />
-              <FieldMicro
-                label="STATE"
-                value={profile.state?.toUpperCase() || '—'}
-              />
-            </div>
-          </div>
-
-          {/* Issue / Expiry */}
-          <div className="grid grid-cols-2 gap-2 pt-1.5 sm:pt-2 border-t border-primary/10">
-            <FieldMicro label="ISSUED" value={joinDate} />
-            <FieldMicro label="EXPIRES" value={expiryFormatted} valueClass="text-orange" />
-          </div>
+      {/* ============== INFO GRID ============== */}
+      <div className="absolute top-[68%] inset-x-0 px-3">
+        <div className="grid grid-cols-2 gap-x-2.5 gap-y-1.5 pb-2 border-b border-primary/15">
+          <FieldMicro
+            label="COMMUNITY"
+            value={profile.community?.replace(/_/g, ' ').toUpperCase() || '—'}
+          />
+          <FieldMicro
+            label="ROLE"
+            value={roleAccent.label}
+            valueClass={roleAccent.color}
+          />
+          <FieldMicro
+            label="LGA"
+            value={profile.lga?.toUpperCase() || '—'}
+          />
+          <FieldMicro
+            label="STATE"
+            value={profile.state?.toUpperCase() || '—'}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-x-2.5 pt-1.5">
+          <FieldMicro label="ISSUED" value={joinDate} />
+          <FieldMicro label="EXPIRES" value={expiryFormatted} valueClass="text-orange" />
         </div>
       </div>
 
       {/* ============== BOTTOM STRIP ============== */}
-      <div className="absolute bottom-0 inset-x-0 px-4 sm:px-5 py-1.5 sm:py-2 flex items-center justify-between border-t border-primary/15 bg-black/40 backdrop-blur-sm">
+      <div className="absolute bottom-0 inset-x-0 h-[7%] px-3 flex items-center justify-between border-t border-primary/15 bg-black/40">
         <div className="flex items-center gap-1.5 min-w-0">
-          {/* Mini chip / hologram emulation */}
-          <div className="relative w-5 h-3.5 sm:w-6 sm:h-4 rounded-[1px] bg-gradient-to-br from-accent/60 via-primary/40 to-accent/30 border border-accent/40 overflow-hidden shrink-0">
+          {/* Mini chip */}
+          <div className="relative w-4 h-3 rounded-[1px] bg-gradient-to-br from-accent/70 via-primary/40 to-accent/30 border border-accent/40 overflow-hidden shrink-0">
             <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent_0px,transparent_2px,rgba(0,0,0,0.3)_2px,rgba(0,0,0,0.3)_3px)]" />
           </div>
-          <span className="font-mono text-foreground/35 text-[7px] sm:text-[8px] tracking-[0.2em] truncate">
-            AGROV1N3 · POWERED BY V1N3TECH
+          <span className="font-mono text-foreground/40 text-[5.5px] tracking-[0.18em] truncate">
+            AGROV1N3
           </span>
         </div>
-        <span className="font-mono text-muted-foreground/40 text-[6px] sm:text-[7px] tracking-[0.18em] shrink-0">
-          REF: {profile.id.slice(0, 8).toUpperCase()}
+        <span className="font-mono text-muted-foreground/40 text-[5.5px] tracking-[0.18em] shrink-0">
+          REF · {profile.id.slice(0, 6).toUpperCase()}
         </span>
       </div>
+
+      {/* Corner brackets — subtle */}
+      <CornerBrackets />
     </div>
   )
 }
 
 /* ============================================================
-   BACK OF ID CARD
+   BACK OF ID CARD — Vertical CR80
    ============================================================ */
 function IDCardBack({
   profile,
@@ -534,82 +570,80 @@ function IDCardBack({
   expiryFormatted: string
 }) {
   return (
-    <div className="relative w-full h-full overflow-hidden rounded-[6px] border border-primary/30 bg-gradient-to-br from-[#040804] via-[#020602] to-[#040604] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8),0_0_0_1px_rgba(0,200,83,0.15)]">
-      {/* Hex/Geo background */}
+    <div
+      className="relative w-full h-full overflow-hidden bg-[#0a120c] border border-primary/25"
+      style={{
+        borderRadius: '3mm',
+        boxShadow:
+          '0 24px 60px -20px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(0,200,83,0.15), inset 0 1px 0 rgba(255,255,255,0.04)',
+      }}
+    >
       <HexGeoBackground />
-      <CornerBrackets />
 
-      {/* Magnetic strip */}
-      <div className="absolute top-[10%] inset-x-0 h-[14%] bg-gradient-to-b from-black via-[#0a0a0a] to-black border-y border-foreground/5">
-        <div className="absolute inset-0 bg-[repeating-linear-gradient(90deg,transparent_0px,transparent_2px,rgba(255,255,255,0.02)_2px,rgba(255,255,255,0.02)_3px)]" />
+      {/* Magnetic strip near top */}
+      <div className="absolute top-[6%] inset-x-0 h-[10%] bg-gradient-to-b from-black via-[#0a0a0a] to-black border-y border-foreground/5">
+        <div className="absolute inset-0 bg-[repeating-linear-gradient(90deg,transparent_0px,transparent_2px,rgba(255,255,255,0.025)_2px,rgba(255,255,255,0.025)_3px)]" />
       </div>
 
       {/* Top label */}
-      <div className="absolute top-1 left-4 sm:left-5 right-4 sm:right-5 flex items-center justify-between">
-        <span className="font-mono text-foreground/40 text-[7px] sm:text-[8px] tracking-[0.25em]">
-          / SECURE STRIP
-        </span>
-        <span className="font-mono text-foreground/40 text-[7px] sm:text-[8px] tracking-[0.25em]">
-          AGROV1N3 · BACK
-        </span>
+      <div className="absolute top-1.5 left-3 right-3 flex items-center justify-between">
+        <span className="font-mono text-foreground/45 text-[6px] tracking-[0.25em]">/ SECURE STRIP</span>
+        <span className="font-mono text-foreground/45 text-[6px] tracking-[0.25em]">AGROV1N3 · BACK</span>
       </div>
 
-      {/* Body */}
-      <div className="absolute top-[28%] bottom-[18%] left-4 sm:left-5 right-4 sm:right-5 flex gap-3 sm:gap-4">
-        {/* Left: signature + barcode */}
-        <div className="flex-1 flex flex-col justify-between min-w-0">
-          {/* Signature line */}
-          <div>
-            <p className="font-mono text-foreground/40 text-[7px] sm:text-[8px] tracking-[0.25em]">
-              / HOLDER SIGNATURE
-            </p>
-            <div className="mt-1.5 sm:mt-2 h-7 sm:h-9 border-b border-primary/30 relative">
-              <span className="absolute bottom-1 left-1 font-serif italic text-primary/70 text-sm sm:text-base">
-                {fullName.split(' ')[0]}
-              </span>
-            </div>
-          </div>
+      {/* Title under strip */}
+      <div className="absolute top-[18%] inset-x-0 px-3 text-center">
+        <p className="font-mono text-foreground/45 text-[6px] tracking-[0.3em]">/ HOLDER VERIFICATION</p>
+        <h2 className="font-mono text-foreground text-[10px] tracking-[0.15em] font-bold mt-0.5">
+          AUTHENTICATION DATA
+        </h2>
+      </div>
 
-          {/* Barcode */}
-          <div className="space-y-1">
-            <p className="font-mono text-foreground/40 text-[7px] sm:text-[8px] tracking-[0.25em]">
-              / SCAN CODE
-            </p>
-            <Barcode value={profile.agroId || 'AE000000'} />
-            <p className="font-mono text-foreground/60 text-[8px] sm:text-[9px] tracking-[0.3em] text-center">
-              {profile.agroId}
-            </p>
-          </div>
+      {/* Signature line */}
+      <div className="absolute top-[28%] inset-x-0 px-3">
+        <p className="font-mono text-foreground/45 text-[6px] tracking-[0.25em]">/ HOLDER SIGNATURE</p>
+        <div className="mt-1 h-7 border-b border-primary/30 relative">
+          <span className="absolute bottom-0.5 left-1 font-serif italic text-primary/70 text-sm">
+            {fullName.split(' ')[0]}
+          </span>
         </div>
+      </div>
 
-        {/* Right: QR + meta */}
-        <div className="shrink-0 flex flex-col items-end gap-2 sm:gap-2.5">
-          {/* QR placeholder */}
-          <div className="relative aspect-square h-[60%] bg-foreground/95 rounded-[3px] p-1 sm:p-1.5 border border-primary/30">
-            <QRPattern />
+      {/* QR code centered */}
+      <div className="absolute top-[42%] left-1/2 -translate-x-1/2 w-[42%] aspect-square">
+        <div className="absolute -inset-[1.5px] rounded-[3px] bg-gradient-to-br from-primary/60 to-accent/60" />
+        <div className="relative w-full h-full bg-white rounded-[2px] p-1.5">
+          <QRPattern />
+        </div>
+      </div>
+
+      {/* Validity */}
+      <div className="absolute top-[68%] inset-x-0 px-3">
+        <div className="grid grid-cols-2 gap-x-2.5 pb-1.5 border-b border-primary/15">
+          <FieldMicro label="ISSUED" value={joinDate} />
+          <FieldMicro label="VALID THROUGH" value={expiryFormatted} valueClass="text-orange" />
+        </div>
+        {/* Barcode */}
+        <div className="mt-2">
+          <p className="font-mono text-foreground/45 text-[6px] tracking-[0.25em]">/ SCAN CODE</p>
+          <div className="mt-1">
+            <Barcode value={profile.agroId || 'AE000000'} />
           </div>
-          <div className="text-right space-y-0.5 sm:space-y-1">
-            <p className="font-mono text-foreground/40 text-[6px] sm:text-[7px] tracking-[0.25em]">
-              VALID THROUGH
-            </p>
-            <p className="font-mono text-orange text-[9px] sm:text-[11px] tracking-[0.15em] font-semibold">
-              {expiryFormatted}
-            </p>
-            <p className="font-mono text-foreground/30 text-[6px] sm:text-[7px] tracking-[0.2em]">
-              ISSUED · {joinDate}
-            </p>
-          </div>
+          <p className="font-mono text-foreground/55 text-[7px] tracking-[0.25em] text-center mt-0.5">
+            {profile.agroId}
+          </p>
         </div>
       </div>
 
       {/* Footer / Notice */}
-      <div className="absolute bottom-0 inset-x-0 px-4 sm:px-5 py-2 sm:py-2.5 border-t border-primary/15 bg-black/40 backdrop-blur-sm">
-        <p className="font-mono text-foreground/35 text-[6px] sm:text-[7px] tracking-[0.18em] leading-relaxed">
+      <div className="absolute bottom-0 inset-x-0 px-3 py-1.5 border-t border-primary/15 bg-black/40">
+        <p className="font-mono text-foreground/40 text-[5.5px] tracking-[0.15em] leading-snug">
           PROPERTY OF GREENV1N3 NIGERIA. IF FOUND, RETURN TO THE STATE COORDINATING COUNCIL,
-          PLATEAU STATE. THIS CARD REMAINS PROPERTY OF THE AGROV1N3 PROGRAM AND MUST BE
-          SURRENDERED ON REQUEST. UNAUTHORIZED USE IS PROHIBITED.
+          PLATEAU STATE. UNAUTHORIZED USE IS PROHIBITED.
         </p>
       </div>
+
+      <CornerBrackets />
     </div>
   )
 }
@@ -622,85 +656,85 @@ function HexGeoBackground() {
     <>
       {/* Hexagonal pattern */}
       <svg
-        className="absolute inset-0 w-full h-full opacity-[0.08] pointer-events-none"
+        className="absolute inset-0 w-full h-full opacity-[0.07] pointer-events-none"
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>
           <pattern
-            id="hex-pattern"
-            width="32"
-            height="28"
+            id="hex-pattern-v"
+            width="22"
+            height="19"
             patternUnits="userSpaceOnUse"
-            patternTransform="scale(1.4)"
           >
             <polygon
-              points="16,2 30,10 30,22 16,30 2,22 2,10"
+              points="11,1 21,6.5 21,15.5 11,21 1,15.5 1,6.5"
               fill="none"
               stroke="#00c853"
-              strokeWidth="0.6"
+              strokeWidth="0.5"
             />
           </pattern>
-          <radialGradient id="hex-fade" cx="50%" cy="50%" r="70%">
+          <radialGradient id="hex-fade-v" cx="50%" cy="55%" r="75%">
             <stop offset="0%" stopColor="#00c853" stopOpacity="1" />
             <stop offset="100%" stopColor="#00c853" stopOpacity="0" />
           </radialGradient>
-          <mask id="hex-mask">
-            <rect width="100%" height="100%" fill="url(#hex-fade)" />
+          <mask id="hex-mask-v">
+            <rect width="100%" height="100%" fill="url(#hex-fade-v)" />
           </mask>
         </defs>
-        <rect width="100%" height="100%" fill="url(#hex-pattern)" mask="url(#hex-mask)" />
+        <rect width="100%" height="100%" fill="url(#hex-pattern-v)" mask="url(#hex-mask-v)" />
       </svg>
 
-      {/* Geometric line accents */}
+      {/* Geometric line accents (vertical layout) */}
       <svg
         className="absolute inset-0 w-full h-full pointer-events-none"
-        viewBox="0 0 680 429"
+        viewBox="0 0 340 540"
         preserveAspectRatio="none"
       >
-        {/* Diagonal slashes */}
-        <line x1="0" y1="60" x2="120" y2="0" stroke="#00c853" strokeOpacity="0.15" strokeWidth="1" />
-        <line x1="0" y1="80" x2="100" y2="0" stroke="#00c853" strokeOpacity="0.08" strokeWidth="1" />
-        <line x1="560" y1="429" x2="680" y2="320" stroke="#d4a000" strokeOpacity="0.12" strokeWidth="1" />
-        <line x1="600" y1="429" x2="680" y2="350" stroke="#d4a000" strokeOpacity="0.06" strokeWidth="1" />
+        {/* Diagonal slashes top-left */}
+        <line x1="0" y1="80" x2="80" y2="0" stroke="#00c853" strokeOpacity="0.12" strokeWidth="1" />
+        <line x1="0" y1="100" x2="60" y2="0" stroke="#00c853" strokeOpacity="0.06" strokeWidth="1" />
 
-        {/* Right side floating hex */}
+        {/* Diagonal slashes bottom-right */}
+        <line x1="260" y1="540" x2="340" y2="460" stroke="#d4a000" strokeOpacity="0.1" strokeWidth="1" />
+        <line x1="280" y1="540" x2="340" y2="480" stroke="#d4a000" strokeOpacity="0.05" strokeWidth="1" />
+
+        {/* Floating hex left middle */}
         <polygon
-          points="600,200 640,220 640,260 600,280 560,260 560,220"
+          points="20,260 50,278 50,310 20,328 -10,310 -10,278"
           fill="none"
           stroke="#00c853"
-          strokeOpacity="0.12"
+          strokeOpacity="0.1"
           strokeWidth="1"
         />
+        {/* Floating hex right */}
         <polygon
-          points="620,180 660,200 660,240 620,260 580,240 580,200"
-          fill="none"
-          stroke="#00c853"
-          strokeOpacity="0.06"
-          strokeWidth="1"
-        />
-
-        {/* Left side floating hex */}
-        <polygon
-          points="40,300 70,316 70,348 40,364 10,348 10,316"
+          points="320,400 350,418 350,450 320,468 290,450 290,418"
           fill="none"
           stroke="#d4a000"
           strokeOpacity="0.1"
           strokeWidth="1"
         />
+        <polygon
+          points="310,380 340,398 340,430 310,448 280,430 280,398"
+          fill="none"
+          stroke="#00c853"
+          strokeOpacity="0.05"
+          strokeWidth="1"
+        />
 
-        {/* Tick marks along right edge */}
-        <line x1="670" y1="100" x2="680" y2="100" stroke="#00c853" strokeOpacity="0.3" strokeWidth="1" />
-        <line x1="670" y1="120" x2="680" y2="120" stroke="#00c853" strokeOpacity="0.2" strokeWidth="1" />
-        <line x1="670" y1="140" x2="680" y2="140" stroke="#00c853" strokeOpacity="0.1" strokeWidth="1" />
+        {/* Edge ticks */}
+        <line x1="330" y1="200" x2="340" y2="200" stroke="#00c853" strokeOpacity="0.25" strokeWidth="1" />
+        <line x1="330" y1="220" x2="340" y2="220" stroke="#00c853" strokeOpacity="0.18" strokeWidth="1" />
+        <line x1="330" y1="240" x2="340" y2="240" stroke="#00c853" strokeOpacity="0.1" strokeWidth="1" />
       </svg>
 
       {/* Grid overlay (very subtle) */}
       <div
-        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        className="absolute inset-0 opacity-[0.025] pointer-events-none"
         style={{
           backgroundImage:
             'linear-gradient(rgba(0,200,83,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(0,200,83,0.6) 1px, transparent 1px)',
-          backgroundSize: '24px 24px',
+          backgroundSize: '20px 20px',
         }}
       />
     </>
@@ -710,10 +744,10 @@ function HexGeoBackground() {
 function CornerBrackets() {
   return (
     <>
-      <div className="absolute top-2 left-2 w-3 h-3 border-t border-l border-primary/50 pointer-events-none" />
-      <div className="absolute top-2 right-2 w-3 h-3 border-t border-r border-primary/50 pointer-events-none" />
-      <div className="absolute bottom-2 left-2 w-3 h-3 border-b border-l border-primary/50 pointer-events-none" />
-      <div className="absolute bottom-2 right-2 w-3 h-3 border-b border-r border-primary/50 pointer-events-none" />
+      <div className="absolute top-1.5 left-1.5 w-2 h-2 border-t border-l border-primary/40 pointer-events-none" />
+      <div className="absolute top-1.5 right-1.5 w-2 h-2 border-t border-r border-primary/40 pointer-events-none" />
+      <div className="absolute bottom-1.5 left-1.5 w-2 h-2 border-b border-l border-primary/40 pointer-events-none" />
+      <div className="absolute bottom-1.5 right-1.5 w-2 h-2 border-b border-r border-primary/40 pointer-events-none" />
     </>
   )
 }
@@ -729,10 +763,10 @@ function FieldMicro({
 }) {
   return (
     <div className="min-w-0">
-      <p className="font-mono text-foreground/40 text-[6px] sm:text-[7px] tracking-[0.22em] mb-0.5">
+      <p className="font-mono text-foreground/40 text-[5.5px] tracking-[0.22em] mb-0.5">
         / {label}
       </p>
-      <p className={`font-mono text-[9px] sm:text-[11px] tracking-[0.1em] truncate ${valueClass}`}>
+      <p className={`font-mono text-[8px] tracking-[0.08em] truncate font-semibold ${valueClass}`}>
         {value}
       </p>
     </div>
@@ -741,7 +775,7 @@ function FieldMicro({
 
 function Barcode({ value }: { value: string }) {
   // Deterministic pseudo-barcode based on value
-  const bars = Array.from({ length: 48 }, (_, i) => {
+  const bars = Array.from({ length: 56 }, (_, i) => {
     const charCode = value.charCodeAt(i % value.length) || 65
     const w = ((charCode + i * 7) % 4) + 1
     const dark = (charCode + i) % 2 === 0
@@ -749,7 +783,7 @@ function Barcode({ value }: { value: string }) {
   })
 
   return (
-    <div className="flex items-end gap-[1px] h-7 sm:h-9 w-full">
+    <div className="flex items-end gap-[1px] h-6 w-full">
       {bars.map((b, i) => (
         <div
           key={i}
@@ -766,21 +800,19 @@ function QRPattern() {
   const cells = Array.from({ length: 49 }, (_, i) => {
     const row = Math.floor(i / 7)
     const col = i % 7
-    // Finder patterns at corners
     if ((row < 3 && col < 3) || (row < 3 && col > 3) || (row > 3 && col < 3)) {
       const r = row < 3 ? row : 6 - row
       const c = col < 3 ? col : col > 3 ? 6 - col : col
       const inFinder = r === 0 || c === 0 || (r === 1 && c === 1)
       return inFinder
     }
-    // Pseudo-random fill
     return (row * 7 + col * 3 + 17) % 3 !== 0
   })
 
   return (
     <div className="grid grid-cols-7 gap-[1px] w-full h-full">
       {cells.map((on, i) => (
-        <div key={i} className={on ? 'bg-background' : 'bg-transparent'} />
+        <div key={i} className={on ? 'bg-black' : 'bg-transparent'} />
       ))}
     </div>
   )
