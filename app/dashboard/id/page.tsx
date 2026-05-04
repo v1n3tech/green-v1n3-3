@@ -172,28 +172,36 @@ export default function IDPage() {
             size: 53.98mm 85.6mm;
             margin: 0;
           }
-          body * {
-            visibility: hidden !important;
-          }
-          .id-print-area, .id-print-area * {
-            visibility: visible !important;
-          }
-          .id-print-area {
-            position: fixed !important;
-            inset: 0 !important;
+          html, body {
             margin: 0 !important;
             padding: 0 !important;
             background: white !important;
           }
-          .id-card-print {
+          body * {
+            visibility: hidden !important;
+          }
+          .id-print-cards, .id-print-cards * {
+            visibility: visible !important;
+          }
+          .id-print-cards {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 53.98mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+          }
+          .id-card-print-single {
             width: 53.98mm !important;
             height: 85.6mm !important;
             max-width: none !important;
             box-shadow: none !important;
             border-radius: 3mm !important;
-            page-break-after: always;
+            page-break-after: always !important;
+            transform: none !important;
           }
-          .id-print-hide {
+          .id-print-hide, .id-screen-only {
             display: none !important;
           }
         }
@@ -255,8 +263,8 @@ export default function IDPage() {
         </span>
       </div>
 
-      {/* ID Card — vertical CR80 (53.98 × 85.6 mm) */}
-      <div className="id-print-area flex justify-center" style={{ perspective: '1800px' }}>
+      {/* ID Card — vertical CR80 (53.98 × 85.6 mm) - Screen View with 3D flip */}
+      <div className="id-screen-only flex justify-center" style={{ perspective: '1800px' }}>
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -265,13 +273,13 @@ export default function IDPage() {
           style={{ width: '340px' }}
         >
           {/* Ambient glow (screen only) */}
-          <div className="absolute -inset-10 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 blur-3xl opacity-50 pointer-events-none id-print-hide" />
+          <div className="absolute -inset-10 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 blur-3xl opacity-50 pointer-events-none" />
 
           {/* Flip container */}
           <motion.div
             animate={{ rotateY: flipped ? 180 : 0 }}
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="relative w-full id-card-print"
+            className="relative w-full"
             style={{
               aspectRatio: '53.98 / 85.6',
               transformStyle: 'preserve-3d',
@@ -313,6 +321,34 @@ export default function IDPage() {
             </div>
           </motion.div>
         </motion.div>
+      </div>
+
+      {/* Print-only: Flat cards without 3D transforms (hidden on screen) */}
+      <div className="id-print-cards hidden">
+        {/* FRONT - Page 1 */}
+        <div className="id-card-print-single" style={{ width: '53.98mm', height: '85.6mm' }}>
+          <IDCardFront
+            profile={profile}
+            fullName={fullName}
+            joinDate={joinDate}
+            expiryFormatted={expiryFormatted}
+            roleAccent={roleAccent}
+            verificationStyle={verificationStyle}
+            VerificationIcon={VerificationIcon}
+            getInitials={getInitials}
+            copied={false}
+            copyAgroId={() => {}}
+          />
+        </div>
+        {/* BACK - Page 2 */}
+        <div className="id-card-print-single" style={{ width: '53.98mm', height: '85.6mm' }}>
+          <IDCardBack
+            profile={profile}
+            fullName={fullName}
+            joinDate={joinDate}
+            expiryFormatted={expiryFormatted}
+          />
+        </div>
       </div>
 
       {/* Quick stats row */}

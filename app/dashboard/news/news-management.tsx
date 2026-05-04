@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, ChangeEvent } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -42,6 +42,8 @@ import {
   ChevronDown,
   Layers,
   Zap,
+  Upload,
+  Loader2,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -117,7 +119,10 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showSocialLinks, setShowSocialLinks] = useState(false)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const contentRef = useRef<HTMLTextAreaElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -173,6 +178,55 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
   const formatLink = () => insertFormatting('[', '](url)')
   const formatList = () => insertFormatting('- ', '')
   const formatOrderedList = () => insertFormatting('1. ', '')
+
+  // Image upload handler
+  const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if (!validTypes.includes(file.type)) {
+      setUploadError('Invalid file type. Use JPEG, PNG, WebP, or GIF.')
+      return
+    }
+
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024
+    if (file.size > maxSize) {
+      setUploadError('File too large. Maximum size is 10MB.')
+      return
+    }
+
+    setIsUploadingImage(true)
+    setUploadError(null)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/upload/news-image', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Upload failed')
+      }
+
+      setFormData(prev => ({ ...prev, featured_image: data.url }))
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setIsUploadingImage(false)
+      // Reset file input
+      if (imageInputRef.current) {
+        imageInputRef.current.value = ''
+      }
+    }
+  }
 
   const resetForm = () => {
     setFormData({
@@ -823,14 +877,94 @@ Use markdown for formatting:
                   </div>
 
                   <div>
-                    <label className="block mono-xs text-muted-foreground mb-2">FEATURED IMAGE URL</label>
+                    <label className="block mono-xs text-muted-foreground mb-2">FEATURED IMAGE</label>
+                    
+                    {/* Hidden file input */}
                     <input
-                      type="text"
-                      value={formData.featured_image}
-                      onChange={(e) => setFormData(prev => ({ ...prev, featured_image: e.target.value }))}
-                      placeholder="https://..."
-                      className="w-full px-3 py-2 bg-secondary/50 border border-border rounded-[2px] text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 outline-none transition-colors text-sm"
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      onChange={handleImageUpload}
+                      className="hidden"
                     />
+                    
+                    {/* Image preview or upload button */}
+                    {formData.featured_image ? (
+                      <div className="space-y-2">
+                        <div className="relative aspect-video rounded-[2px] overflow-hidden border border-border bg-secondary/30">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img 
+                            src={formData.featured_image} 
+                            alt="Featured" 
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, featured_image: '' }))}
+                            className="absolute top-2 right-2 p-1.5 bg-background/90 hover:bg-destructive hover:text-background rounded-full transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => imageInputRef.current?.click()}
+                          disabled={isUploadingImage}
+                          className="w-full px-3 py-2 border border-dashed border-border rounded-[2px] text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors text-sm flex items-center justify-center gap-2"
+                        >
+                          {isUploadingImage ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Uploading...
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="w-4 h-4" />
+                              Change Image
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => !isUploadingImage && imageInputRef.current?.click()}
+                        className={`aspect-video border-2 border-dashed rounded-[2px] flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors ${
+                          isUploadingImage 
+                            ? 'border-primary/50 bg-primary/5' 
+                            : 'border-border hover:border-primary/40 hover:bg-secondary/30'
+                        }`}
+                      >
+                        {isUploadingImage ? (
+                          <>
+                            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                            <span className="mono-xs text-muted-foreground">Uploading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-8 h-8 text-muted-foreground/50" />
+                            <span className="mono-xs text-muted-foreground">Click to upload</span>
+                            <span className="text-xs text-muted-foreground/50">Max 10MB</span>
+                          </>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Upload error */}
+                    {uploadError && (
+                      <p className="text-xs text-destructive mt-2">{uploadError}</p>
+                    )}
+                    
+                    {/* Or paste URL */}
+                    <div className="mt-3">
+                      <p className="mono-xs text-muted-foreground/50 mb-1">Or paste URL:</p>
+                      <input
+                        type="text"
+                        value={formData.featured_image}
+                        onChange={(e) => setFormData(prev => ({ ...prev, featured_image: e.target.value }))}
+                        placeholder="https://..."
+                        className="w-full px-3 py-2 bg-secondary/50 border border-border rounded-[2px] text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 outline-none transition-colors text-sm"
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-3 pt-2">
