@@ -3,8 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { AdminDashboard } from '@/components/admin/admin-dashboard'
 
 export const metadata = {
-  title: 'Admin — GreenV1n3',
-  description: 'Administrative control panel for GreenV1n3 platform.',
+  title: 'Admin Panel — GreenV1n3',
+  description: 'Administrative control panel for GreenV1n3 AgroV1n3 platform.',
 }
 
 export default async function AdminPage() {
@@ -24,21 +24,33 @@ export default async function AdminPage() {
     redirect('/dashboard')
   }
 
-  // Fetch stats for the admin dashboard
+  // Fetch comprehensive stats for the admin dashboard
   const [
     { count: totalUsers },
     { count: pendingVerifications },
     { count: activeExecutives },
+    { count: totalGCMs },
+    { count: totalLGPAs },
+    { count: totalSCCMembers },
+    { count: recentSignups },
   ] = await Promise.all([
     supabase.from('profiles').select('*', { count: 'exact', head: true }),
     supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('verification_status', 'pending'),
     supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'agro_executive').eq('is_active', true),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'gcm'),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'lgpa'),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'scc_member'),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
   ])
 
   const stats = {
     totalUsers: totalUsers ?? 0,
     pendingVerifications: pendingVerifications ?? 0,
     activeExecutives: activeExecutives ?? 0,
+    totalGCMs: totalGCMs ?? 0,
+    totalLGPAs: totalLGPAs ?? 0,
+    totalSCCMembers: totalSCCMembers ?? 0,
+    recentSignups: recentSignups ?? 0,
   }
 
   return (
