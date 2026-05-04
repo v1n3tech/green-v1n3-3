@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
@@ -16,7 +16,14 @@ import {
   Calendar,
   User,
   FileText,
+  Twitter,
+  Facebook,
+  Instagram,
+  Linkedin,
+  Youtube,
+  ExternalLink,
 } from 'lucide-react'
+import { marked } from 'marked'
 import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
 import { createClient } from '@/lib/supabase/client'
@@ -39,6 +46,15 @@ interface Author {
   role: string | null
 }
 
+interface SocialLinks {
+  twitter?: string
+  facebook?: string
+  instagram?: string
+  linkedin?: string
+  youtube?: string
+  tiktok?: string
+}
+
 interface Article {
   id: string
   title: string
@@ -48,6 +64,7 @@ interface Article {
   featured_image: string | null
   thumbnail: string | null
   tags: string[]
+  social_links: SocialLinks | null
   is_featured: boolean
   is_breaking: boolean
   views_count: number
@@ -77,12 +94,52 @@ interface ArticleContentProps {
   relatedArticles: RelatedArticle[]
 }
 
+// TikTok icon component
+const TikTokIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
+  </svg>
+)
+
+// Configure marked for better rendering
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+})
+
 export function ArticleContent({ article, relatedArticles }: ArticleContentProps) {
   const [isLiked, setIsLiked] = useState(false)
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [likesCount, setLikesCount] = useState(article.likes_count)
+  const [parsedContent, setParsedContent] = useState('')
 
   const supabase = createClient()
+
+  // Parse markdown content
+  useEffect(() => {
+    const parseMarkdown = async () => {
+      const html = await marked(article.content)
+      setParsedContent(html)
+    }
+    parseMarkdown()
+  }, [article.content])
+
+  // Check if user has already liked/bookmarked
+  useEffect(() => {
+    const checkUserInteractions = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const [{ data: likes }, { data: bookmarks }] = await Promise.all([
+        supabase.from('news_likes').select('id').eq('article_id', article.id).eq('user_id', user.id).single(),
+        supabase.from('news_bookmarks').select('id').eq('article_id', article.id).eq('user_id', user.id).single(),
+      ])
+
+      setIsLiked(!!likes)
+      setIsBookmarked(!!bookmarks)
+    }
+    checkUserInteractions()
+  }, [article.id, supabase])
 
   const toggleLike = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -137,6 +194,8 @@ export function ArticleContent({ article, relatedArticles }: ArticleContentProps
   }
 
   const readTime = Math.ceil(article.content.length / 1000)
+
+  const hasSocialLinks = article.social_links && Object.values(article.social_links).some(v => v)
 
   return (
     <main className="min-h-screen bg-background">
@@ -265,9 +324,90 @@ export function ArticleContent({ article, relatedArticles }: ArticleContentProps
             {/* Article Body */}
             <article className="prose prose-invert prose-lg max-w-none">
               <div 
-                className="text-foreground/90 leading-relaxed whitespace-pre-wrap"
-                dangerouslySetInnerHTML={{ __html: article.content.replace(/\n/g, '<br />') }}
+                className="article-content text-foreground/90 leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: parsedContent }}
               />
+              
+              {/* Social Links Section */}
+              {hasSocialLinks && (
+                <div className="mt-10 pt-8 border-t border-border">
+                  <h4 className="mono text-sm text-foreground mb-4">FOLLOW THIS STORY</h4>
+                  <div className="flex flex-wrap gap-3">
+                    {article.social_links?.twitter && (
+                      <a
+                        href={article.social_links.twitter}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#1DA1F2]/10 border border-[#1DA1F2]/30 text-[#1DA1F2] rounded-[2px] hover:bg-[#1DA1F2]/20 transition-colors"
+                      >
+                        <Twitter className="w-4 h-4" />
+                        <span className="mono-xs">Twitter</span>
+                        <ExternalLink className="w-3 h-3 ml-1 opacity-50" />
+                      </a>
+                    )}
+                    {article.social_links?.facebook && (
+                      <a
+                        href={article.social_links.facebook}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#1877F2]/10 border border-[#1877F2]/30 text-[#1877F2] rounded-[2px] hover:bg-[#1877F2]/20 transition-colors"
+                      >
+                        <Facebook className="w-4 h-4" />
+                        <span className="mono-xs">Facebook</span>
+                        <ExternalLink className="w-3 h-3 ml-1 opacity-50" />
+                      </a>
+                    )}
+                    {article.social_links?.instagram && (
+                      <a
+                        href={article.social_links.instagram}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#E4405F]/10 border border-[#E4405F]/30 text-[#E4405F] rounded-[2px] hover:bg-[#E4405F]/20 transition-colors"
+                      >
+                        <Instagram className="w-4 h-4" />
+                        <span className="mono-xs">Instagram</span>
+                        <ExternalLink className="w-3 h-3 ml-1 opacity-50" />
+                      </a>
+                    )}
+                    {article.social_links?.linkedin && (
+                      <a
+                        href={article.social_links.linkedin}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#0A66C2]/10 border border-[#0A66C2]/30 text-[#0A66C2] rounded-[2px] hover:bg-[#0A66C2]/20 transition-colors"
+                      >
+                        <Linkedin className="w-4 h-4" />
+                        <span className="mono-xs">LinkedIn</span>
+                        <ExternalLink className="w-3 h-3 ml-1 opacity-50" />
+                      </a>
+                    )}
+                    {article.social_links?.youtube && (
+                      <a
+                        href={article.social_links.youtube}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#FF0000]/10 border border-[#FF0000]/30 text-[#FF0000] rounded-[2px] hover:bg-[#FF0000]/20 transition-colors"
+                      >
+                        <Youtube className="w-4 h-4" />
+                        <span className="mono-xs">YouTube</span>
+                        <ExternalLink className="w-3 h-3 ml-1 opacity-50" />
+                      </a>
+                    )}
+                    {article.social_links?.tiktok && (
+                      <a
+                        href={article.social_links.tiktok}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 bg-foreground/10 border border-foreground/30 text-foreground rounded-[2px] hover:bg-foreground/20 transition-colors"
+                      >
+                        <TikTokIcon className="w-4 h-4" />
+                        <span className="mono-xs">TikTok</span>
+                        <ExternalLink className="w-3 h-3 ml-1 opacity-50" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
             </article>
 
             {/* Sticky Sidebar */}
@@ -430,6 +570,99 @@ export function ArticleContent({ article, relatedArticles }: ArticleContentProps
       )}
 
       <Footer />
+
+      {/* Custom styles for markdown content */}
+      <style jsx global>{`
+        .article-content h1 {
+          font-size: 2rem;
+          font-weight: 300;
+          margin-top: 2rem;
+          margin-bottom: 1rem;
+          color: hsl(var(--foreground));
+        }
+        .article-content h2 {
+          font-size: 1.5rem;
+          font-weight: 400;
+          margin-top: 1.75rem;
+          margin-bottom: 0.75rem;
+          color: hsl(var(--foreground));
+        }
+        .article-content h3 {
+          font-size: 1.25rem;
+          font-weight: 500;
+          margin-top: 1.5rem;
+          margin-bottom: 0.5rem;
+          color: hsl(var(--foreground));
+        }
+        .article-content p {
+          margin-bottom: 1.25rem;
+          line-height: 1.8;
+        }
+        .article-content strong {
+          font-weight: 600;
+          color: hsl(var(--foreground));
+        }
+        .article-content em {
+          font-style: italic;
+        }
+        .article-content ul, .article-content ol {
+          margin-bottom: 1.25rem;
+          padding-left: 1.5rem;
+        }
+        .article-content li {
+          margin-bottom: 0.5rem;
+        }
+        .article-content ul li {
+          list-style-type: disc;
+        }
+        .article-content ol li {
+          list-style-type: decimal;
+        }
+        .article-content blockquote {
+          border-left: 3px solid hsl(var(--primary));
+          padding-left: 1rem;
+          margin: 1.5rem 0;
+          font-style: italic;
+          color: hsl(var(--muted-foreground));
+        }
+        .article-content code {
+          background: hsl(var(--secondary));
+          padding: 0.2rem 0.4rem;
+          border-radius: 2px;
+          font-family: monospace;
+          font-size: 0.9em;
+        }
+        .article-content pre {
+          background: hsl(var(--secondary));
+          padding: 1rem;
+          border-radius: 2px;
+          overflow-x: auto;
+          margin: 1.5rem 0;
+        }
+        .article-content pre code {
+          background: none;
+          padding: 0;
+        }
+        .article-content a {
+          color: hsl(var(--primary));
+          text-decoration: underline;
+          text-underline-offset: 2px;
+        }
+        .article-content a:hover {
+          opacity: 0.8;
+        }
+        .article-content img {
+          max-width: 100%;
+          height: auto;
+          border-radius: 2px;
+          margin: 1.5rem 0;
+        }
+        .article-content hr {
+          border: none;
+          border-top: 1px solid hsl(var(--border));
+          margin: 2rem 0;
+        }
+      `}</style>
     </main>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -16,7 +16,6 @@ import {
   XCircle,
   AlertCircle,
   ExternalLink,
-  MoreHorizontal,
   Newspaper,
   TrendingUp,
   MessageSquare,
@@ -29,6 +28,20 @@ import {
   Italic,
   List,
   Link2,
+  Heading1,
+  Heading2,
+  Quote,
+  Code,
+  ListOrdered,
+  Sparkles,
+  Twitter,
+  Facebook,
+  Instagram,
+  Linkedin,
+  Youtube,
+  ChevronDown,
+  Layers,
+  Zap,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -47,6 +60,15 @@ interface Category {
   color: string | null
 }
 
+interface SocialLinks {
+  twitter?: string
+  facebook?: string
+  instagram?: string
+  linkedin?: string
+  youtube?: string
+  tiktok?: string
+}
+
 interface Article {
   id: string
   title: string
@@ -56,6 +78,7 @@ interface Article {
   featured_image: string | null
   category_id: string | null
   tags: string[]
+  social_links: SocialLinks
   status: 'draft' | 'pending_review' | 'published' | 'archived'
   is_featured: boolean
   is_breaking: boolean
@@ -78,6 +101,13 @@ interface NewsManagementProps {
 type ViewMode = 'list' | 'create' | 'edit'
 type FilterStatus = 'all' | 'draft' | 'pending_review' | 'published' | 'archived'
 
+// TikTok icon component
+const TikTokIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
+  </svg>
+)
+
 export function NewsManagement({ profile, canManageNews, categories, initialArticles }: NewsManagementProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [articles, setArticles] = useState<Article[]>(initialArticles)
@@ -86,6 +116,8 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
   const [editingArticle, setEditingArticle] = useState<Article | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showSocialLinks, setShowSocialLinks] = useState(false)
+  const contentRef = useRef<HTMLTextAreaElement>(null)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -98,9 +130,49 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
     is_featured: false,
     is_breaking: false,
     status: 'draft' as Article['status'],
+    social_links: {
+      twitter: '',
+      facebook: '',
+      instagram: '',
+      linkedin: '',
+      youtube: '',
+      tiktok: '',
+    } as SocialLinks,
   })
 
   const supabase = createClient()
+
+  // Text formatting functions
+  const insertFormatting = useCallback((prefix: string, suffix: string = prefix) => {
+    const textarea = contentRef.current
+    if (!textarea) return
+
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const selectedText = formData.content.substring(start, end)
+    const beforeText = formData.content.substring(0, start)
+    const afterText = formData.content.substring(end)
+
+    const newText = `${beforeText}${prefix}${selectedText}${suffix}${afterText}`
+    setFormData(prev => ({ ...prev, content: newText }))
+
+    // Restore cursor position
+    setTimeout(() => {
+      textarea.focus()
+      const newCursorPos = start + prefix.length + selectedText.length + suffix.length
+      textarea.setSelectionRange(newCursorPos, newCursorPos)
+    }, 0)
+  }, [formData.content])
+
+  const formatBold = () => insertFormatting('**')
+  const formatItalic = () => insertFormatting('*')
+  const formatH1 = () => insertFormatting('# ', '')
+  const formatH2 = () => insertFormatting('## ', '')
+  const formatQuote = () => insertFormatting('> ', '')
+  const formatCode = () => insertFormatting('`')
+  const formatLink = () => insertFormatting('[', '](url)')
+  const formatList = () => insertFormatting('- ', '')
+  const formatOrderedList = () => insertFormatting('1. ', '')
 
   const resetForm = () => {
     setFormData({
@@ -113,9 +185,18 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
       is_featured: false,
       is_breaking: false,
       status: 'draft',
+      social_links: {
+        twitter: '',
+        facebook: '',
+        instagram: '',
+        linkedin: '',
+        youtube: '',
+        tiktok: '',
+      },
     })
     setEditingArticle(null)
     setError(null)
+    setShowSocialLinks(false)
   }
 
   const handleCreate = () => {
@@ -124,6 +205,7 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
   }
 
   const handleEdit = (article: Article) => {
+    const socialLinks = article.social_links || {}
     setFormData({
       title: article.title,
       excerpt: article.excerpt || '',
@@ -134,8 +216,17 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
       is_featured: article.is_featured,
       is_breaking: article.is_breaking,
       status: article.status,
+      social_links: {
+        twitter: socialLinks.twitter || '',
+        facebook: socialLinks.facebook || '',
+        instagram: socialLinks.instagram || '',
+        linkedin: socialLinks.linkedin || '',
+        youtube: socialLinks.youtube || '',
+        tiktok: socialLinks.tiktok || '',
+      },
     })
     setEditingArticle(article)
+    setShowSocialLinks(Object.values(socialLinks).some(v => v))
     setViewMode('edit')
   }
 
@@ -167,6 +258,15 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
       const tags = formData.tags.split(',').map(t => t.trim()).filter(Boolean)
       const status = publishNow ? 'published' : formData.status
 
+      // Clean up empty social links
+      const socialLinks: SocialLinks = {}
+      if (formData.social_links.twitter) socialLinks.twitter = formData.social_links.twitter
+      if (formData.social_links.facebook) socialLinks.facebook = formData.social_links.facebook
+      if (formData.social_links.instagram) socialLinks.instagram = formData.social_links.instagram
+      if (formData.social_links.linkedin) socialLinks.linkedin = formData.social_links.linkedin
+      if (formData.social_links.youtube) socialLinks.youtube = formData.social_links.youtube
+      if (formData.social_links.tiktok) socialLinks.tiktok = formData.social_links.tiktok
+
       const articleData = {
         title: formData.title.trim(),
         slug,
@@ -175,6 +275,7 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
         featured_image: formData.featured_image.trim() || null,
         category_id: formData.category_id || null,
         tags,
+        social_links: socialLinks,
         is_featured: formData.is_featured,
         is_breaking: formData.is_breaking,
         status,
@@ -287,12 +388,17 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-light text-foreground">News</h1>
-            <p className="text-sm text-muted-foreground mt-1">Stay updated with the latest news</p>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-primary/10 rounded-[2px]">
+                <Sparkles className="w-5 h-5 text-primary" />
+              </div>
+              <h1 className="text-2xl font-light text-foreground">News Studio</h1>
+            </div>
+            <p className="text-sm text-muted-foreground">Stay updated with the latest news</p>
           </div>
         </div>
 
-        <div className="p-12 border border-dashed border-border rounded-[2px] text-center">
+        <div className="p-12 border border-dashed border-border rounded-[2px] text-center bg-gradient-to-br from-card to-secondary/20">
           <Newspaper className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-foreground mb-2">View Only Access</h3>
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
@@ -316,15 +422,21 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-light text-foreground">News Management</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Create and manage news articles for GreenV1n3
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-gradient-to-br from-primary to-primary/70 rounded-[2px]">
+              <Sparkles className="w-5 h-5 text-background" />
+            </div>
+            <h1 className="text-2xl font-light text-foreground">News Studio</h1>
+            <span className="mono-xs px-2 py-0.5 bg-primary/20 text-primary rounded-full">PRO</span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Create, edit, and publish news articles for GreenV1n3
           </p>
         </div>
         {viewMode === 'list' && (
           <button
             onClick={handleCreate}
-            className="inline-flex items-center gap-2 mono-xs px-4 py-2.5 bg-primary text-background rounded-[2px] hover:bg-primary/90 transition-colors"
+            className="inline-flex items-center gap-2 mono-xs px-5 py-2.5 bg-gradient-to-r from-primary to-primary/80 text-background rounded-[2px] hover:opacity-90 transition-all shadow-lg shadow-primary/20"
           >
             <Plus className="w-4 h-4" />
             NEW ARTICLE
@@ -344,14 +456,14 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
             {/* Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
-                { label: 'Total Articles', value: stats.total, icon: FileText },
-                { label: 'Published', value: stats.published, icon: CheckCircle },
-                { label: 'Drafts', value: stats.drafts, icon: Clock },
-                { label: 'Total Views', value: stats.views.toLocaleString(), icon: Eye },
+                { label: 'Total Articles', value: stats.total, icon: Layers, color: 'text-primary' },
+                { label: 'Published', value: stats.published, icon: Zap, color: 'text-green-400' },
+                { label: 'Drafts', value: stats.drafts, icon: Clock, color: 'text-orange' },
+                { label: 'Total Views', value: stats.views.toLocaleString(), icon: TrendingUp, color: 'text-accent' },
               ].map((stat) => (
-                <div key={stat.label} className="p-4 border border-border rounded-[2px] bg-card">
+                <div key={stat.label} className="p-4 border border-border rounded-[2px] bg-gradient-to-br from-card to-secondary/10 hover:border-primary/30 transition-all">
                   <div className="flex items-center gap-2 mb-2">
-                    <stat.icon className="w-4 h-4 text-primary" />
+                    <stat.icon className={`w-4 h-4 ${stat.color}`} />
                     <span className="mono-xs text-muted-foreground">{stat.label}</span>
                   </div>
                   <p className="text-2xl font-light text-foreground">{stat.value}</p>
@@ -395,10 +507,10 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
                 filteredArticles.map((article) => (
                   <div
                     key={article.id}
-                    className="flex items-center gap-4 p-4 border border-border rounded-[2px] bg-card hover:border-primary/30 transition-all"
+                    className="flex items-center gap-4 p-4 border border-border rounded-[2px] bg-card hover:border-primary/30 transition-all group"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         {getStatusIcon(article.status)}
                         <span className="mono-xs text-muted-foreground">
                           {getStatusLabel(article.status)}
@@ -419,8 +531,13 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
                             BREAKING
                           </span>
                         )}
+                        {article.social_links && Object.keys(article.social_links).length > 0 && (
+                          <span className="mono-xs px-1.5 py-0.5 bg-accent/20 text-accent rounded text-[9px] flex items-center gap-1">
+                            <Link2 className="w-2.5 h-2.5" /> SOCIAL
+                          </span>
+                        )}
                       </div>
-                      <h3 className="text-foreground font-medium truncate">{article.title}</h3>
+                      <h3 className="text-foreground font-medium truncate group-hover:text-primary transition-colors">{article.title}</h3>
                       <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                         <span>{formatDate(article.created_at)}</span>
                         <div className="flex items-center gap-1">
@@ -466,7 +583,7 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
                   </div>
                 ))
               ) : (
-                <div className="p-12 border border-dashed border-border rounded-[2px] text-center">
+                <div className="p-12 border border-dashed border-border rounded-[2px] text-center bg-gradient-to-br from-card to-secondary/10">
                   <FileText className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
                   <p className="text-muted-foreground">
                     {searchQuery || filterStatus !== 'all' 
@@ -494,9 +611,12 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
                 >
                   <X className="w-5 h-5" />
                 </button>
-                <h2 className="text-lg font-medium text-foreground">
-                  {viewMode === 'edit' ? 'Edit Article' : 'New Article'}
-                </h2>
+                <div>
+                  <h2 className="text-lg font-medium text-foreground">
+                    {viewMode === 'edit' ? 'Edit Article' : 'New Article'}
+                  </h2>
+                  <p className="text-xs text-muted-foreground">Use markdown for formatting</p>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -510,7 +630,7 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
                 <button
                   onClick={() => handleSubmit(true)}
                   disabled={isSubmitting}
-                  className="inline-flex items-center gap-2 mono-xs px-4 py-2 bg-primary text-background rounded-[2px] hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-2 mono-xs px-4 py-2 bg-gradient-to-r from-primary to-primary/80 text-background rounded-[2px] hover:opacity-90 transition-all disabled:opacity-50 shadow-lg shadow-primary/20"
                 >
                   <Send className="w-4 h-4" />
                   PUBLISH
@@ -535,7 +655,7 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
                     value={formData.title}
                     onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                     placeholder="Enter article title..."
-                    className="w-full px-4 py-3 bg-secondary/50 border border-border rounded-[2px] text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 outline-none transition-colors"
+                    className="w-full px-4 py-3 bg-secondary/50 border border-border rounded-[2px] text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 outline-none transition-colors text-lg"
                   />
                 </div>
 
@@ -551,31 +671,118 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
                 </div>
 
                 <div>
-                  <label className="block mono-xs text-muted-foreground mb-2">CONTENT *</label>
+                  <label className="block mono-xs text-muted-foreground mb-2">CONTENT * <span className="text-muted-foreground/50">(Markdown supported)</span></label>
                   <div className="border border-border rounded-[2px] overflow-hidden">
-                    <div className="flex items-center gap-1 px-3 py-2 bg-secondary/30 border-b border-border">
-                      <button className="p-1.5 text-muted-foreground hover:text-foreground transition-colors">
-                        <Bold className="w-4 h-4" />
-                      </button>
-                      <button className="p-1.5 text-muted-foreground hover:text-foreground transition-colors">
-                        <Italic className="w-4 h-4" />
-                      </button>
-                      <button className="p-1.5 text-muted-foreground hover:text-foreground transition-colors">
-                        <List className="w-4 h-4" />
-                      </button>
-                      <button className="p-1.5 text-muted-foreground hover:text-foreground transition-colors">
-                        <Link2 className="w-4 h-4" />
-                      </button>
-                      <button className="p-1.5 text-muted-foreground hover:text-foreground transition-colors">
-                        <ImageIcon className="w-4 h-4" />
-                      </button>
+                    {/* Formatting Toolbar */}
+                    <div className="flex items-center gap-1 px-3 py-2 bg-gradient-to-r from-secondary/50 to-secondary/30 border-b border-border flex-wrap">
+                      <div className="flex items-center gap-1 pr-2 border-r border-border/50 mr-2">
+                        <button 
+                          type="button"
+                          onClick={formatBold}
+                          className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors" 
+                          title="Bold (**text**)"
+                        >
+                          <Bold className="w-4 h-4" />
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={formatItalic}
+                          className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors" 
+                          title="Italic (*text*)"
+                        >
+                          <Italic className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1 pr-2 border-r border-border/50 mr-2">
+                        <button 
+                          type="button"
+                          onClick={formatH1}
+                          className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors" 
+                          title="Heading 1 (# text)"
+                        >
+                          <Heading1 className="w-4 h-4" />
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={formatH2}
+                          className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors" 
+                          title="Heading 2 (## text)"
+                        >
+                          <Heading2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1 pr-2 border-r border-border/50 mr-2">
+                        <button 
+                          type="button"
+                          onClick={formatList}
+                          className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors" 
+                          title="Bullet List (- item)"
+                        >
+                          <List className="w-4 h-4" />
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={formatOrderedList}
+                          className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors" 
+                          title="Numbered List (1. item)"
+                        >
+                          <ListOrdered className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button 
+                          type="button"
+                          onClick={formatQuote}
+                          className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors" 
+                          title="Quote (> text)"
+                        >
+                          <Quote className="w-4 h-4" />
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={formatCode}
+                          className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors" 
+                          title="Code (`code`)"
+                        >
+                          <Code className="w-4 h-4" />
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={formatLink}
+                          className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors" 
+                          title="Link ([text](url))"
+                        >
+                          <Link2 className="w-4 h-4" />
+                        </button>
+                        <button 
+                          type="button"
+                          className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors" 
+                          title="Image"
+                        >
+                          <ImageIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="ml-auto mono-xs text-muted-foreground/50 hidden sm:block">
+                        Markdown
+                      </div>
                     </div>
                     <textarea
+                      ref={contentRef}
                       value={formData.content}
                       onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                      placeholder="Write your article content here..."
-                      rows={15}
-                      className="w-full px-4 py-3 bg-background text-foreground placeholder:text-muted-foreground/50 outline-none resize-none"
+                      placeholder="Write your article content here...
+
+Use markdown for formatting:
+**bold** or *italic*
+# Heading 1
+## Heading 2
+- Bullet list
+1. Numbered list
+> Quote
+`code`
+[link text](url)"
+                      rows={18}
+                      className="w-full px-4 py-3 bg-background text-foreground placeholder:text-muted-foreground/50 outline-none resize-none font-mono text-sm leading-relaxed"
                     />
                   </div>
                 </div>
@@ -583,8 +790,11 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
 
               {/* Sidebar */}
               <div className="space-y-4">
-                <div className="p-4 border border-border rounded-[2px] bg-card space-y-4">
-                  <h3 className="mono-xs text-foreground">SETTINGS</h3>
+                <div className="p-4 border border-border rounded-[2px] bg-gradient-to-br from-card to-secondary/10 space-y-4">
+                  <h3 className="mono-xs text-foreground flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-primary" />
+                    SETTINGS
+                  </h3>
 
                   <div>
                     <label className="block mono-xs text-muted-foreground mb-2">CATEGORY</label>
@@ -624,29 +834,139 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
                   </div>
 
                   <div className="space-y-3 pt-2">
-                    <label className="flex items-center gap-3 cursor-pointer">
+                    <label className="flex items-center gap-3 cursor-pointer group">
                       <input
                         type="checkbox"
                         checked={formData.is_featured}
                         onChange={(e) => setFormData(prev => ({ ...prev, is_featured: e.target.checked }))}
                         className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
                       />
-                      <span className="text-sm text-foreground">Mark as Featured</span>
+                      <span className="text-sm text-foreground group-hover:text-primary transition-colors">Mark as Featured</span>
                     </label>
-                    <label className="flex items-center gap-3 cursor-pointer">
+                    <label className="flex items-center gap-3 cursor-pointer group">
                       <input
                         type="checkbox"
                         checked={formData.is_breaking}
                         onChange={(e) => setFormData(prev => ({ ...prev, is_breaking: e.target.checked }))}
                         className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
                       />
-                      <span className="text-sm text-foreground">Mark as Breaking News</span>
+                      <span className="text-sm text-foreground group-hover:text-primary transition-colors">Mark as Breaking News</span>
                     </label>
                   </div>
                 </div>
 
+                {/* Social Media Links */}
                 <div className="p-4 border border-border rounded-[2px] bg-card">
-                  <h3 className="mono-xs text-foreground mb-3">PUBLISH STATUS</h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowSocialLinks(!showSocialLinks)}
+                    className="w-full flex items-center justify-between mono-xs text-foreground"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Link2 className="w-4 h-4 text-primary" />
+                      SOCIAL MEDIA LINKS
+                    </span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${showSocialLinks ? 'rotate-180' : ''}`} />
+                  </button>
+                  
+                  <AnimatePresence>
+                    {showSocialLinks && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="space-y-3 pt-4">
+                          <div className="flex items-center gap-2">
+                            <Twitter className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                            <input
+                              type="url"
+                              value={formData.social_links.twitter}
+                              onChange={(e) => setFormData(prev => ({ 
+                                ...prev, 
+                                social_links: { ...prev.social_links, twitter: e.target.value }
+                              }))}
+                              placeholder="Twitter/X URL"
+                              className="flex-1 px-3 py-1.5 bg-secondary/50 border border-border rounded-[2px] text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 outline-none transition-colors text-sm"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Facebook className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                            <input
+                              type="url"
+                              value={formData.social_links.facebook}
+                              onChange={(e) => setFormData(prev => ({ 
+                                ...prev, 
+                                social_links: { ...prev.social_links, facebook: e.target.value }
+                              }))}
+                              placeholder="Facebook URL"
+                              className="flex-1 px-3 py-1.5 bg-secondary/50 border border-border rounded-[2px] text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 outline-none transition-colors text-sm"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Instagram className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                            <input
+                              type="url"
+                              value={formData.social_links.instagram}
+                              onChange={(e) => setFormData(prev => ({ 
+                                ...prev, 
+                                social_links: { ...prev.social_links, instagram: e.target.value }
+                              }))}
+                              placeholder="Instagram URL"
+                              className="flex-1 px-3 py-1.5 bg-secondary/50 border border-border rounded-[2px] text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 outline-none transition-colors text-sm"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Linkedin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                            <input
+                              type="url"
+                              value={formData.social_links.linkedin}
+                              onChange={(e) => setFormData(prev => ({ 
+                                ...prev, 
+                                social_links: { ...prev.social_links, linkedin: e.target.value }
+                              }))}
+                              placeholder="LinkedIn URL"
+                              className="flex-1 px-3 py-1.5 bg-secondary/50 border border-border rounded-[2px] text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 outline-none transition-colors text-sm"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Youtube className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                            <input
+                              type="url"
+                              value={formData.social_links.youtube}
+                              onChange={(e) => setFormData(prev => ({ 
+                                ...prev, 
+                                social_links: { ...prev.social_links, youtube: e.target.value }
+                              }))}
+                              placeholder="YouTube URL"
+                              className="flex-1 px-3 py-1.5 bg-secondary/50 border border-border rounded-[2px] text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 outline-none transition-colors text-sm"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <TikTokIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                            <input
+                              type="url"
+                              value={formData.social_links.tiktok}
+                              onChange={(e) => setFormData(prev => ({ 
+                                ...prev, 
+                                social_links: { ...prev.social_links, tiktok: e.target.value }
+                              }))}
+                              placeholder="TikTok URL"
+                              className="flex-1 px-3 py-1.5 bg-secondary/50 border border-border rounded-[2px] text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 outline-none transition-colors text-sm"
+                            />
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                <div className="p-4 border border-border rounded-[2px] bg-card">
+                  <h3 className="mono-xs text-foreground mb-3 flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-primary" />
+                    PUBLISH STATUS
+                  </h3>
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as Article['status'] }))}
@@ -657,6 +977,18 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
                     <option value="published">Published</option>
                     <option value="archived">Archived</option>
                   </select>
+                </div>
+
+                {/* Formatting Help */}
+                <div className="p-4 border border-border/50 rounded-[2px] bg-secondary/20">
+                  <h4 className="mono-xs text-muted-foreground mb-2">FORMATTING TIPS</h4>
+                  <div className="space-y-1 text-xs text-muted-foreground/70 font-mono">
+                    <p>**bold** → <strong>bold</strong></p>
+                    <p>*italic* → <em>italic</em></p>
+                    <p># Heading 1</p>
+                    <p>## Heading 2</p>
+                    <p>[link](url)</p>
+                  </div>
                 </div>
               </div>
             </div>

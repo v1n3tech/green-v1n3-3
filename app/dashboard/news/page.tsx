@@ -65,6 +65,6 @@ export default async function DashboardNewsPage() {
 }
 
 export const metadata = {
-  title: 'News Management | GreenV1n3 Dashboard',
-  description: 'Create and manage news articles for the GreenV1n3 platform',
+  title: 'News Studio | GreenV1n3 Dashboard',
+  description: 'Create, edit, and publish news articles for the GreenV1n3 platform',
 }
