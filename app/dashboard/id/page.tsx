@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import QRCode from 'qrcode'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -159,7 +160,7 @@ export default function IDPage() {
     .toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
     .toUpperCase()
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (typeof window === 'undefined') return
 
     const agroId = profile.agroId || 'AE-000000'
@@ -189,25 +190,17 @@ export default function IDPage() {
     const barcodeTotalWidth = bx
     const barcodeSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${barcodeTotalWidth} 18" width="100%" height="18px" preserveAspectRatio="none">${barcodeRects}</svg>`
 
-    // QR pattern — exact same algorithm as QRPattern component
-    const qrCells = Array.from({ length: 49 }, (_, i) => {
-      const row = Math.floor(i / 7)
-      const col = i % 7
-      if ((row < 3 && col < 3) || (row < 3 && col > 3) || (row > 3 && col < 3)) {
-        const r = row < 3 ? row : 6 - row
-        const c = col < 3 ? col : col > 3 ? 6 - col : col
-        const inFinder = r === 0 || c === 0 || (r === 1 && c === 1)
-        return inFinder
+    // Real QR code — encode the Agro ID as a scannable data URL
+    const qrDataUrl = await QRCode.toDataURL(
+      `GREENV1N3:${agroId}:${profile.id}`,
+      {
+        width: 160,
+        margin: 1,
+        color: { dark: '#000000', light: '#ffffff' },
+        errorCorrectionLevel: 'M',
       }
-      return (row * 7 + col * 3 + 17) % 3 !== 0
-    })
-    const cellSize = 14 / 7 // 14mm / 7 cells
-    const qrRects = qrCells.map((on, i) => {
-      const row = Math.floor(i / 7)
-      const col = i % 7
-      return on ? `<rect x="${col * cellSize}mm" y="${row * cellSize}mm" width="${cellSize}mm" height="${cellSize}mm" fill="#000"/>` : ''
-    }).join('')
-    const qrSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14mm" height="14mm" style="display:block;">${qrRects}</svg>`
+    )
+    const qrSvg = `<img src="${qrDataUrl}" width="14mm" height="14mm" style="display:block;image-rendering:pixelated;"/>`
 
     // Photo / initials
     const photoHtml = profile.avatarUrl

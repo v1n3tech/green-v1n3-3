@@ -264,6 +264,24 @@
   animation: v1n3Pulse 2s ease-in-out infinite;
 }
 
+@keyframes v1n3TextPulse {
+  0%   { opacity: 1; }
+  45%  { opacity: 0.08; }
+  55%  { opacity: 0.08; }
+  100% { opacity: 1; }
+}
+
+.v1n3-loader-text {
+  animation: v1n3TextPulse 2.4s ease-in-out infinite;
+  font-weight: 300;
+}
+
+.v1n3-loader-halo {
+  filter: blur(14px);
+  animation: v1n3TextPulse 2.4s ease-in-out infinite;
+  font-weight: 300;
+}
+
 @keyframes progressBar {
   0% { width: 0%; }
   100% { width: 100%; }
