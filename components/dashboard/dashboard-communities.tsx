@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Users,
@@ -23,9 +23,13 @@ import {
   MoreHorizontal,
   TrendingUp,
   Clock,
+  Zap,
+  Loader2,
 } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
 import type { AgroCommunityKey } from '@/components/onboarding/data'
+import { fetchServices, type CommunityService } from '@/lib/services/actions'
 
 interface Community {
   key: AgroCommunityKey
@@ -111,7 +115,7 @@ const LEADERBOARD = [
   { rank: 5, name: 'John Dung', points: 1820, badge: 'BRONZE' },
 ]
 
-type TabKey = 'feed' | 'events' | 'members' | 'resources'
+type TabKey = 'feed' | 'services' | 'events' | 'members' | 'resources'
 
 export function DashboardCommunities({
   userCommunity,
@@ -121,9 +125,22 @@ export function DashboardCommunities({
   agroId,
 }: DashboardCommunitiesProps) {
   const [activeTab, setActiveTab] = useState<TabKey>('feed')
+  const [services, setServices] = useState<CommunityService[]>([])
+  const [servicesLoading, setServicesLoading] = useState(false)
+
+  // Fetch services when switching to services tab
+  useEffect(() => {
+    if (activeTab === 'services' && userCommunity) {
+      setServicesLoading(true)
+      fetchServices({ community: userCommunity.key as any, limit: 20 })
+        .then(({ services }) => setServices(services))
+        .finally(() => setServicesLoading(false))
+    }
+  }, [activeTab, userCommunity])
 
   const tabs: { key: TabKey; label: string; icon: React.ReactNode }[] = [
     { key: 'feed', label: 'Feed', icon: <Radio className="w-3.5 h-3.5" /> },
+    { key: 'services', label: 'Services', icon: <Zap className="w-3.5 h-3.5" /> },
     { key: 'events', label: 'Events', icon: <Calendar className="w-3.5 h-3.5" /> },
     { key: 'members', label: 'Members', icon: <Users className="w-3.5 h-3.5" /> },
     { key: 'resources', label: 'Resources', icon: <FileText className="w-3.5 h-3.5" /> },
@@ -288,6 +305,51 @@ export function DashboardCommunities({
                 {COMMUNITY_POSTS.map((post) => (
                   <PostCard key={post.id} post={post} />
                 ))}
+              </motion.div>
+            )}
+
+            {activeTab === 'services' && (
+              <motion.div
+                key="services"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-4"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-primary" />
+                    <span className="mono-xs text-[10px] text-muted-foreground">/ COMMUNITY SERVICES</span>
+                  </div>
+                  <span className="mono-xs text-[9px] text-primary">{services.length} AVAILABLE</span>
+                </div>
+
+                {servicesLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                  </div>
+                ) : services.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-4">
+                    {services.map((service) => (
+                      <DashboardServiceCard key={service.id} service={service} isOwnCommunity />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-background border border-border rounded-[2px] p-6 text-center">
+                    <Zap className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+                    <h3 className="font-mono text-lg text-foreground mb-2">No Services Yet</h3>
+                    <p className="mono-xs text-[11px] text-muted-foreground mb-4">
+                      Your community hasn&apos;t listed any services yet. Check back later or browse other communities.
+                    </p>
+                    <Link
+                      href="/dashboard/requests"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-background mono-sm text-xs rounded-[2px]"
+                    >
+                      BROWSE ALL SERVICES
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </div>
+                )}
               </motion.div>
             )}
 
@@ -486,6 +548,58 @@ function PostCard({ post }: { post: typeof COMMUNITY_POSTS[0] }) {
               <MoreHorizontal className="w-4 h-4" />
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DashboardServiceCard({ service, isOwnCommunity }: { service: CommunityService; isOwnCommunity?: boolean }) {
+  return (
+    <div className="bg-background border border-primary/30 rounded-[2px] p-4 hover:border-primary/50 transition-colors">
+      <div className="flex items-center gap-1.5 mb-3">
+        <Zap className="w-3.5 h-3.5 text-primary" />
+        <span className="mono-xs text-[9px] text-primary">COMMUNITY SERVICE</span>
+      </div>
+
+      <div className="flex items-start gap-4">
+        <div className="flex-1 min-w-0">
+          <h3 className="mono text-foreground">{service.title}</h3>
+          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{service.description}</p>
+
+          <div className="flex items-center gap-3 mt-3">
+            <div className="flex items-center gap-1">
+              <Star className="w-3 h-3 text-accent fill-accent" />
+              <span className="mono-xs text-[10px] text-foreground/80">{service.rating.toFixed(1)}</span>
+              <span className="mono-xs text-[9px] text-muted-foreground">({service.reviews_count})</span>
+            </div>
+            {service.turnaround_time && (
+              <div className="flex items-center gap-1">
+                <Clock className="w-3 h-3 text-muted-foreground" />
+                <span className="mono-xs text-[9px] text-muted-foreground">{service.turnaround_time}</span>
+              </div>
+            )}
+            <span className="mono-xs text-[9px] text-muted-foreground">
+              {service.completed_count} completed
+            </span>
+          </div>
+        </div>
+
+        <div className="text-right flex-shrink-0">
+          <p className="mono text-sm text-primary">{service.price.toLocaleString()} V1N3</p>
+          <p className="mono-xs text-[9px] text-muted-foreground">{service.price_unit}</p>
+          {isOwnCommunity ? (
+            <span className="inline-block mt-2 mono-xs text-[9px] text-muted-foreground px-3 py-1.5 border border-border rounded-[2px]">
+              YOUR COMMUNITY
+            </span>
+          ) : (
+            <Link
+              href={`/dashboard/requests?service=${service.id}`}
+              className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 bg-primary text-background mono-xs text-[9px] rounded-[2px]"
+            >
+              REQUEST <ArrowRight className="w-3 h-3" />
+            </Link>
+          )}
         </div>
       </div>
     </div>
