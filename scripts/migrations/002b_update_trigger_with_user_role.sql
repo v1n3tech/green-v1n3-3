@@ -1,23 +1,10 @@
--- Migration: Add 'user' role and update signup trigger
+-- Migration 002b: Update signup trigger to use 'user' role
 -- Created: 2026-05-02
--- Description: Adds 'user' to user_role enum and updates the handle_new_user trigger
---              so that only the first registrant becomes an agro_executive,
---              while all subsequent users get the 'user' role by default.
+-- Description: Updates handle_new_user trigger so first user becomes agro_executive,
+--              all subsequent users get 'user' role by default.
+--
+-- PREREQUISITE: Migration 002a must be run and committed first.
 
--- IMPORTANT: This migration MUST be run in two separate executions due to PostgreSQL limitation.
--- PostgreSQL requires new enum values to be committed before they can be used.
-
--- ============================================
--- PART 1: Run this FIRST, then commit
--- ============================================
-ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'user';
-
--- ============================================
--- PART 2: Run this AFTER Part 1 is committed
--- ============================================
--- Uncomment and run separately after Part 1 succeeds:
-
-/*
 -- Update handle_new_user function with first-user logic
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
@@ -68,7 +55,6 @@ $$;
 
 -- Update the default value for role column
 ALTER TABLE public.profiles ALTER COLUMN role SET DEFAULT 'user';
-*/
 
 -- Current user_role enum values after this migration:
 -- 'agro_executive' - First user / promoted users
