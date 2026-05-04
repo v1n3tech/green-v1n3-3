@@ -16,7 +16,7 @@ const navItems = [
   { id: '03', label: 'Communities', href: '/communities' },
   { id: '04', label: 'Chain', href: '#chain' },
   { id: '05', label: 'V1n3', href: '#v1n3' },
-  { id: '06', label: 'Horizon', href: '#horizon' },
+  { id: '06', label: 'News', href: '/news' },
 ]
 
 export function Header() {
