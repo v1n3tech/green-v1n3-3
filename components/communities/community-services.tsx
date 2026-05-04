@@ -100,12 +100,12 @@ export function CommunityServices({ community, isAuthenticated, isUserInCommunit
         </div>
       ) : (
         <>
-          {/* Database Services (GCM offerings) */}
+          {/* Community Services from Database */}
           {hasDbServices && (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <Zap className={`w-4 h-4 ${accentColor}`} />
-                <span className="mono-xs text-[10px] text-muted-foreground">/ GCM SERVICES</span>
+                <span className="mono-xs text-[10px] text-muted-foreground">/ COMMUNITY SERVICES</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {dbServices.map((service, index) => (
@@ -114,6 +114,7 @@ export function CommunityServices({ community, isAuthenticated, isUserInCommunit
                     service={service}
                     index={index}
                     isAuthenticated={isAuthenticated}
+                    isUserInCommunity={isUserInCommunity}
                     accent={community.color}
                   />
                 ))}
@@ -121,40 +122,45 @@ export function CommunityServices({ community, isAuthenticated, isUserInCommunit
             </div>
           )}
 
-          {/* Featured Static Services */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {staticServices.filter(s => s.featured).map((service, index) => (
-              <ServiceCard
-                key={service.id}
-                service={service}
-                index={index}
-                isAuthenticated={isAuthenticated}
-                isUserInCommunity={isUserInCommunity}
-                accent={community.color}
-                featured
-              />
-            ))}
-          </div>
+          {/* Only show placeholders if no real services exist */}
+          {!hasDbServices && (
+            <>
+              {/* Featured Static Services */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {staticServices.filter(s => s.featured).map((service, index) => (
+                  <ServiceCard
+                    key={service.id}
+                    service={service}
+                    index={index}
+                    isAuthenticated={isAuthenticated}
+                    isUserInCommunity={isUserInCommunity}
+                    accent={community.color}
+                    featured
+                  />
+                ))}
+              </div>
 
-          {/* All Static Services */}
-          <div className="border border-border rounded-[2px] bg-card/50 overflow-hidden">
-            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-              <span className="mono-xs text-muted-foreground">/ ALL SERVICES</span>
-              <span className={`mono-xs text-[10px] ${accentColor}`}>{staticServices.length + dbServices.length} AVAILABLE</span>
-            </div>
-            <div className="divide-y divide-border">
-              {staticServices.map((service, index) => (
-                <ServiceRow
-                  key={service.id}
-                  service={service}
-                  index={index}
-                  isAuthenticated={isAuthenticated}
-                  isUserInCommunity={isUserInCommunity}
-                  accent={community.color}
-                />
-              ))}
-            </div>
-          </div>
+              {/* All Static Services */}
+              <div className="border border-border rounded-[2px] bg-card/50 overflow-hidden">
+                <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+                  <span className="mono-xs text-muted-foreground">/ ALL SERVICES</span>
+                  <span className={`mono-xs text-[10px] ${accentColor}`}>{staticServices.length} AVAILABLE</span>
+                </div>
+                <div className="divide-y divide-border">
+                  {staticServices.map((service, index) => (
+                    <ServiceRow
+                      key={service.id}
+                      service={service}
+                      index={index}
+                      isAuthenticated={isAuthenticated}
+                      isUserInCommunity={isUserInCommunity}
+                      accent={community.color}
+                    />
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </>
       )}
 
@@ -290,15 +296,20 @@ function DbServiceCard({
   service,
   index,
   isAuthenticated,
+  isUserInCommunity,
   accent
 }: {
   service: CommunityService
   index: number
   isAuthenticated: boolean
+  isUserInCommunity: boolean
   accent: 'green' | 'orange'
 }) {
   const accentColor = accent === 'orange' ? 'text-orange' : 'text-primary'
   const accentBg = accent === 'orange' ? 'bg-orange' : 'bg-primary'
+  
+  // Members of a community cannot request services from their own community
+  const canRequest = isAuthenticated && !isUserInCommunity
 
   return (
     <motion.div
@@ -309,7 +320,7 @@ function DbServiceCard({
     >
       <div className="flex items-center gap-1.5 mb-3">
         <Zap className={`w-3.5 h-3.5 ${accentColor}`} />
-        <span className={`mono-xs text-[9px] ${accentColor}`}>GCM SERVICE</span>
+        <span className={`mono-xs text-[9px] ${accentColor}`}>COMMUNITY SERVICE</span>
       </div>
       
       <h3 className="mono text-foreground">{service.title}</h3>
@@ -334,19 +345,25 @@ function DbServiceCard({
           <span className="mono text-sm text-primary">{service.price.toLocaleString()} V1N3</span>
           <span className="mono-xs text-[9px] text-muted-foreground block">{service.price_unit}</span>
         </div>
-        <Link
-          href={isAuthenticated ? '/dashboard/requests' : '/'}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] ${accentBg} text-background mono-xs text-[9px]`}
-        >
-          {isAuthenticated ? 'REQUEST' : 'CONNECT'}
-          <ArrowRight className="w-3 h-3" />
-        </Link>
+        {isUserInCommunity ? (
+          <span className="mono-xs text-[9px] text-muted-foreground px-3 py-1.5 border border-border rounded-[2px]">
+            YOUR COMMUNITY
+          </span>
+        ) : (
+          <Link
+            href={isAuthenticated ? `/dashboard/requests?service=${service.id}` : '/'}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] ${accentBg} text-background mono-xs text-[9px]`}
+          >
+            {isAuthenticated ? 'REQUEST' : 'CONNECT'}
+            <ArrowRight className="w-3 h-3" />
+          </Link>
+        )}
       </div>
       
       {service.gcm && (
         <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
           <span className="mono-xs text-[9px] text-muted-foreground">
-            by {service.gcm.display_name} • {service.completed_count} completed
+            {service.completed_count} completed
           </span>
         </div>
       )}

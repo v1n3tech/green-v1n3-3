@@ -116,6 +116,8 @@ export function DashboardRequests({
   const filteredServices = services.filter(s => {
     if (searchQuery && !s.title.toLowerCase().includes(searchQuery.toLowerCase())) return false
     if (selectedCommunity !== 'all' && s.community !== selectedCommunity) return false
+    // Cannot request services from your own community
+    if (community && s.community === community) return false
     return true
   })
   
@@ -260,6 +262,7 @@ export function DashboardRequests({
                     <ServiceCard
                       key={service.id}
                       service={service}
+                      userCommunity={community}
                       onRequest={() => {
                         setSelectedService(service)
                         setShowRequestModal(true)
@@ -417,8 +420,9 @@ function StatCard({ label, value, icon, accent }: { label: string; value: number
   )
 }
 
-function ServiceCard({ service, onRequest, isOwner, onEdit }: { service: CommunityService; onRequest?: () => void; isOwner?: boolean; onEdit?: () => void }) {
+function ServiceCard({ service, onRequest, isOwner, onEdit, userCommunity }: { service: CommunityService; onRequest?: () => void; isOwner?: boolean; onEdit?: () => void; userCommunity?: string | null }) {
   const community = COMMUNITIES.find(c => c.key === service.community)
+  const isOwnCommunity = userCommunity === service.community
   
   return (
     <motion.div
@@ -466,6 +470,10 @@ function ServiceCard({ service, onRequest, isOwner, onEdit }: { service: Communi
             >
               EDIT
             </button>
+          ) : isOwnCommunity ? (
+            <span className="mono-xs text-[9px] text-muted-foreground px-3 py-1.5 border border-border rounded-[2px]">
+              YOUR COMMUNITY
+            </span>
           ) : (
             <button
               onClick={onRequest}
