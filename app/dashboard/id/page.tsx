@@ -171,39 +171,51 @@ export default function IDPage() {
           @page {
             size: 53.98mm 85.6mm;
             margin: 0;
+            padding: 0;
+          }
+          * {
+            margin: 0 !important;
+            padding: 0 !important;
           }
           html, body {
+            width: 100% !important;
+            height: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
             background: white !important;
           }
-          body * {
-            visibility: hidden !important;
-          }
-          .id-print-cards, .id-print-cards * {
-            visibility: visible !important;
+          body > * {
+            display: none !important;
           }
           .id-print-cards {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 53.98mm !important;
+            display: block !important;
+            position: static !important;
+            width: 100% !important;
+            height: auto !important;
             margin: 0 !important;
             padding: 0 !important;
             background: white !important;
           }
           .id-card-print-single {
+            display: block !important;
             width: 53.98mm !important;
             height: 85.6mm !important;
-            max-width: none !important;
-            box-shadow: none !important;
-            border-radius: 3mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
             page-break-after: always !important;
-            transform: none !important;
+            page-break-inside: avoid !important;
           }
-          .id-print-hide, .id-screen-only {
+          .id-card-print-single * {
+            display: block !important;
+            visibility: visible !important;
+          }
+          .id-screen-only {
             display: none !important;
           }
+        }
+        
+        .id-print-cards {
+          display: none;
         }
       `}</style>
 
@@ -324,7 +336,7 @@ export default function IDPage() {
       </div>
 
       {/* Print-only: Flat cards without 3D transforms (hidden on screen) */}
-      <div className="id-print-cards hidden">
+      <div className="id-print-cards">
         {/* FRONT - Page 1 */}
         <div className="id-card-print-single" style={{ width: '53.98mm', height: '85.6mm' }}>
           <IDCardFront
