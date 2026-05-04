@@ -160,65 +160,207 @@ export default function IDPage() {
     .toUpperCase()
 
   const handlePrint = () => {
-    if (typeof window !== 'undefined') window.print()
+    if (typeof window === 'undefined') return
+
+    const avatarHtml = profile.avatarUrl
+      ? `<img src="${profile.avatarUrl}" style="width:100%;height:100%;object-fit:cover;display:block;" />`
+      : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(0,200,83,0.2),rgba(255,165,0,0.1));">
+          <span style="font-family:monospace;font-size:28px;color:#00c853;font-weight:700;letter-spacing:0.1em;">${getInitials(fullName)}</span>
+        </div>`
+
+    const communityLabel = (profile.community || '').replace(/_/g, ' ').toUpperCase()
+
+    const frontHtml = `
+      <div style="width:53.98mm;height:85.6mm;background:#0a120c;border-radius:3mm;overflow:hidden;position:relative;font-family:monospace;box-sizing:border-box;">
+        <!-- HEX BG -->
+        <svg style="position:absolute;inset:0;width:100%;height:100%;opacity:0.04;" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="h" width="18" height="16" patternUnits="userSpaceOnUse">
+              <polygon points="9,1 17,5 17,11 9,15 1,11 1,5" fill="none" stroke="#00c853" stroke-width="0.6"/>
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#h)"/>
+        </svg>
+        <!-- DIAGONAL GEO -->
+        <svg style="position:absolute;inset:0;width:100%;height:100%;opacity:0.03;" xmlns="http://www.w3.org/2000/svg">
+          <line x1="0" y1="60%" x2="100%" y2="30%" stroke="#00c853" stroke-width="20"/>
+          <line x1="0" y1="80%" x2="100%" y2="50%" stroke="#ff9800" stroke-width="8"/>
+        </svg>
+        <!-- CORNER BRACKETS -->
+        <div style="position:absolute;top:6mm;left:4mm;width:4mm;height:4mm;border-top:0.5px solid rgba(0,200,83,0.4);border-left:0.5px solid rgba(0,200,83,0.4);"></div>
+        <div style="position:absolute;top:6mm;right:4mm;width:4mm;height:4mm;border-top:0.5px solid rgba(0,200,83,0.4);border-right:0.5px solid rgba(0,200,83,0.4);"></div>
+        <div style="position:absolute;bottom:6mm;left:4mm;width:4mm;height:4mm;border-bottom:0.5px solid rgba(0,200,83,0.4);border-left:0.5px solid rgba(0,200,83,0.4);"></div>
+        <div style="position:absolute;bottom:6mm;right:4mm;width:4mm;height:4mm;border-bottom:0.5px solid rgba(0,200,83,0.4);border-right:0.5px solid rgba(0,200,83,0.4);"></div>
+        <!-- HEADER BAND -->
+        <div style="position:absolute;top:0;left:0;right:0;height:12%;background:linear-gradient(90deg,#00c853,rgba(0,200,83,0.85));">
+          <div style="position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,rgba(255,152,0,0.6),#ff9800,rgba(255,152,0,0.6));"></div>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 3mm;">
+            <div>
+              <p style="margin:0;color:#fff;font-size:5.5pt;letter-spacing:0.28em;font-weight:700;">GREENV1N3</p>
+              <p style="margin:0.5mm 0 0;color:rgba(255,255,255,0.7);font-size:4pt;letter-spacing:0.22em;">NIGERIA</p>
+            </div>
+            <div style="text-align:right;">
+              <p style="margin:0;color:rgba(255,255,255,0.7);font-size:4pt;letter-spacing:0.22em;">PHASE 01</p>
+              <p style="margin:0.5mm 0 0;color:#fff;font-size:4.5pt;letter-spacing:0.2em;font-weight:700;">PLATEAU STATE</p>
+            </div>
+          </div>
+        </div>
+        <!-- TITLE STRIP -->
+        <div style="position:absolute;top:13%;left:0;right:0;padding:1.5mm 3mm 0;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div>
+              <p style="margin:0;color:rgba(255,255,255,0.35);font-size:4pt;letter-spacing:0.3em;">OFFICIAL IDENTIFICATION</p>
+              <p style="margin:0.5mm 0 0;color:#fff;font-size:7pt;letter-spacing:0.18em;font-weight:700;">AGRO EXECUTIVE</p>
+            </div>
+            <div style="text-align:right;">
+              <p style="margin:0;color:rgba(255,255,255,0.35);font-size:3.5pt;letter-spacing:0.25em;">/ SERIES</p>
+              <p style="margin:0.5mm 0 0;color:#00c853;font-size:5.5pt;letter-spacing:0.15em;font-weight:600;">AV1-${(profile.agroId || 'AE000000').slice(-6)}</p>
+            </div>
+          </div>
+        </div>
+        <!-- PHOTO -->
+        <div style="position:absolute;top:24%;left:50%;transform:translateX(-50%);width:40%;aspect-ratio:3/4;">
+          <div style="position:absolute;inset:-1.5px;border-radius:3px;background:linear-gradient(135deg,#00c853,rgba(0,200,83,0.4),#ff9800);"></div>
+          <div style="position:relative;width:100%;height:100%;border-radius:3px;overflow:hidden;background:#0c170e;">
+            ${avatarHtml}
+            <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,200,83,0.025) 0px,rgba(0,200,83,0.025) 1px,transparent 1px,transparent 3px);pointer-events:none;"></div>
+          </div>
+          <!-- VERIFIED BADGE -->
+          <div style="position:absolute;bottom:-3mm;left:50%;transform:translateX(-50%);padding:0.5mm 2mm;background:#0a120c;border:0.4px solid ${verificationStyle.color === 'text-primary' ? '#00c853' : '#ff9800'};border-radius:2px;white-space:nowrap;">
+            <span style="color:${verificationStyle.color === 'text-primary' ? '#00c853' : '#ff9800'};font-size:4pt;letter-spacing:0.2em;font-weight:600;">${verificationStyle.label}</span>
+          </div>
+        </div>
+        <!-- NAME + ID -->
+        <div style="position:absolute;top:58%;left:0;right:0;padding:0 3mm;text-align:center;">
+          <p style="margin:0;color:rgba(255,255,255,0.35);font-size:4pt;letter-spacing:0.3em;">/ FULL NAME</p>
+          <p style="margin:0.5mm 0 0;color:#fff;font-size:8.5pt;letter-spacing:0.06em;font-weight:700;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fullName}</p>
+          <div style="display:flex;align-items:center;justify-content:center;gap:1.5mm;margin-top:1.5mm;">
+            <p style="margin:0;color:rgba(255,255,255,0.35);font-size:4pt;letter-spacing:0.25em;">ID:</p>
+            <p style="margin:0;color:#00c853;font-size:6pt;letter-spacing:0.15em;font-weight:600;">${profile.agroId || 'AE-000000'}</p>
+          </div>
+        </div>
+        <!-- INFO GRID -->
+        <div style="position:absolute;top:68%;left:0;right:0;padding:0 3mm;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5mm;">
+            <div style="background:rgba(255,255,255,0.03);border:0.4px solid rgba(0,200,83,0.15);border-radius:2px;padding:1.2mm;">
+              <p style="margin:0;color:rgba(255,255,255,0.3);font-size:3.5pt;letter-spacing:0.25em;">COMMUNITY</p>
+              <p style="margin:0.4mm 0 0;color:#fff;font-size:4.5pt;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${communityLabel || 'UNASSIGNED'}</p>
+            </div>
+            <div style="background:rgba(255,255,255,0.03);border:0.4px solid rgba(0,200,83,0.15);border-radius:2px;padding:1.2mm;">
+              <p style="margin:0;color:rgba(255,255,255,0.3);font-size:3.5pt;letter-spacing:0.25em;">ROLE</p>
+              <p style="margin:0.4mm 0 0;color:#00c853;font-size:4.5pt;font-weight:600;">${roleAccent.label}</p>
+            </div>
+            <div style="background:rgba(255,255,255,0.03);border:0.4px solid rgba(0,200,83,0.15);border-radius:2px;padding:1.2mm;">
+              <p style="margin:0;color:rgba(255,255,255,0.3);font-size:3.5pt;letter-spacing:0.25em;">LGA</p>
+              <p style="margin:0.4mm 0 0;color:#fff;font-size:4.5pt;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${(profile.lga || 'N/A').toUpperCase()}</p>
+            </div>
+            <div style="background:rgba(255,255,255,0.03);border:0.4px solid rgba(0,200,83,0.15);border-radius:2px;padding:1.2mm;">
+              <p style="margin:0;color:rgba(255,255,255,0.3);font-size:3.5pt;letter-spacing:0.25em;">STATE</p>
+              <p style="margin:0.4mm 0 0;color:#fff;font-size:4.5pt;font-weight:600;">${(profile.state || 'PLATEAU').toUpperCase()}</p>
+            </div>
+          </div>
+        </div>
+        <!-- FOOTER -->
+        <div style="position:absolute;bottom:0;left:0;right:0;height:10%;border-top:0.5px solid rgba(0,200,83,0.15);">
+          <div style="display:flex;align-items:center;justify-content:space-between;height:100%;padding:0 3mm;">
+            <div>
+              <p style="margin:0;color:rgba(255,255,255,0.25);font-size:3.5pt;letter-spacing:0.2em;">ISSUED</p>
+              <p style="margin:0.3mm 0 0;color:rgba(255,255,255,0.5);font-size:4pt;font-weight:600;">${joinDate}</p>
+            </div>
+            <!-- CHIP -->
+            <div style="width:7mm;height:5mm;background:linear-gradient(135deg,#c8a96e,#f5d48e,#b8941a);border-radius:1mm;border:0.5px solid rgba(255,255,255,0.3);">
+              <div style="width:100%;height:100%;border-radius:1mm;background:repeating-linear-gradient(0deg,transparent,transparent 1mm,rgba(0,0,0,0.1) 1mm,rgba(0,0,0,0.1) 1.2mm),repeating-linear-gradient(90deg,transparent,transparent 1.5mm,rgba(0,0,0,0.1) 1.5mm,rgba(0,0,0,0.1) 1.7mm);"></div>
+            </div>
+            <div style="text-align:right;">
+              <p style="margin:0;color:rgba(255,255,255,0.25);font-size:3.5pt;letter-spacing:0.2em;">EXPIRES</p>
+              <p style="margin:0.3mm 0 0;color:#00c853;font-size:4pt;font-weight:600;">${expiryFormatted}</p>
+            </div>
+          </div>
+        </div>
+      </div>`
+
+    const backHtml = `
+      <div style="width:53.98mm;height:85.6mm;background:#0a120c;border-radius:3mm;overflow:hidden;position:relative;font-family:monospace;box-sizing:border-box;">
+        <!-- HEX BG -->
+        <svg style="position:absolute;inset:0;width:100%;height:100%;opacity:0.04;" xmlns="http://www.w3.org/2000/svg">
+          <defs><pattern id="h2" width="18" height="16" patternUnits="userSpaceOnUse"><polygon points="9,1 17,5 17,11 9,15 1,11 1,5" fill="none" stroke="#00c853" stroke-width="0.6"/></pattern></defs>
+          <rect width="100%" height="100%" fill="url(#h2)"/>
+        </svg>
+        <!-- MAG STRIP -->
+        <div style="position:absolute;top:0;left:0;right:0;height:14%;background:linear-gradient(90deg,#1a1a1a,#111,#1a1a1a);border-bottom:0.5px solid rgba(0,200,83,0.15);">
+          <div style="position:absolute;top:30%;left:0;right:0;height:40%;background:linear-gradient(90deg,#2a2a2a,#333,#2a2a2a);"></div>
+        </div>
+        <!-- LOGO CENTER -->
+        <div style="position:absolute;top:18%;left:0;right:0;text-align:center;">
+          <p style="margin:0;color:#00c853;font-size:8pt;letter-spacing:0.28em;font-weight:700;">GREENV1N3</p>
+          <p style="margin:0.5mm 0 0;color:rgba(255,255,255,0.3);font-size:4pt;letter-spacing:0.35em;">NIGERIA · AGROEXECUTIVE ID</p>
+        </div>
+        <!-- SIGNATURE LINE -->
+        <div style="position:absolute;top:30%;left:0;right:0;padding:0 4mm;">
+          <p style="margin:0;color:rgba(255,255,255,0.25);font-size:3.5pt;letter-spacing:0.2em;">HOLDER SIGNATURE</p>
+          <div style="height:8mm;background:rgba(255,255,255,0.04);border:0.4px solid rgba(0,200,83,0.2);border-radius:2px;margin-top:1mm;">
+            <div style="height:0.4px;background:rgba(0,200,83,0.3);margin-top:5.5mm;margin-left:2mm;margin-right:2mm;"></div>
+          </div>
+        </div>
+        <!-- QR CODE (simulated) -->
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-10%);width:18mm;height:18mm;">
+          <div style="width:100%;height:100%;background:rgba(255,255,255,0.04);border:0.5px solid rgba(0,200,83,0.3);border-radius:2px;display:flex;align-items:center;justify-content:center;position:relative;padding:1.5mm;box-sizing:border-box;">
+            <div style="width:100%;height:100%;background:repeating-linear-gradient(0deg,rgba(0,200,83,0.15) 0px,rgba(0,200,83,0.15) 1.2mm,transparent 1.2mm,transparent 2.4mm),repeating-linear-gradient(90deg,rgba(0,200,83,0.15) 0px,rgba(0,200,83,0.15) 1.2mm,transparent 1.2mm,transparent 2.4mm);"></div>
+            <div style="position:absolute;top:1.5mm;left:1.5mm;width:4mm;height:4mm;border:0.6px solid #00c853;background:rgba(0,200,83,0.1);"></div>
+            <div style="position:absolute;top:1.5mm;right:1.5mm;width:4mm;height:4mm;border:0.6px solid #00c853;background:rgba(0,200,83,0.1);"></div>
+            <div style="position:absolute;bottom:1.5mm;left:1.5mm;width:4mm;height:4mm;border:0.6px solid #00c853;background:rgba(0,200,83,0.1);"></div>
+          </div>
+        </div>
+        <!-- BARCODE -->
+        <div style="position:absolute;bottom:16%;left:0;right:0;padding:0 5mm;">
+          <div style="display:flex;gap:0.3mm;height:5mm;justify-content:center;">
+            ${Array.from({length:40},(_,i)=>`<div style="flex:${0.5+Math.random()};background:rgba(255,255,255,${0.4+Math.random()*0.5});border-radius:0.3px;"></div>`).join('')}
+          </div>
+          <p style="margin:0.8mm 0 0;color:rgba(255,255,255,0.3);font-size:3.5pt;letter-spacing:0.15em;text-align:center;">${profile.agroId || 'AE-000000'}</p>
+        </div>
+        <!-- FOOTER LEGAL -->
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:2mm 3mm;border-top:0.5px solid rgba(0,200,83,0.1);">
+          <p style="margin:0;color:rgba(255,255,255,0.2);font-size:3pt;letter-spacing:0.1em;text-align:center;line-height:1.6;">IF FOUND, RETURN TO AGROVIN3 PROGRAM · PLATEAU STATE, NIGERIA</p>
+          <p style="margin:0.5mm 0 0;color:rgba(255,255,255,0.15);font-size:3pt;letter-spacing:0.1em;text-align:center;">VALID: ${joinDate} – ${expiryFormatted}</p>
+        </div>
+      </div>`
+
+    const printWindow = window.open('', '_blank', 'width=220,height=360,toolbar=0,menubar=0,scrollbars=0')
+    if (!printWindow) return
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>GreenV1n3 Agro ID – ${fullName}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 53.98mm; background: #0a120c; }
+    @page { size: 53.98mm 85.6mm; margin: 0; }
+    @media print {
+      * { margin: 0 !important; padding: 0 !important; }
+      html, body { width: 53.98mm !important; background: #0a120c !important; }
+      .page-break { page-break-after: always; display: block; height: 0; }
+    }
+    .card-wrap { width: 53.98mm; height: 85.6mm; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <div class="card-wrap">${frontHtml}</div>
+  <div class="page-break"></div>
+  <div class="card-wrap">${backHtml}</div>
+  <script>
+    window.onload = function() {
+      setTimeout(function() { window.print(); }, 400);
+    };
+  <\/script>
+</body>
+</html>`)
+    printWindow.document.close()
   }
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
-      {/* Print-only styles: render at true CR80 portrait dimensions */}
-      <style jsx global>{`
-        @media print {
-          @page {
-            size: 53.98mm 85.6mm;
-            margin: 0;
-            padding: 0;
-          }
-          * {
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-          html, body {
-            width: 100% !important;
-            height: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            background: white !important;
-          }
-          body > * {
-            display: none !important;
-          }
-          .id-print-cards {
-            display: block !important;
-            position: static !important;
-            width: 100% !important;
-            height: auto !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            background: white !important;
-          }
-          .id-card-print-single {
-            display: block !important;
-            width: 53.98mm !important;
-            height: 85.6mm !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            page-break-after: always !important;
-            page-break-inside: avoid !important;
-          }
-          .id-card-print-single * {
-            display: block !important;
-            visibility: visible !important;
-          }
-          .id-screen-only {
-            display: none !important;
-          }
-        }
-        
-        .id-print-cards {
-          display: none;
-        }
-      `}</style>
-
       {/* Back Button + Actions */}
       <div className="flex items-center justify-between id-print-hide">
         <Link
@@ -275,8 +417,8 @@ export default function IDPage() {
         </span>
       </div>
 
-      {/* ID Card — vertical CR80 (53.98 × 85.6 mm) - Screen View with 3D flip */}
-      <div className="id-screen-only flex justify-center" style={{ perspective: '1800px' }}>
+      {/* ID Card — vertical CR80 (53.98 × 85.6 mm) */}
+      <div className="flex justify-center" style={{ perspective: '1800px' }}>
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -333,34 +475,6 @@ export default function IDPage() {
             </div>
           </motion.div>
         </motion.div>
-      </div>
-
-      {/* Print-only: Flat cards without 3D transforms (hidden on screen) */}
-      <div className="id-print-cards">
-        {/* FRONT - Page 1 */}
-        <div className="id-card-print-single" style={{ width: '53.98mm', height: '85.6mm' }}>
-          <IDCardFront
-            profile={profile}
-            fullName={fullName}
-            joinDate={joinDate}
-            expiryFormatted={expiryFormatted}
-            roleAccent={roleAccent}
-            verificationStyle={verificationStyle}
-            VerificationIcon={VerificationIcon}
-            getInitials={getInitials}
-            copied={false}
-            copyAgroId={() => {}}
-          />
-        </div>
-        {/* BACK - Page 2 */}
-        <div className="id-card-print-single" style={{ width: '53.98mm', height: '85.6mm' }}>
-          <IDCardBack
-            profile={profile}
-            fullName={fullName}
-            joinDate={joinDate}
-            expiryFormatted={expiryFormatted}
-          />
-        </div>
       </div>
 
       {/* Quick stats row */}
