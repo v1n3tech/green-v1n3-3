@@ -1,123 +1,180 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useEffect, useRef, useState } from 'react'
 
-interface V1n3LoaderProps {
-  minDisplayTime?: number
-}
+export function V1n3Loader() {
+  const [visible, setVisible] = useState(true)
+  const [fading, setFading] = useState(false)
+  const [progress, setProgress] = useState(6)
 
-export function V1n3Loader({ minDisplayTime = 1000 }: V1n3LoaderProps) {
-  const [isLoading, setIsLoading] = useState(true)
-  const [pageLoaded, setPageLoaded] = useState(false)
-  const [minTimeElapsed, setMinTimeElapsed] = useState(false)
-  const [progress, setProgress] = useState(0)
+  // Target progress that the visible bar smoothly eases toward
+  const targetRef = useRef(6)
+  const rafRef = useRef<number | null>(null)
+  const mountedRef = useRef(true)
 
   useEffect(() => {
-    // Track page load
+    mountedRef.current = true
+
+    const setTarget = (value: number) => {
+      targetRef.current = Math.max(targetRef.current, Math.min(value, 100))
+    }
+
+    // Smoothly animate the visible progress toward the target
+    const tick = () => {
+      setProgress((current) => {
+        const target = targetRef.current
+        const diff = target - current
+        if (Math.abs(diff) < 0.15) return target
+        return current + diff * 0.07
+      })
+      rafRef.current = requestAnimationFrame(tick)
+    }
+    rafRef.current = requestAnimationFrame(tick)
+
+    // 1) Initial bump so the bar isn't empty
+    setTarget(18)
+
+    // 2) Document readyState transitions
+    const handleReadyState = () => {
+      if (document.readyState === 'interactive') setTarget(55)
+      if (document.readyState === 'complete') setTarget(92)
+    }
+    handleReadyState()
+    document.addEventListener('readystatechange', handleReadyState)
+
+    // 3) Resource loading via PerformanceObserver — bump as assets arrive
+    let resourcesSeen = 0
+    let observer: PerformanceObserver | null = null
+    try {
+      observer = new PerformanceObserver((list) => {
+        resourcesSeen += list.getEntries().length
+        // Asymptotic climb: each resource pushes us closer to ~88%
+        const eased = 88 - 70 * Math.exp(-resourcesSeen / 14)
+        setTarget(eased)
+      })
+      observer.observe({ type: 'resource', buffered: true })
+    } catch {
+      /* PerformanceObserver not supported — silent fallback */
+    }
+
+    // 4) Fonts ready
+    const fonts = (document as Document & { fonts?: { ready: Promise<unknown> } }).fonts
+    if (fonts?.ready) {
+      fonts.ready.then(() => {
+        if (mountedRef.current) setTarget(85)
+      })
+    }
+
+    // 5) Window load — fully complete, then hold 1s and fade
+    const handleLoad = () => {
+      setTarget(100)
+      setTimeout(() => {
+        if (!mountedRef.current) return
+        setFading(true)
+        setTimeout(() => {
+          if (mountedRef.current) setVisible(false)
+        }, 500)
+      }, 1000)
+    }
     if (document.readyState === 'complete') {
-      setPageLoaded(true)
+      handleLoad()
     } else {
-      const handleLoad = () => setPageLoaded(true)
-      window.addEventListener('load', handleLoad)
-      return () => window.removeEventListener('load', handleLoad)
+      window.addEventListener('load', handleLoad, { once: true })
+    }
+
+    return () => {
+      mountedRef.current = false
+      document.removeEventListener('readystatechange', handleReadyState)
+      window.removeEventListener('load', handleLoad)
+      observer?.disconnect()
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
     }
   }, [])
 
-  useEffect(() => {
-    // Ensure minimum display time
-    const timer = setTimeout(() => {
-      setMinTimeElapsed(true)
-    }, minDisplayTime)
-    
-    return () => clearTimeout(timer)
-  }, [minDisplayTime])
+  if (!visible) return null
 
-  useEffect(() => {
-    // Animate progress bar with percentage
-    const duration = minDisplayTime
-    const interval = 30
-    const steps = duration / interval
-    let currentStep = 0
-
-    const progressTimer = setInterval(() => {
-      currentStep++
-      const newProgress = Math.min(Math.floor((currentStep / steps) * 100), 100)
-      setProgress(newProgress)
-      
-      if (currentStep >= steps) {
-        clearInterval(progressTimer)
-      }
-    }, interval)
-
-    return () => clearInterval(progressTimer)
-  }, [minDisplayTime])
-
-  useEffect(() => {
-    // Dismiss loader when both conditions are met
-    if (pageLoaded && minTimeElapsed) {
-      setIsLoading(false)
-    }
-  }, [pageLoaded, minTimeElapsed])
-
-  // Format progress as 3-digit number (001, 012, 100)
-  const formattedProgress = progress.toString().padStart(3, '0')
+  const displayProgress = Math.round(progress)
+  const aldrich = { fontFamily: 'var(--font-aldrich)' as const }
 
   return (
-    <AnimatePresence>
-      {isLoading && (
-        <motion.div
-          initial={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.4, ease: 'easeOut' }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center"
-          style={{
-            backgroundColor: 'rgba(0, 12, 4, 0.75)',
-            backdropFilter: 'blur(2px)',
-          }}
-        >
-          {/* Content */}
-          <div className="flex flex-col items-center">
-            {/* V1n3Tech Text - Thinner with Aldrich font */}
-            <div className="v1n3-loader-pulse mb-10">
-              <span 
-                className="text-xl sm:text-2xl tracking-[0.35em] font-light"
-                style={{ fontFamily: 'var(--font-aldrich), monospace' }}
-              >
-                <span className="text-white/90">V1n3</span>
-                <span className="text-primary">Tech</span>
-              </span>
-            </div>
-            
-            {/* Progress Bar with Counter */}
-            <div className="flex items-center gap-4 mb-5">
-              {/* Thin Progress Bar */}
-              <div className="w-40 sm:w-52 h-[1px] bg-white/20">
-                <div 
-                  className="h-full bg-primary/80 transition-all duration-75 ease-linear"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              
-              {/* Percentage Counter */}
-              <span 
-                className="text-[10px] tracking-[0.15em] text-white/50 tabular-nums"
-                style={{ fontFamily: 'var(--font-aldrich), monospace' }}
-              >
-                {formattedProgress}
-              </span>
-            </div>
-            
-            {/* Loading Text - Thinner */}
-            <span 
-              className="text-[9px] sm:text-[10px] tracking-[0.5em] text-white/40 font-light"
-              style={{ fontFamily: 'var(--font-aldrich), monospace' }}
-            >
-              LOADING
-            </span>
+    <div
+      aria-hidden={fading}
+      role="status"
+      aria-label="Loading"
+      className={`fixed inset-0 z-[9999] flex items-center justify-center transition-opacity duration-500 ease-out ${
+        fading ? 'opacity-0' : 'opacity-100'
+      }`}
+      style={{
+        backgroundColor: 'rgba(2, 8, 4, 0.18)',
+        backdropFilter: 'blur(3px)',
+        WebkitBackdropFilter: 'blur(3px)',
+      }}
+    >
+      {/* Soft green ambient wash behind the wordmark */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(ellipse 50% 35% at 50% 50%, rgba(0, 200, 83, 0.10), transparent 70%)',
+        }}
+      />
+
+      {/* Content */}
+      <div className="relative flex flex-col items-center gap-6">
+        {/* Wordmark with breathing halo */}
+        <div className="relative leading-none">
+          {/* Blurred halo layer behind */}
+          <span
+            aria-hidden="true"
+            className="v1n3-loader-halo absolute inset-0 flex items-center justify-center text-2xl sm:text-3xl tracking-[0.18em] text-primary"
+            style={aldrich}
+          >
+            V1n3Tech
+          </span>
+          {/* Main text */}
+          <span
+            className="v1n3-loader-text relative block text-2xl sm:text-3xl tracking-[0.18em]"
+            style={aldrich}
+          >
+            <span className="text-foreground">V1n3</span>
+            <span className="text-primary">Tech</span>
+          </span>
+        </div>
+
+        {/* Progress bar + percentage */}
+        <div className="flex items-center gap-3">
+          <div
+            className="relative h-px w-40 sm:w-48 overflow-hidden bg-primary/15"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={displayProgress}
+          >
+            <span
+              className="absolute inset-y-0 left-0 bg-primary"
+              style={{
+                width: `${displayProgress}%`,
+                boxShadow: '0 0 10px rgba(0, 200, 83, 0.7)',
+                transition: 'width 120ms linear',
+              }}
+            />
           </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+          <span
+            className="text-[10px] tracking-[0.2em] text-foreground/70 tabular-nums w-9 text-right"
+            style={aldrich}
+          >
+            {String(displayProgress).padStart(3, '0')}
+          </span>
+        </div>
+
+        <span
+          className="text-[10px] tracking-[0.4em] text-muted-foreground"
+          style={aldrich}
+        >
+          LOADING
+        </span>
+      </div>
+    </div>
   )
 }
