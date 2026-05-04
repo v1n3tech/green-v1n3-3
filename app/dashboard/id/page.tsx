@@ -162,170 +162,249 @@ export default function IDPage() {
   const handlePrint = () => {
     if (typeof window === 'undefined') return
 
-    const avatarHtml = profile.avatarUrl
-      ? `<img src="${profile.avatarUrl}" style="width:100%;height:100%;object-fit:cover;display:block;" />`
-      : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(0,200,83,0.2),rgba(255,165,0,0.1));">
-          <span style="font-family:monospace;font-size:28px;color:#00c853;font-weight:700;letter-spacing:0.1em;">${getInitials(fullName)}</span>
-        </div>`
-
+    const agroId = profile.agroId || 'AE-000000'
     const communityLabel = (profile.community || '').replace(/_/g, ' ').toUpperCase()
+    const vColor = profile.verificationStatus === 'verified' ? '#00c853' : '#ff9800'
+    const vLabel = verificationStyle.label
+    const rColor = profile.role === 'admin' ? '#ff9800' : profile.role === 'lgpa' ? '#d4a000' : profile.role === 'gcm' ? '#60a5fa' : '#00c853'
 
+    // Deterministic barcode — exact same algorithm as Barcode component
+    const barcodeValue = agroId
+    const bars = Array.from({ length: 56 }, (_, i) => {
+      const charCode = barcodeValue.charCodeAt(i % barcodeValue.length) || 65
+      const w = ((charCode + i * 7) % 4) + 1
+      const dark = (charCode + i) % 2 === 0
+      return { w, dark }
+    })
+    const barcodeSvgBars = bars.map(b =>
+      `<rect width="${b.w}" height="18" fill="${b.dark ? 'rgba(255,255,255,0.85)' : 'transparent'}"/>`
+    )
+    // Build barcode as SVG with proper widths
+    let bx = 0
+    const barcodeRects = bars.map(b => {
+      const rect = b.dark ? `<rect x="${bx}" y="0" width="${b.w + 1}" height="18" fill="rgba(255,255,255,0.85)"/>` : ''
+      bx += b.w + 1
+      return rect
+    }).join('')
+    const barcodeTotalWidth = bx
+    const barcodeSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${barcodeTotalWidth} 18" width="100%" height="18px" preserveAspectRatio="none">${barcodeRects}</svg>`
+
+    // QR pattern — exact same algorithm as QRPattern component
+    const qrCells = Array.from({ length: 49 }, (_, i) => {
+      const row = Math.floor(i / 7)
+      const col = i % 7
+      if ((row < 3 && col < 3) || (row < 3 && col > 3) || (row > 3 && col < 3)) {
+        const r = row < 3 ? row : 6 - row
+        const c = col < 3 ? col : col > 3 ? 6 - col : col
+        const inFinder = r === 0 || c === 0 || (r === 1 && c === 1)
+        return inFinder
+      }
+      return (row * 7 + col * 3 + 17) % 3 !== 0
+    })
+    const cellSize = 14 / 7 // 14mm / 7 cells
+    const qrRects = qrCells.map((on, i) => {
+      const row = Math.floor(i / 7)
+      const col = i % 7
+      return on ? `<rect x="${col * cellSize}mm" y="${row * cellSize}mm" width="${cellSize}mm" height="${cellSize}mm" fill="#000"/>` : ''
+    }).join('')
+    const qrSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14mm" height="14mm" style="display:block;">${qrRects}</svg>`
+
+    // Photo / initials
+    const photoHtml = profile.avatarUrl
+      ? `<img src="${profile.avatarUrl}" style="width:100%;height:100%;object-fit:cover;display:block;" crossorigin="anonymous"/>`
+      : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(0,200,83,0.2),rgba(212,160,0,0.1));"><span style="font-family:monospace;font-size:9pt;color:#00c853;font-weight:700;letter-spacing:0.1em;">${getInitials(fullName)}</span></div>`
+
+    // Shared hex+geo background SVG
+    const hexGeoBg = `
+      <svg style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0.07;pointer-events:none;" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="hexv" width="22" height="19" patternUnits="userSpaceOnUse">
+            <polygon points="11,1 21,6.5 21,15.5 11,21 1,15.5 1,6.5" fill="none" stroke="#00c853" stroke-width="0.5"/>
+          </pattern>
+          <radialGradient id="hfv" cx="50%" cy="55%" r="75%">
+            <stop offset="0%" stop-color="#00c853" stop-opacity="1"/>
+            <stop offset="100%" stop-color="#00c853" stop-opacity="0"/>
+          </radialGradient>
+          <mask id="hmv"><rect width="100%" height="100%" fill="url(#hfv)"/></mask>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#hexv)" mask="url(#hmv)"/>
+      </svg>
+      <svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;" viewBox="0 0 204 323" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <line x1="0" y1="48" x2="48" y2="0" stroke="#00c853" stroke-opacity="0.12" stroke-width="1"/>
+        <line x1="0" y1="60" x2="36" y2="0" stroke="#00c853" stroke-opacity="0.06" stroke-width="1"/>
+        <line x1="156" y1="323" x2="204" y2="275" stroke="#d4a000" stroke-opacity="0.1" stroke-width="1"/>
+        <line x1="168" y1="323" x2="204" y2="287" stroke="#d4a000" stroke-opacity="0.05" stroke-width="1"/>
+        <polygon points="12,156 30,167 30,186 12,197 -6,186 -6,167" fill="none" stroke="#00c853" stroke-opacity="0.1" stroke-width="1"/>
+        <polygon points="192,240 210,251 210,270 192,281 174,270 174,251" fill="none" stroke="#d4a000" stroke-opacity="0.1" stroke-width="1"/>
+      </svg>
+      <div style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;opacity:0.025;background-image:linear-gradient(rgba(0,200,83,0.6) 1px,transparent 1px),linear-gradient(90deg,rgba(0,200,83,0.6) 1px,transparent 1px);background-size:20px 20px;"></div>`
+
+    // Corner brackets — same as CornerBrackets component
+    const cornerBrackets = `
+      <div style="position:absolute;top:1.5mm;left:1.5mm;width:2mm;height:2mm;border-top:0.5px solid rgba(0,200,83,0.4);border-left:0.5px solid rgba(0,200,83,0.4);pointer-events:none;"></div>
+      <div style="position:absolute;top:1.5mm;right:1.5mm;width:2mm;height:2mm;border-top:0.5px solid rgba(0,200,83,0.4);border-right:0.5px solid rgba(0,200,83,0.4);pointer-events:none;"></div>
+      <div style="position:absolute;bottom:1.5mm;left:1.5mm;width:2mm;height:2mm;border-bottom:0.5px solid rgba(0,200,83,0.4);border-left:0.5px solid rgba(0,200,83,0.4);pointer-events:none;"></div>
+      <div style="position:absolute;bottom:1.5mm;right:1.5mm;width:2mm;height:2mm;border-bottom:0.5px solid rgba(0,200,83,0.4);border-right:0.5px solid rgba(0,200,83,0.4);pointer-events:none;"></div>`
+
+    // Field helper (matches FieldMicro)
+    const field = (label: string, value: string, valColor = 'rgba(255,255,255,0.85)') =>
+      `<div style="min-width:0;overflow:hidden;">
+        <p style="margin:0 0 0.4mm;font-family:monospace;color:rgba(255,255,255,0.4);font-size:4.5pt;letter-spacing:0.22em;">/ ${label}</p>
+        <p style="margin:0;font-family:monospace;font-size:6.5pt;letter-spacing:0.08em;font-weight:600;color:${valColor};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${value}</p>
+      </div>`
+
+    // ==================== FRONT ====================
     const frontHtml = `
-      <div style="width:53.98mm;height:85.6mm;background:#0a120c;border-radius:3mm;overflow:hidden;position:relative;font-family:monospace;box-sizing:border-box;">
-        <!-- HEX BG -->
-        <svg style="position:absolute;inset:0;width:100%;height:100%;opacity:0.04;" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="h" width="18" height="16" patternUnits="userSpaceOnUse">
-              <polygon points="9,1 17,5 17,11 9,15 1,11 1,5" fill="none" stroke="#00c853" stroke-width="0.6"/>
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#h)"/>
-        </svg>
-        <!-- DIAGONAL GEO -->
-        <svg style="position:absolute;inset:0;width:100%;height:100%;opacity:0.03;" xmlns="http://www.w3.org/2000/svg">
-          <line x1="0" y1="60%" x2="100%" y2="30%" stroke="#00c853" stroke-width="20"/>
-          <line x1="0" y1="80%" x2="100%" y2="50%" stroke="#ff9800" stroke-width="8"/>
-        </svg>
-        <!-- CORNER BRACKETS -->
-        <div style="position:absolute;top:6mm;left:4mm;width:4mm;height:4mm;border-top:0.5px solid rgba(0,200,83,0.4);border-left:0.5px solid rgba(0,200,83,0.4);"></div>
-        <div style="position:absolute;top:6mm;right:4mm;width:4mm;height:4mm;border-top:0.5px solid rgba(0,200,83,0.4);border-right:0.5px solid rgba(0,200,83,0.4);"></div>
-        <div style="position:absolute;bottom:6mm;left:4mm;width:4mm;height:4mm;border-bottom:0.5px solid rgba(0,200,83,0.4);border-left:0.5px solid rgba(0,200,83,0.4);"></div>
-        <div style="position:absolute;bottom:6mm;right:4mm;width:4mm;height:4mm;border-bottom:0.5px solid rgba(0,200,83,0.4);border-right:0.5px solid rgba(0,200,83,0.4);"></div>
+      <div style="width:53.98mm;height:85.6mm;background:#0a120c;border-radius:3mm;overflow:hidden;position:relative;box-sizing:border-box;border:0.5px solid rgba(0,200,83,0.25);">
+        ${hexGeoBg}
+        ${cornerBrackets}
+
         <!-- HEADER BAND -->
-        <div style="position:absolute;top:0;left:0;right:0;height:12%;background:linear-gradient(90deg,#00c853,rgba(0,200,83,0.85));">
-          <div style="position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,rgba(255,152,0,0.6),#ff9800,rgba(255,152,0,0.6));"></div>
-          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 3mm;">
-            <div>
-              <p style="margin:0;color:#fff;font-size:5.5pt;letter-spacing:0.28em;font-weight:700;">GREENV1N3</p>
-              <p style="margin:0.5mm 0 0;color:rgba(255,255,255,0.7);font-size:4pt;letter-spacing:0.22em;">NIGERIA</p>
+        <div style="position:absolute;top:0;left:0;right:0;height:12%;background:linear-gradient(90deg,#00c853,rgba(0,200,83,0.85));overflow:hidden;">
+          <svg style="position:absolute;inset:0;width:100%;height:100%;opacity:0.15;" xmlns="http://www.w3.org/2000/svg">
+            <defs><pattern id="bh" width="14" height="12" patternUnits="userSpaceOnUse"><polygon points="7,1 13,4.5 13,9.5 7,13 1,9.5 1,4.5" fill="none" stroke="#fff" stroke-width="0.4"/></pattern></defs>
+            <rect width="100%" height="100%" fill="url(#bh)"/>
+          </svg>
+          <div style="position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,rgba(212,160,0,0.6),#d4a000,rgba(212,160,0,0.6));"></div>
+          <div style="position:relative;height:100%;padding:0 3mm;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:1.5mm;">
+              <div style="width:4mm;height:4mm;border-radius:1px;background:#0a120c;border:0.5px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;">
+                <svg width="2.5mm" height="2.5mm" viewBox="0 0 24 24" fill="none" stroke="#00c853" stroke-width="2.5" xmlns="http://www.w3.org/2000/svg"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+              </div>
+              <div>
+                <p style="margin:0;font-family:monospace;color:#fff;font-size:5.5pt;letter-spacing:0.25em;font-weight:700;line-height:1.2;">GREENV1N3</p>
+                <p style="margin:0;font-family:monospace;color:rgba(255,255,255,0.7);font-size:4.5pt;letter-spacing:0.22em;line-height:1.2;">NIGERIA</p>
+              </div>
             </div>
             <div style="text-align:right;">
-              <p style="margin:0;color:rgba(255,255,255,0.7);font-size:4pt;letter-spacing:0.22em;">PHASE 01</p>
-              <p style="margin:0.5mm 0 0;color:#fff;font-size:4.5pt;letter-spacing:0.2em;font-weight:700;">PLATEAU STATE</p>
+              <p style="margin:0;font-family:monospace;color:rgba(255,255,255,0.7);font-size:4.5pt;letter-spacing:0.22em;line-height:1.2;">PHASE 01</p>
+              <p style="margin:0;font-family:monospace;color:#fff;font-size:5pt;letter-spacing:0.2em;font-weight:700;line-height:1.2;">PLATEAU STATE</p>
             </div>
           </div>
         </div>
+
         <!-- TITLE STRIP -->
-        <div style="position:absolute;top:13%;left:0;right:0;padding:1.5mm 3mm 0;">
+        <div style="position:absolute;top:12.5%;left:0;right:0;padding:2mm 3mm 0;">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;">
             <div>
-              <p style="margin:0;color:rgba(255,255,255,0.35);font-size:4pt;letter-spacing:0.3em;">OFFICIAL IDENTIFICATION</p>
-              <p style="margin:0.5mm 0 0;color:#fff;font-size:7pt;letter-spacing:0.18em;font-weight:700;">AGRO EXECUTIVE</p>
+              <p style="margin:0;font-family:monospace;color:rgba(255,255,255,0.45);font-size:4.5pt;letter-spacing:0.3em;line-height:1.3;">OFFICIAL IDENTIFICATION</p>
+              <p style="margin:0.5mm 0 0;font-family:monospace;color:#fff;font-size:8pt;letter-spacing:0.18em;font-weight:700;line-height:1.2;">AGRO EXECUTIVE</p>
             </div>
             <div style="text-align:right;">
-              <p style="margin:0;color:rgba(255,255,255,0.35);font-size:3.5pt;letter-spacing:0.25em;">/ SERIES</p>
-              <p style="margin:0.5mm 0 0;color:#00c853;font-size:5.5pt;letter-spacing:0.15em;font-weight:600;">AV1-${(profile.agroId || 'AE000000').slice(-6)}</p>
+              <p style="margin:0;font-family:monospace;color:rgba(255,255,255,0.45);font-size:4pt;letter-spacing:0.25em;line-height:1.3;">/ SERIES</p>
+              <p style="margin:0.5mm 0 0;font-family:monospace;color:#00c853;font-size:6pt;letter-spacing:0.15em;font-weight:600;line-height:1.2;">AV1-${agroId.slice(-6)}</p>
             </div>
           </div>
         </div>
+
         <!-- PHOTO -->
-        <div style="position:absolute;top:24%;left:50%;transform:translateX(-50%);width:40%;aspect-ratio:3/4;">
-          <div style="position:absolute;inset:-1.5px;border-radius:3px;background:linear-gradient(135deg,#00c853,rgba(0,200,83,0.4),#ff9800);"></div>
-          <div style="position:relative;width:100%;height:100%;border-radius:3px;overflow:hidden;background:#0c170e;">
-            ${avatarHtml}
+        <div style="position:absolute;top:24%;left:50%;transform:translateX(-50%);width:42%;aspect-ratio:3/4;">
+          <div style="position:absolute;inset:-1.5px;border-radius:3px;background:linear-gradient(135deg,#00c853,rgba(0,200,83,0.4),#d4a000);"></div>
+          <div style="position:relative;width:100%;height:100%;border-radius:3px;overflow:hidden;background:#0c170e;border:0.5px solid rgba(0,200,83,0.3);">
+            ${photoHtml}
             <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,200,83,0.025) 0px,rgba(0,200,83,0.025) 1px,transparent 1px,transparent 3px);pointer-events:none;"></div>
+            <div style="position:absolute;top:1mm;left:1mm;width:2mm;height:2mm;border-top:0.5px solid rgba(0,200,83,0.6);border-left:0.5px solid rgba(0,200,83,0.6);"></div>
+            <div style="position:absolute;top:1mm;right:1mm;width:2mm;height:2mm;border-top:0.5px solid rgba(0,200,83,0.6);border-right:0.5px solid rgba(0,200,83,0.6);"></div>
+            <div style="position:absolute;bottom:1mm;left:1mm;width:2mm;height:2mm;border-bottom:0.5px solid rgba(0,200,83,0.6);border-left:0.5px solid rgba(0,200,83,0.6);"></div>
+            <div style="position:absolute;bottom:1mm;right:1mm;width:2mm;height:2mm;border-bottom:0.5px solid rgba(0,200,83,0.6);border-right:0.5px solid rgba(0,200,83,0.6);"></div>
           </div>
-          <!-- VERIFIED BADGE -->
-          <div style="position:absolute;bottom:-3mm;left:50%;transform:translateX(-50%);padding:0.5mm 2mm;background:#0a120c;border:0.4px solid ${verificationStyle.color === 'text-primary' ? '#00c853' : '#ff9800'};border-radius:2px;white-space:nowrap;">
-            <span style="color:${verificationStyle.color === 'text-primary' ? '#00c853' : '#ff9800'};font-size:4pt;letter-spacing:0.2em;font-weight:600;">${verificationStyle.label}</span>
+          <div style="position:absolute;bottom:-2.5mm;left:50%;transform:translateX(-50%);padding:0.5mm 2mm;background:#0a120c;border:0.4px solid ${vColor};border-radius:2px;white-space:nowrap;">
+            <span style="font-family:monospace;color:${vColor};font-size:4pt;letter-spacing:0.2em;font-weight:600;">${vLabel}</span>
           </div>
         </div>
+
         <!-- NAME + ID -->
-        <div style="position:absolute;top:58%;left:0;right:0;padding:0 3mm;text-align:center;">
-          <p style="margin:0;color:rgba(255,255,255,0.35);font-size:4pt;letter-spacing:0.3em;">/ FULL NAME</p>
-          <p style="margin:0.5mm 0 0;color:#fff;font-size:8.5pt;letter-spacing:0.06em;font-weight:700;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fullName}</p>
-          <div style="display:flex;align-items:center;justify-content:center;gap:1.5mm;margin-top:1.5mm;">
-            <p style="margin:0;color:rgba(255,255,255,0.35);font-size:4pt;letter-spacing:0.25em;">ID:</p>
-            <p style="margin:0;color:#00c853;font-size:6pt;letter-spacing:0.15em;font-weight:600;">${profile.agroId || 'AE-000000'}</p>
-          </div>
+        <div style="position:absolute;top:57%;left:0;right:0;padding:0 3mm;text-align:center;">
+          <p style="margin:0;font-family:monospace;color:rgba(255,255,255,0.45);font-size:4.5pt;letter-spacing:0.3em;">/ FULL NAME</p>
+          <p style="margin:0.5mm 0 0;font-family:monospace;color:#fff;font-size:10pt;letter-spacing:0.06em;font-weight:700;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2;">${fullName}</p>
+          <p style="margin:1.5mm 0 0;font-family:monospace;color:#00c853;font-size:7.5pt;letter-spacing:0.18em;font-weight:600;">${agroId}</p>
         </div>
+
         <!-- INFO GRID -->
-        <div style="position:absolute;top:68%;left:0;right:0;padding:0 3mm;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5mm;">
-            <div style="background:rgba(255,255,255,0.03);border:0.4px solid rgba(0,200,83,0.15);border-radius:2px;padding:1.2mm;">
-              <p style="margin:0;color:rgba(255,255,255,0.3);font-size:3.5pt;letter-spacing:0.25em;">COMMUNITY</p>
-              <p style="margin:0.4mm 0 0;color:#fff;font-size:4.5pt;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${communityLabel || 'UNASSIGNED'}</p>
-            </div>
-            <div style="background:rgba(255,255,255,0.03);border:0.4px solid rgba(0,200,83,0.15);border-radius:2px;padding:1.2mm;">
-              <p style="margin:0;color:rgba(255,255,255,0.3);font-size:3.5pt;letter-spacing:0.25em;">ROLE</p>
-              <p style="margin:0.4mm 0 0;color:#00c853;font-size:4.5pt;font-weight:600;">${roleAccent.label}</p>
-            </div>
-            <div style="background:rgba(255,255,255,0.03);border:0.4px solid rgba(0,200,83,0.15);border-radius:2px;padding:1.2mm;">
-              <p style="margin:0;color:rgba(255,255,255,0.3);font-size:3.5pt;letter-spacing:0.25em;">LGA</p>
-              <p style="margin:0.4mm 0 0;color:#fff;font-size:4.5pt;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${(profile.lga || 'N/A').toUpperCase()}</p>
-            </div>
-            <div style="background:rgba(255,255,255,0.03);border:0.4px solid rgba(0,200,83,0.15);border-radius:2px;padding:1.2mm;">
-              <p style="margin:0;color:rgba(255,255,255,0.3);font-size:3.5pt;letter-spacing:0.25em;">STATE</p>
-              <p style="margin:0.4mm 0 0;color:#fff;font-size:4.5pt;font-weight:600;">${(profile.state || 'PLATEAU').toUpperCase()}</p>
-            </div>
+        <div style="position:absolute;top:67%;left:0;right:0;padding:0 3mm;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:2mm 2.5mm;padding-bottom:2mm;border-bottom:0.5px solid rgba(0,200,83,0.15);">
+            ${field('COMMUNITY', communityLabel || 'UNASSIGNED')}
+            ${field('ROLE', roleAccent.label, rColor)}
+            ${field('LGA', (profile.lga || '—').toUpperCase())}
+            ${field('STATE', (profile.state || 'PLATEAU').toUpperCase())}
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:2mm 2.5mm;padding-top:1.5mm;">
+            ${field('ISSUED', joinDate)}
+            ${field('EXPIRES', expiryFormatted, '#d4a000')}
           </div>
         </div>
-        <!-- FOOTER -->
-        <div style="position:absolute;bottom:0;left:0;right:0;height:10%;border-top:0.5px solid rgba(0,200,83,0.15);">
-          <div style="display:flex;align-items:center;justify-content:space-between;height:100%;padding:0 3mm;">
-            <div>
-              <p style="margin:0;color:rgba(255,255,255,0.25);font-size:3.5pt;letter-spacing:0.2em;">ISSUED</p>
-              <p style="margin:0.3mm 0 0;color:rgba(255,255,255,0.5);font-size:4pt;font-weight:600;">${joinDate}</p>
+
+        <!-- BOTTOM STRIP -->
+        <div style="position:absolute;bottom:0;left:0;right:0;height:7%;padding:0 3mm;display:flex;align-items:center;justify-content:space-between;border-top:0.5px solid rgba(0,200,83,0.15);background:rgba(0,0,0,0.4);">
+          <div style="display:flex;align-items:center;gap:1.5mm;">
+            <div style="position:relative;width:4mm;height:3mm;border-radius:1px;background:linear-gradient(135deg,rgba(212,160,0,0.7),rgba(0,200,83,0.4),rgba(212,160,0,0.3));border:0.5px solid rgba(212,160,0,0.4);overflow:hidden;">
+              <div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent 0,transparent 0.5mm,rgba(0,0,0,0.3) 0.5mm,rgba(0,0,0,0.3) 0.75mm);"></div>
             </div>
-            <!-- CHIP -->
-            <div style="width:7mm;height:5mm;background:linear-gradient(135deg,#c8a96e,#f5d48e,#b8941a);border-radius:1mm;border:0.5px solid rgba(255,255,255,0.3);">
-              <div style="width:100%;height:100%;border-radius:1mm;background:repeating-linear-gradient(0deg,transparent,transparent 1mm,rgba(0,0,0,0.1) 1mm,rgba(0,0,0,0.1) 1.2mm),repeating-linear-gradient(90deg,transparent,transparent 1.5mm,rgba(0,0,0,0.1) 1.5mm,rgba(0,0,0,0.1) 1.7mm);"></div>
-            </div>
-            <div style="text-align:right;">
-              <p style="margin:0;color:rgba(255,255,255,0.25);font-size:3.5pt;letter-spacing:0.2em;">EXPIRES</p>
-              <p style="margin:0.3mm 0 0;color:#00c853;font-size:4pt;font-weight:600;">${expiryFormatted}</p>
-            </div>
+            <span style="font-family:monospace;color:rgba(255,255,255,0.4);font-size:4.5pt;letter-spacing:0.18em;">AGROV1N3</span>
           </div>
+          <span style="font-family:monospace;color:rgba(255,255,255,0.4);font-size:4.5pt;letter-spacing:0.18em;">REF · ${profile.id.slice(0, 6).toUpperCase()}</span>
         </div>
       </div>`
 
+    // ==================== BACK ====================
     const backHtml = `
-      <div style="width:53.98mm;height:85.6mm;background:#0a120c;border-radius:3mm;overflow:hidden;position:relative;font-family:monospace;box-sizing:border-box;">
-        <!-- HEX BG -->
-        <svg style="position:absolute;inset:0;width:100%;height:100%;opacity:0.04;" xmlns="http://www.w3.org/2000/svg">
-          <defs><pattern id="h2" width="18" height="16" patternUnits="userSpaceOnUse"><polygon points="9,1 17,5 17,11 9,15 1,11 1,5" fill="none" stroke="#00c853" stroke-width="0.6"/></pattern></defs>
-          <rect width="100%" height="100%" fill="url(#h2)"/>
-        </svg>
-        <!-- MAG STRIP -->
-        <div style="position:absolute;top:0;left:0;right:0;height:14%;background:linear-gradient(90deg,#1a1a1a,#111,#1a1a1a);border-bottom:0.5px solid rgba(0,200,83,0.15);">
-          <div style="position:absolute;top:30%;left:0;right:0;height:40%;background:linear-gradient(90deg,#2a2a2a,#333,#2a2a2a);"></div>
+      <div style="width:53.98mm;height:85.6mm;background:#0a120c;border-radius:3mm;overflow:hidden;position:relative;box-sizing:border-box;border:0.5px solid rgba(0,200,83,0.25);">
+        ${hexGeoBg}
+        ${cornerBrackets}
+
+        <!-- TOP LABEL -->
+        <div style="position:absolute;top:1.5mm;left:3mm;right:3mm;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-family:monospace;color:rgba(255,255,255,0.45);font-size:4.5pt;letter-spacing:0.25em;">/ SECURE STRIP</span>
+          <span style="font-family:monospace;color:rgba(255,255,255,0.45);font-size:4.5pt;letter-spacing:0.25em;">AGROV1N3 · BACK</span>
         </div>
-        <!-- LOGO CENTER -->
-        <div style="position:absolute;top:18%;left:0;right:0;text-align:center;">
-          <p style="margin:0;color:#00c853;font-size:8pt;letter-spacing:0.28em;font-weight:700;">GREENV1N3</p>
-          <p style="margin:0.5mm 0 0;color:rgba(255,255,255,0.3);font-size:4pt;letter-spacing:0.35em;">NIGERIA · AGROEXECUTIVE ID</p>
+
+        <!-- MAGNETIC STRIP -->
+        <div style="position:absolute;top:6%;left:0;right:0;height:10%;background:linear-gradient(180deg,#0a0a0a,#050505,#0a0a0a);border-top:0.5px solid rgba(255,255,255,0.05);border-bottom:0.5px solid rgba(255,255,255,0.05);">
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0,transparent 2px,rgba(255,255,255,0.025) 2px,rgba(255,255,255,0.025) 3px);"></div>
         </div>
+
+        <!-- TITLE -->
+        <div style="position:absolute;top:18%;left:0;right:0;padding:0 3mm;text-align:center;">
+          <p style="margin:0;font-family:monospace;color:rgba(255,255,255,0.45);font-size:4.5pt;letter-spacing:0.3em;">/ HOLDER VERIFICATION</p>
+          <p style="margin:0.5mm 0 0;font-family:monospace;color:#fff;font-size:8pt;letter-spacing:0.15em;font-weight:700;">AUTHENTICATION DATA</p>
+        </div>
+
         <!-- SIGNATURE LINE -->
-        <div style="position:absolute;top:30%;left:0;right:0;padding:0 4mm;">
-          <p style="margin:0;color:rgba(255,255,255,0.25);font-size:3.5pt;letter-spacing:0.2em;">HOLDER SIGNATURE</p>
-          <div style="height:8mm;background:rgba(255,255,255,0.04);border:0.4px solid rgba(0,200,83,0.2);border-radius:2px;margin-top:1mm;">
-            <div style="height:0.4px;background:rgba(0,200,83,0.3);margin-top:5.5mm;margin-left:2mm;margin-right:2mm;"></div>
+        <div style="position:absolute;top:27%;left:0;right:0;padding:0 3mm;">
+          <p style="margin:0;font-family:monospace;color:rgba(255,255,255,0.45);font-size:4.5pt;letter-spacing:0.25em;">/ HOLDER SIGNATURE</p>
+          <div style="margin-top:1mm;height:7mm;border-bottom:0.5px solid rgba(0,200,83,0.3);position:relative;">
+            <span style="position:absolute;bottom:1mm;left:1mm;font-family:Georgia,serif;font-style:italic;color:rgba(0,200,83,0.7);font-size:9pt;">${fullName.split(' ')[0]}</span>
           </div>
         </div>
-        <!-- QR CODE (simulated) -->
-        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-10%);width:18mm;height:18mm;">
-          <div style="width:100%;height:100%;background:rgba(255,255,255,0.04);border:0.5px solid rgba(0,200,83,0.3);border-radius:2px;display:flex;align-items:center;justify-content:center;position:relative;padding:1.5mm;box-sizing:border-box;">
-            <div style="width:100%;height:100%;background:repeating-linear-gradient(0deg,rgba(0,200,83,0.15) 0px,rgba(0,200,83,0.15) 1.2mm,transparent 1.2mm,transparent 2.4mm),repeating-linear-gradient(90deg,rgba(0,200,83,0.15) 0px,rgba(0,200,83,0.15) 1.2mm,transparent 1.2mm,transparent 2.4mm);"></div>
-            <div style="position:absolute;top:1.5mm;left:1.5mm;width:4mm;height:4mm;border:0.6px solid #00c853;background:rgba(0,200,83,0.1);"></div>
-            <div style="position:absolute;top:1.5mm;right:1.5mm;width:4mm;height:4mm;border:0.6px solid #00c853;background:rgba(0,200,83,0.1);"></div>
-            <div style="position:absolute;bottom:1.5mm;left:1.5mm;width:4mm;height:4mm;border:0.6px solid #00c853;background:rgba(0,200,83,0.1);"></div>
+
+        <!-- QR CODE -->
+        <div style="position:absolute;top:41%;left:50%;transform:translateX(-50%);">
+          <div style="position:absolute;inset:-1.5px;border-radius:3px;background:linear-gradient(135deg,rgba(0,200,83,0.6),rgba(212,160,0,0.6));"></div>
+          <div style="position:relative;background:#fff;border-radius:2px;padding:1.5mm;box-sizing:border-box;">
+            ${qrSvg}
           </div>
         </div>
-        <!-- BARCODE -->
-        <div style="position:absolute;bottom:16%;left:0;right:0;padding:0 5mm;">
-          <div style="display:flex;gap:0.3mm;height:5mm;justify-content:center;">
-            ${Array.from({length:40},(_,i)=>`<div style="flex:${0.5+Math.random()};background:rgba(255,255,255,${0.4+Math.random()*0.5});border-radius:0.3px;"></div>`).join('')}
+
+        <!-- VALIDITY -->
+        <div style="position:absolute;top:67%;left:0;right:0;padding:0 3mm;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:2mm 2.5mm;padding-bottom:1.5mm;border-bottom:0.5px solid rgba(0,200,83,0.15);">
+            ${field('ISSUED', joinDate)}
+            ${field('VALID THROUGH', expiryFormatted, '#d4a000')}
           </div>
-          <p style="margin:0.8mm 0 0;color:rgba(255,255,255,0.3);font-size:3.5pt;letter-spacing:0.15em;text-align:center;">${profile.agroId || 'AE-000000'}</p>
+          <div style="margin-top:2mm;">
+            <p style="margin:0 0 1mm;font-family:monospace;color:rgba(255,255,255,0.45);font-size:4.5pt;letter-spacing:0.25em;">/ SCAN CODE</p>
+            ${barcodeSvg}
+            <p style="margin:0.8mm 0 0;font-family:monospace;color:rgba(255,255,255,0.55);font-size:5.5pt;letter-spacing:0.25em;text-align:center;">${agroId}</p>
+          </div>
         </div>
+
         <!-- FOOTER LEGAL -->
-        <div style="position:absolute;bottom:0;left:0;right:0;padding:2mm 3mm;border-top:0.5px solid rgba(0,200,83,0.1);">
-          <p style="margin:0;color:rgba(255,255,255,0.2);font-size:3pt;letter-spacing:0.1em;text-align:center;line-height:1.6;">IF FOUND, RETURN TO AGROVIN3 PROGRAM · PLATEAU STATE, NIGERIA</p>
-          <p style="margin:0.5mm 0 0;color:rgba(255,255,255,0.15);font-size:3pt;letter-spacing:0.1em;text-align:center;">VALID: ${joinDate} – ${expiryFormatted}</p>
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:2mm 3mm;border-top:0.5px solid rgba(0,200,83,0.15);background:rgba(0,0,0,0.4);">
+          <p style="margin:0;font-family:monospace;color:rgba(255,255,255,0.4);font-size:4pt;letter-spacing:0.15em;line-height:1.5;">PROPERTY OF GREENV1N3 NIGERIA. IF FOUND, RETURN TO THE STATE COORDINATING COUNCIL, PLATEAU STATE. UNAUTHORIZED USE IS PROHIBITED.</p>
         </div>
       </div>`
 
-    const printWindow = window.open('', '_blank', 'width=220,height=360,toolbar=0,menubar=0,scrollbars=0')
+    const printWindow = window.open('', '_blank', 'width=240,height=420,toolbar=0,menubar=0,scrollbars=0')
     if (!printWindow) return
 
     printWindow.document.write(`<!DOCTYPE html>
@@ -340,19 +419,17 @@ export default function IDPage() {
     @media print {
       * { margin: 0 !important; padding: 0 !important; }
       html, body { width: 53.98mm !important; background: #0a120c !important; }
-      .page-break { page-break-after: always; display: block; height: 0; }
+      .pb { page-break-after: always; display: block; height: 0; line-height: 0; font-size: 0; }
     }
-    .card-wrap { width: 53.98mm; height: 85.6mm; overflow: hidden; }
+    .cw { width: 53.98mm; height: 85.6mm; overflow: hidden; display: block; }
   </style>
 </head>
 <body>
-  <div class="card-wrap">${frontHtml}</div>
-  <div class="page-break"></div>
-  <div class="card-wrap">${backHtml}</div>
+  <div class="cw">${frontHtml}</div>
+  <div class="pb"></div>
+  <div class="cw">${backHtml}</div>
   <script>
-    window.onload = function() {
-      setTimeout(function() { window.print(); }, 400);
-    };
+    window.onload = function() { setTimeout(function() { window.print(); }, 600); };
   <\/script>
 </body>
 </html>`)
