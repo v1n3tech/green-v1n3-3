@@ -1,13 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { 
   ArrowRight, Star, Clock, Users, CheckCircle, 
-  Zap, Shield, Award, ExternalLink, Lock
+  Zap, Shield, Award, ExternalLink, Lock, Loader2
 } from 'lucide-react'
 import type { CommunityData } from './communities-hub'
+import { fetchServices, type CommunityService } from '@/lib/services/actions'
 
 interface CommunityServicesProps {
   community: CommunityData
@@ -57,7 +58,23 @@ const DEFAULT_SERVICES = [
 ]
 
 export function CommunityServices({ community, isAuthenticated, isUserInCommunity }: CommunityServicesProps) {
-  const services = SERVICES_DETAILS[community.key] ?? DEFAULT_SERVICES
+  const [dbServices, setDbServices] = useState<CommunityService[]>([])
+  const [loading, setLoading] = useState(true)
+  
+  useEffect(() => {
+    async function loadServices() {
+      setLoading(true)
+      const { services } = await fetchServices({ community: community.key as any, limit: 10 })
+      setDbServices(services)
+      setLoading(false)
+    }
+    loadServices()
+  }, [community.key])
+  
+  // Use database services if available, otherwise fallback to static
+  const staticServices = SERVICES_DETAILS[community.key] ?? DEFAULT_SERVICES
+  const hasDbServices = dbServices.length > 0
+  
   const accentColor = community.color === 'orange' ? 'text-orange' : 'text-primary'
   const accentBg = community.color === 'orange' ? 'bg-orange' : 'bg-primary'
   const accentBgSoft = community.color === 'orange' ? 'bg-orange-soft' : 'bg-primary/10'
@@ -77,40 +94,69 @@ export function CommunityServices({ community, isAuthenticated, isUserInCommunit
         </div>
       </div>
 
-      {/* Featured Services */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {services.filter(s => s.featured).map((service, index) => (
-          <ServiceCard
-            key={service.id}
-            service={service}
-            index={index}
-            isAuthenticated={isAuthenticated}
-            isUserInCommunity={isUserInCommunity}
-            accent={community.color}
-            featured
-          />
-        ))}
-      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-6 h-6 text-primary animate-spin" />
+        </div>
+      ) : (
+        <>
+          {/* Database Services (GCM offerings) */}
+          {hasDbServices && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Zap className={`w-4 h-4 ${accentColor}`} />
+                <span className="mono-xs text-[10px] text-muted-foreground">/ GCM SERVICES</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {dbServices.map((service, index) => (
+                  <DbServiceCard
+                    key={service.id}
+                    service={service}
+                    index={index}
+                    isAuthenticated={isAuthenticated}
+                    accent={community.color}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
 
-      {/* All Services */}
-      <div className="border border-border rounded-[2px] bg-card/50 overflow-hidden">
-        <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-          <span className="mono-xs text-muted-foreground">/ ALL SERVICES</span>
-          <span className={`mono-xs text-[10px] ${accentColor}`}>{services.length} AVAILABLE</span>
-        </div>
-        <div className="divide-y divide-border">
-          {services.map((service, index) => (
-            <ServiceRow
-              key={service.id}
-              service={service}
-              index={index}
-              isAuthenticated={isAuthenticated}
-              isUserInCommunity={isUserInCommunity}
-              accent={community.color}
-            />
-          ))}
-        </div>
-      </div>
+          {/* Featured Static Services */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {staticServices.filter(s => s.featured).map((service, index) => (
+              <ServiceCard
+                key={service.id}
+                service={service}
+                index={index}
+                isAuthenticated={isAuthenticated}
+                isUserInCommunity={isUserInCommunity}
+                accent={community.color}
+                featured
+              />
+            ))}
+          </div>
+
+          {/* All Static Services */}
+          <div className="border border-border rounded-[2px] bg-card/50 overflow-hidden">
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+              <span className="mono-xs text-muted-foreground">/ ALL SERVICES</span>
+              <span className={`mono-xs text-[10px] ${accentColor}`}>{staticServices.length + dbServices.length} AVAILABLE</span>
+            </div>
+            <div className="divide-y divide-border">
+              {staticServices.map((service, index) => (
+                <ServiceRow
+                  key={service.id}
+                  service={service}
+                  index={index}
+                  isAuthenticated={isAuthenticated}
+                  isUserInCommunity={isUserInCommunity}
+                  accent={community.color}
+                />
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* CTA for non-authenticated users */}
       {!isAuthenticated && (
@@ -236,6 +282,74 @@ function ServiceCard({
           <ArrowRight className="w-3 h-3" />
         </Link>
       </div>
+    </motion.div>
+  )
+}
+
+function DbServiceCard({
+  service,
+  index,
+  isAuthenticated,
+  accent
+}: {
+  service: CommunityService
+  index: number
+  isAuthenticated: boolean
+  accent: 'green' | 'orange'
+}) {
+  const accentColor = accent === 'orange' ? 'text-orange' : 'text-primary'
+  const accentBg = accent === 'orange' ? 'bg-orange' : 'bg-primary'
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.1 }}
+      className="border border-primary/30 rounded-[2px] p-4 bg-card/50 hover:border-primary/50 transition-all"
+    >
+      <div className="flex items-center gap-1.5 mb-3">
+        <Zap className={`w-3.5 h-3.5 ${accentColor}`} />
+        <span className={`mono-xs text-[9px] ${accentColor}`}>GCM SERVICE</span>
+      </div>
+      
+      <h3 className="mono text-foreground">{service.title}</h3>
+      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{service.description}</p>
+      
+      <div className="flex items-center gap-3 mt-3">
+        <div className="flex items-center gap-1">
+          <Star className="w-3 h-3 text-accent fill-accent" />
+          <span className="mono-xs text-[10px] text-foreground/80">{service.rating.toFixed(1)}</span>
+          <span className="mono-xs text-[9px] text-muted-foreground">({service.reviews_count})</span>
+        </div>
+        {service.turnaround_time && (
+          <div className="flex items-center gap-1">
+            <Clock className="w-3 h-3 text-muted-foreground" />
+            <span className="mono-xs text-[9px] text-muted-foreground">{service.turnaround_time}</span>
+          </div>
+        )}
+      </div>
+      
+      <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+        <div>
+          <span className="mono text-sm text-primary">{service.price.toLocaleString()} V1N3</span>
+          <span className="mono-xs text-[9px] text-muted-foreground block">{service.price_unit}</span>
+        </div>
+        <Link
+          href={isAuthenticated ? '/dashboard/requests' : '/'}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] ${accentBg} text-background mono-xs text-[9px]`}
+        >
+          {isAuthenticated ? 'REQUEST' : 'CONNECT'}
+          <ArrowRight className="w-3 h-3" />
+        </Link>
+      </div>
+      
+      {service.gcm && (
+        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
+          <span className="mono-xs text-[9px] text-muted-foreground">
+            by {service.gcm.display_name} • {service.completed_count} completed
+          </span>
+        </div>
+      )}
     </motion.div>
   )
 }
