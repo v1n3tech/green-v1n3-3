@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
 
 export type UserRole = "user" | "agro_executive" | "gcm" | "lgpa" | "scc_member" | "admin"
@@ -137,7 +138,9 @@ export async function updateUserRole(
     return { success: false, error: "Cannot change your own role" }
   }
   
-  const { error } = await supabase
+  // Use admin client to bypass RLS for updating other users
+  const adminClient = createAdminClient()
+  const { error } = await adminClient
     .from("profiles")
     .update({ role: newRole })
     .eq("id", userId)
@@ -176,7 +179,9 @@ export async function updateUserStatus(
     return { success: false, error: "Cannot deactivate your own account" }
   }
   
-  const { error } = await supabase
+  // Use admin client to bypass RLS for updating other users
+  const adminClient = createAdminClient()
+  const { error } = await adminClient
     .from("profiles")
     .update({ is_active: isActive })
     .eq("id", userId)
@@ -210,7 +215,9 @@ export async function updateVerificationStatus(
     return { success: false, error: "Unauthorized" }
   }
   
-  const { error } = await supabase
+  // Use admin client to bypass RLS for updating other users
+  const adminClient = createAdminClient()
+  const { error } = await adminClient
     .from("profiles")
     .update({ verification_status: status })
     .eq("id", userId)
