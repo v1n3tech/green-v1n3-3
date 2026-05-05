@@ -29,7 +29,6 @@ import {
   HelpCircle,
   MessageSquare,
   FileText,
-  Briefcase,
 } from 'lucide-react'
 import { signOut } from '@/lib/auth/actions'
 
@@ -83,17 +82,16 @@ const NAV_ITEMS = [
       { href: '/dashboard/feed', label: 'Feed', icon: Radio, index: '06' },
       { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare, index: '07' },
       { href: '/dashboard/requests', label: 'Requests', icon: FileText, index: '08' },
-      { href: '/dashboard/assignments', label: 'Assignments', icon: Briefcase, index: '09' },
-      { href: '/dashboard/news', label: 'News', icon: Newspaper, index: '10' },
-      { href: '/dashboard/training', label: 'Training', icon: GraduationCap, index: '11' },
+      { href: '/dashboard/news', label: 'News', icon: Newspaper, index: '09' },
+      { href: '/dashboard/training', label: 'Training', icon: GraduationCap, index: '10' },
     ]
   },
   {
     section: 'ADMIN',
     items: [
-      { href: '/dashboard/organization', label: 'Organization', icon: Building2, index: '12' },
-      { href: '/dashboard/security', label: 'Security', icon: Shield, index: '13' },
-      { href: '/dashboard/settings', label: 'Settings', icon: Settings, index: '14' },
+      { href: '/dashboard/organization', label: 'Organization', icon: Building2, index: '11' },
+      { href: '/dashboard/security', label: 'Security', icon: Shield, index: '12' },
+      { href: '/dashboard/settings', label: 'Settings', icon: Settings, index: '13' },
     ]
   },
 ]

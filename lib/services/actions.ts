@@ -7,9 +7,6 @@ import type { AgroCommunityKey } from "@/components/onboarding/data"
 export type ServiceRequestStatus = 
   | "pending" 
   | "accepted" 
-  | "payment_pending"
-  | "paid"
-  | "in_progress"
   | "rejected" 
   | "negotiating" 
   | "completed" 
@@ -61,17 +58,6 @@ export interface ServiceRequest {
   updated_at: string
   accepted_at: string | null
   completed_at: string | null
-  // Location details (added after acceptance)
-  location_state: string | null
-  location_lga: string | null
-  location_address: string | null
-  location_details: string | null
-  utility_bill_url: string | null
-  details_submitted_at: string | null
-  // Payment info
-  payment_status: string | null
-  payment_reference: string | null
-  paid_at: string | null
   // Joined data
   service?: CommunityService
   requester?: {
