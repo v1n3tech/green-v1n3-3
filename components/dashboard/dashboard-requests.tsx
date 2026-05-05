@@ -6,7 +6,8 @@ import {
   FileText, Plus, Search, Filter, MoreHorizontal, Clock,
   CheckCircle, XCircle, MessageSquare, ArrowRight, Send,
   Package, Users, TrendingUp, Zap, Star, RefreshCw,
-  ChevronDown, X, Loader2, AlertCircle, DollarSign
+  ChevronDown, X, Loader2, AlertCircle, DollarSign,
+  MapPin, Upload, UserPlus, PenLine, CreditCard, Eye
 } from 'lucide-react'
 import { COMMUNITIES, type AgroCommunityKey } from '@/components/onboarding/data'
 import {
@@ -22,6 +23,16 @@ import {
   type ServiceRequest,
   type ServiceRequestStatus,
 } from '@/lib/services/actions'
+import {
+  submitLocationDetails,
+  togglePaymentStatus,
+  uploadGcmSignature,
+  getGcmSignature,
+  fetchAvailableExecutives,
+  assignExecutives,
+  fetchRequestAssignments,
+  type ServiceAssignment,
+} from '@/lib/services/assignment-actions'
 
 interface DashboardRequestsProps {
   userId: string
@@ -34,9 +45,12 @@ interface DashboardRequestsProps {
 
 type TabKey = 'browse' | 'my-requests' | 'incoming' | 'my-services'
 
-const STATUS_CONFIG: Record<ServiceRequestStatus, { label: string; color: string; icon: typeof Clock }> = {
+const STATUS_CONFIG: Record<ServiceRequestStatus | 'payment_pending' | 'paid' | 'in_progress', { label: string; color: string; icon: typeof Clock }> = {
   pending: { label: 'Pending', color: 'text-amber-500 bg-amber-500/10 border-amber-500/30', icon: Clock },
   accepted: { label: 'Accepted', color: 'text-primary bg-primary/10 border-primary/30', icon: CheckCircle },
+  payment_pending: { label: 'Payment Pending', color: 'text-orange bg-orange/10 border-orange/30', icon: CreditCard },
+  paid: { label: 'Paid', color: 'text-primary bg-primary/10 border-primary/30', icon: CheckCircle },
+  in_progress: { label: 'In Progress', color: 'text-blue-500 bg-blue-500/10 border-blue-500/30', icon: Users },
   rejected: { label: 'Rejected', color: 'text-destructive bg-destructive/10 border-destructive/30', icon: XCircle },
   negotiating: { label: 'Negotiating', color: 'text-orange bg-orange/10 border-orange/30', icon: MessageSquare },
   completed: { label: 'Completed', color: 'text-primary bg-primary/10 border-primary/30', icon: CheckCircle },
@@ -72,6 +86,19 @@ export function DashboardRequests({
   const [selectedService, setSelectedService] = useState<CommunityService | null>(null)
   const [showResponseModal, setShowResponseModal] = useState(false)
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null)
+  const [showLocationModal, setShowLocationModal] = useState(false)
+  const [showAssignModal, setShowAssignModal] = useState(false)
+  const [showSignatureModal, setShowSignatureModal] = useState(false)
+  const [showChatModal, setShowChatModal] = useState(false)
+  const [showAssignmentsModal, setShowAssignmentsModal] = useState(false)
+  const [gcmSignatureUrl, setGcmSignatureUrl] = useState<string | null>(null)
+  
+  // Load GCM signature on mount
+  useEffect(() => {
+    if (isGcm) {
+      getGcmSignature().then(({ signatureUrl }) => setGcmSignatureUrl(signatureUrl))
+    }
+  }, [isGcm])
   
   // Load data
   useEffect(() => {
@@ -389,10 +416,100 @@ export function DashboardRequests({
           loadData()
         }}
       />
+      
+      {/* Location Details Modal */}
+      <LocationDetailsModal
+        open={showLocationModal}
+        onClose={() => {
+          setShowLocationModal(false)
+          setSelectedRequest(null)
+        }}
+        request={selectedRequest}
+        onSubmitted={() => {
+          loadData()
+        }}
+      />
+      
+      {/* Signature Modal */}
+      <SignatureModal
+        open={showSignatureModal}
+        onClose={() => setShowSignatureModal(false)}
+        onUploaded={(url) => {
+          setGcmSignatureUrl(url)
+          setShowSignatureModal(false)
+          // Now open the assign modal since signature is uploaded
+          if (selectedRequest) {
+            setShowAssignModal(true)
+          }
+        }}
+      />
+      
+      {/* Assign Executives Modal */}
+      <AssignExecutivesModal
+        open={showAssignModal}
+        onClose={() => {
+          setShowAssignModal(false)
+          setSelectedRequest(null)
+        }}
+        request={selectedRequest}
+        onAssigned={() => {
+          loadData()
+        }}
+      />
+      
+      {/* View Assignments Modal */}
+      <ViewAssignmentsModal
+        open={showAssignmentsModal}
+        onClose={() => {
+          setShowAssignmentsModal(false)
+          setSelectedRequest(null)
+        }}
+        request={selectedRequest}
+      />
     </div>
   )
   
   async function handleRequestAction(request: ServiceRequest, action: string) {
+    setSelectedRequest(request)
+    
+    if (action === 'submit-details') {
+      setShowLocationModal(true)
+      return
+    }
+    
+    if (action === 'toggle-payment') {
+      startTransition(async () => {
+        const currentStatus = (request as any).payment_status
+        await togglePaymentStatus(request.id, currentStatus !== 'paid')
+        loadData()
+      })
+      return
+    }
+    
+    if (action === 'assign') {
+      if (!gcmSignatureUrl) {
+        setShowSignatureModal(true)
+        return
+      }
+      setShowAssignModal(true)
+      return
+    }
+    
+    if (action === 'view-assignments') {
+      setShowAssignmentsModal(true)
+      return
+    }
+    
+    if (action === 'chat') {
+      setShowChatModal(true)
+      return
+    }
+    
+    if (action === 'respond') {
+      setShowResponseModal(true)
+      return
+    }
+    
     startTransition(async () => {
       if (action === 'cancel') {
         await cancelRequest(request.id)
@@ -498,7 +615,7 @@ function ServiceCard({ service, onRequest, isOwner, onEdit, userCommunity }: { s
 }
 
 function RequestCard({ request, isGcm, onAction }: { request: ServiceRequest; isGcm: boolean; onAction: (action: string) => void }) {
-  const status = STATUS_CONFIG[request.status]
+  const status = STATUS_CONFIG[request.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.pending
   const StatusIcon = status.icon
   const currentPrice = request.final_price ?? request.gcm_quote ?? request.requester_quote ?? request.original_price
   
@@ -561,7 +678,7 @@ function RequestCard({ request, isGcm, onAction }: { request: ServiceRequest; is
           )}
           
           {/* Actions */}
-          <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border">
+          <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border flex-wrap">
             {isGcm ? (
               <>
                 {request.status === 'pending' && (
@@ -602,13 +719,37 @@ function RequestCard({ request, isGcm, onAction }: { request: ServiceRequest; is
                     </button>
                   </>
                 )}
-                {request.status === 'accepted' && (
+                {(request.status === 'accepted' || request.status === 'payment_pending') && (
                   <button
-                    onClick={() => onAction('complete')}
+                    onClick={() => onAction('toggle-payment')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-orange text-background mono-xs text-[9px] rounded-[2px] hover:bg-orange/90 transition-colors"
+                  >
+                    <CreditCard className="w-3 h-3" /> TOGGLE PAYMENT (TEST)
+                  </button>
+                )}
+                {request.status === 'paid' && (
+                  <button
+                    onClick={() => onAction('assign')}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-background mono-xs text-[9px] rounded-[2px] hover:bg-primary/90 transition-colors"
                   >
-                    <CheckCircle className="w-3 h-3" /> MARK COMPLETE
+                    <UserPlus className="w-3 h-3" /> ASSIGN EXECUTIVES
                   </button>
+                )}
+                {request.status === 'in_progress' && (
+                  <>
+                    <button
+                      onClick={() => onAction('view-assignments')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 border border-primary text-primary mono-xs text-[9px] rounded-[2px] hover:bg-primary/5 transition-colors"
+                    >
+                      <Eye className="w-3 h-3" /> VIEW ASSIGNMENTS
+                    </button>
+                    <button
+                      onClick={() => onAction('complete')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-background mono-xs text-[9px] rounded-[2px] hover:bg-primary/90 transition-colors"
+                    >
+                      <CheckCircle className="w-3 h-3" /> MARK COMPLETE
+                    </button>
+                  </>
                 )}
               </>
             ) : (
@@ -621,8 +762,32 @@ function RequestCard({ request, isGcm, onAction }: { request: ServiceRequest; is
                     <XCircle className="w-3 h-3" /> CANCEL
                   </button>
                 )}
+                {request.status === 'accepted' && (
+                  <button
+                    onClick={() => onAction('submit-details')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-background mono-xs text-[9px] rounded-[2px] hover:bg-primary/90 transition-colors"
+                  >
+                    <MapPin className="w-3 h-3" /> SUBMIT LOCATION DETAILS
+                  </button>
+                )}
+                {request.status === 'payment_pending' && (
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 border border-orange text-orange mono-xs text-[9px] rounded-[2px]">
+                    <Clock className="w-3 h-3" /> AWAITING PAYMENT
+                  </span>
+                )}
+                {(request.status === 'paid' || request.status === 'in_progress') && (
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 border border-primary text-primary mono-xs text-[9px] rounded-[2px]">
+                    <CheckCircle className="w-3 h-3" /> {request.status === 'paid' ? 'PAYMENT CONFIRMED' : 'WORK IN PROGRESS'}
+                  </span>
+                )}
               </>
             )}
+            <button
+              onClick={() => onAction('chat')}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-border text-muted-foreground mono-xs text-[9px] rounded-[2px] hover:bg-secondary transition-colors"
+            >
+              <MessageSquare className="w-3 h-3" /> CHAT
+            </button>
           </div>
         </div>
       </div>
@@ -1003,6 +1168,556 @@ function ResponseModal({ open, onClose, request, onResponded }: { open: boolean;
             {isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             SEND COUNTER
           </button>
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
+// ============ LOCATION DETAILS MODAL ============
+function LocationDetailsModal({ 
+  open, 
+  onClose, 
+  request, 
+  onSubmitted 
+}: { 
+  open: boolean
+  onClose: () => void
+  request: ServiceRequest | null
+  onSubmitted: () => void 
+}) {
+  const [isPending, startTransition] = useTransition()
+  const [state, setState] = useState('Plateau')
+  const [lga, setLga] = useState('')
+  const [address, setAddress] = useState('')
+  const [details, setDetails] = useState('')
+  const [utilityBillUrl, setUtilityBillUrl] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  
+  if (!open || !request) return null
+  
+  function handleSubmit() {
+    if (!lga || !address || !details) {
+      setError('Please fill in all required fields')
+      return
+    }
+    
+    startTransition(async () => {
+      const result = await submitLocationDetails(request.id, {
+        state,
+        lga,
+        address,
+        details,
+        utilityBillUrl: utilityBillUrl || undefined,
+      })
+      
+      if (result.error) {
+        setError(result.error)
+      } else {
+        onSubmitted()
+        onClose()
+      }
+    })
+  }
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="relative w-full max-w-lg bg-background border border-border rounded-[2px] overflow-hidden max-h-[90vh] overflow-y-auto"
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border sticky top-0 bg-background">
+          <span className="mono-sm text-sm text-foreground">Submit Location Details</span>
+          <button onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="p-4 space-y-4">
+          {error && (
+            <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-[2px]">
+              <AlertCircle className="w-4 h-4 text-destructive" />
+              <span className="mono-xs text-xs text-destructive">{error}</span>
+            </div>
+          )}
+          
+          <div className="p-3 bg-primary/5 border border-primary/30 rounded-[2px]">
+            <p className="mono-xs text-[10px] text-primary">Please provide accurate location details for service delivery. A utility bill may be required as proof of address.</p>
+          </div>
+          
+          <div>
+            <label className="block mono-xs text-[10px] text-muted-foreground mb-1.5">STATE *</label>
+            <select
+              value={state}
+              onChange={(e) => setState(e.target.value)}
+              className="w-full px-3 py-2.5 bg-secondary/50 border border-border rounded-[2px] mono-xs text-xs text-foreground outline-none focus:border-primary/50"
+            >
+              <option value="Plateau">Plateau</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="block mono-xs text-[10px] text-muted-foreground mb-1.5">LOCAL GOVERNMENT *</label>
+            <input
+              type="text"
+              value={lga}
+              onChange={(e) => setLga(e.target.value)}
+              placeholder="e.g., Jos North"
+              className="w-full px-3 py-2.5 bg-secondary/50 border border-border rounded-[2px] mono-xs text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50"
+            />
+          </div>
+          
+          <div>
+            <label className="block mono-xs text-[10px] text-muted-foreground mb-1.5">ADDRESS *</label>
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="Enter your address"
+              className="w-full px-3 py-2.5 bg-secondary/50 border border-border rounded-[2px] mono-xs text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50"
+            />
+          </div>
+          
+          <div>
+            <label className="block mono-xs text-[10px] text-muted-foreground mb-1.5">ADDITIONAL DETAILS *</label>
+            <textarea
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+              placeholder="Provide any additional details about the location or service requirements..."
+              rows={3}
+              className="w-full px-3 py-2.5 bg-secondary/50 border border-border rounded-[2px] mono-xs text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50 resize-none"
+            />
+          </div>
+          
+          <div>
+            <label className="block mono-xs text-[10px] text-muted-foreground mb-1.5">UTILITY BILL URL (PROOF OF LOCATION)</label>
+            <input
+              type="url"
+              value={utilityBillUrl}
+              onChange={(e) => setUtilityBillUrl(e.target.value)}
+              placeholder="https://..."
+              className="w-full px-3 py-2.5 bg-secondary/50 border border-border rounded-[2px] mono-xs text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50"
+            />
+            <p className="mono-xs text-[9px] text-muted-foreground mt-1">Upload your utility bill to an image host and paste the URL here</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-3 px-4 py-3 border-t border-border sticky bottom-0 bg-background">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-border text-muted-foreground mono-xs text-[10px] rounded-[2px] hover:bg-secondary transition-colors"
+          >
+            CANCEL
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isPending}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-background mono-xs text-[10px] rounded-[2px] hover:bg-primary/90 transition-colors disabled:opacity-50"
+          >
+            {isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            SUBMIT DETAILS
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
+// ============ SIGNATURE UPLOAD MODAL ============
+function SignatureModal({ 
+  open, 
+  onClose, 
+  onUploaded 
+}: { 
+  open: boolean
+  onClose: () => void
+  onUploaded: (url: string) => void 
+}) {
+  const [isPending, startTransition] = useTransition()
+  const [signatureUrl, setSignatureUrl] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  
+  if (!open) return null
+  
+  function handleSubmit() {
+    if (!signatureUrl) {
+      setError('Please provide a signature image URL')
+      return
+    }
+    
+    startTransition(async () => {
+      const result = await uploadGcmSignature(signatureUrl)
+      
+      if (result.error) {
+        setError(result.error)
+      } else {
+        onUploaded(signatureUrl)
+        onClose()
+      }
+    })
+  }
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="relative w-full max-w-md bg-background border border-border rounded-[2px] overflow-hidden"
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <span className="mono-sm text-sm text-foreground">Upload Signature</span>
+          <button onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="p-4 space-y-4">
+          {error && (
+            <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-[2px]">
+              <AlertCircle className="w-4 h-4 text-destructive" />
+              <span className="mono-xs text-xs text-destructive">{error}</span>
+            </div>
+          )}
+          
+          <div className="p-3 bg-orange/10 border border-orange/30 rounded-[2px]">
+            <p className="mono-xs text-[10px] text-orange">Your signature is required for assignment letters. Please upload a clear image of your signature.</p>
+          </div>
+          
+          <div>
+            <label className="block mono-xs text-[10px] text-muted-foreground mb-1.5">SIGNATURE IMAGE URL *</label>
+            <input
+              type="url"
+              value={signatureUrl}
+              onChange={(e) => setSignatureUrl(e.target.value)}
+              placeholder="https://..."
+              className="w-full px-3 py-2.5 bg-secondary/50 border border-border rounded-[2px] mono-xs text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50"
+            />
+            <p className="mono-xs text-[9px] text-muted-foreground mt-1">Upload your signature image and paste the URL here</p>
+          </div>
+          
+          {signatureUrl && (
+            <div className="border border-border rounded-[2px] p-2">
+              <p className="mono-xs text-[9px] text-muted-foreground mb-2">PREVIEW</p>
+              <img src={signatureUrl} alt="Signature preview" className="max-h-20 object-contain" />
+            </div>
+          )}
+        </div>
+        <div className="flex items-center justify-end gap-3 px-4 py-3 border-t border-border">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-border text-muted-foreground mono-xs text-[10px] rounded-[2px] hover:bg-secondary transition-colors"
+          >
+            CANCEL
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isPending}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-background mono-xs text-[10px] rounded-[2px] hover:bg-primary/90 transition-colors disabled:opacity-50"
+          >
+            {isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            SAVE SIGNATURE
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
+// ============ ASSIGN EXECUTIVES MODAL ============
+function AssignExecutivesModal({ 
+  open, 
+  onClose, 
+  request, 
+  onAssigned 
+}: { 
+  open: boolean
+  onClose: () => void
+  request: ServiceRequest | null
+  onAssigned: () => void 
+}) {
+  const [isPending, startTransition] = useTransition()
+  const [executives, setExecutives] = useState<Array<{
+    id: string
+    display_name: string
+    agro_id: string
+    avatar_url: string | null
+    lga: string | null
+    community: string
+  }>>([])
+  const [selectedExecs, setSelectedExecs] = useState<Array<{ id: string; roleDescription: string }>>([])
+  const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  
+  useEffect(() => {
+    if (open) {
+      loadExecutives()
+    }
+  }, [open, search])
+  
+  async function loadExecutives() {
+    setLoading(true)
+    const { executives: execs } = await fetchAvailableExecutives({
+      search: search || undefined,
+      limit: 20,
+    })
+    setExecutives(execs)
+    setLoading(false)
+  }
+  
+  function toggleExecutive(exec: typeof executives[0]) {
+    const exists = selectedExecs.find(e => e.id === exec.id)
+    if (exists) {
+      setSelectedExecs(selectedExecs.filter(e => e.id !== exec.id))
+    } else {
+      setSelectedExecs([...selectedExecs, { id: exec.id, roleDescription: '' }])
+    }
+  }
+  
+  function updateRoleDescription(id: string, roleDescription: string) {
+    setSelectedExecs(selectedExecs.map(e => e.id === id ? { ...e, roleDescription } : e))
+  }
+  
+  if (!open || !request) return null
+  
+  function handleSubmit() {
+    if (selectedExecs.length === 0) {
+      setError('Please select at least one executive')
+      return
+    }
+    
+    startTransition(async () => {
+      const result = await assignExecutives(request.id, selectedExecs.map(e => ({
+        executiveId: e.id,
+        roleDescription: e.roleDescription || undefined,
+      })))
+      
+      if (result.error) {
+        setError(result.error)
+      } else {
+        onAssigned()
+        setSelectedExecs([])
+        onClose()
+      }
+    })
+  }
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="relative w-full max-w-2xl bg-background border border-border rounded-[2px] overflow-hidden max-h-[90vh] flex flex-col"
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <span className="mono-sm text-sm text-foreground">Assign Executives</span>
+          <button onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        
+        <div className="p-4 border-b border-border">
+          {error && (
+            <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-[2px] mb-4">
+              <AlertCircle className="w-4 h-4 text-destructive" />
+              <span className="mono-xs text-xs text-destructive">{error}</span>
+            </div>
+          )}
+          
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search executives by name or Agro ID..."
+                className="w-full pl-10 pr-4 py-2 bg-secondary/50 border border-border rounded-[2px] mono-xs text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50"
+              />
+            </div>
+          </div>
+          
+          <p className="mono-xs text-[9px] text-muted-foreground mt-2">
+            Only verified and active executives can be assigned. Selected: {selectedExecs.length}
+          </p>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 text-primary animate-spin" />
+            </div>
+          ) : executives.length === 0 ? (
+            <div className="text-center py-8">
+              <Users className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+              <p className="mono-xs text-xs text-muted-foreground">No verified executives found</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {executives.map((exec) => {
+                const isSelected = selectedExecs.some(e => e.id === exec.id)
+                const selectedData = selectedExecs.find(e => e.id === exec.id)
+                
+                return (
+                  <div
+                    key={exec.id}
+                    className={`border rounded-[2px] p-3 transition-colors ${
+                      isSelected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => toggleExecutive(exec)}
+                        className={`w-5 h-5 rounded-[2px] border flex items-center justify-center ${
+                          isSelected ? 'bg-primary border-primary' : 'border-border'
+                        }`}
+                      >
+                        {isSelected && <CheckCircle className="w-3 h-3 text-background" />}
+                      </button>
+                      
+                      <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center flex-shrink-0">
+                        {exec.avatar_url ? (
+                          <img src={exec.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+                        ) : (
+                          <Users className="w-4 h-4 text-primary" />
+                        )}
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <p className="mono-sm text-xs text-foreground">{exec.display_name}</p>
+                        <p className="mono-xs text-[9px] text-muted-foreground">{exec.agro_id} • {exec.lga || 'No LGA'}</p>
+                      </div>
+                    </div>
+                    
+                    {isSelected && (
+                      <div className="mt-3 pl-8">
+                        <input
+                          type="text"
+                          value={selectedData?.roleDescription || ''}
+                          onChange={(e) => updateRoleDescription(exec.id, e.target.value)}
+                          placeholder="Role description (optional)"
+                          className="w-full px-3 py-2 bg-secondary/50 border border-border rounded-[2px] mono-xs text-[10px] text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+        
+        <div className="flex items-center justify-end gap-3 px-4 py-3 border-t border-border">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-border text-muted-foreground mono-xs text-[10px] rounded-[2px] hover:bg-secondary transition-colors"
+          >
+            CANCEL
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isPending || selectedExecs.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-background mono-xs text-[10px] rounded-[2px] hover:bg-primary/90 transition-colors disabled:opacity-50"
+          >
+            {isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            ASSIGN {selectedExecs.length} EXECUTIVE{selectedExecs.length !== 1 ? 'S' : ''}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
+// ============ VIEW ASSIGNMENTS MODAL ============
+function ViewAssignmentsModal({ 
+  open, 
+  onClose, 
+  request
+}: { 
+  open: boolean
+  onClose: () => void
+  request: ServiceRequest | null
+}) {
+  const [assignments, setAssignments] = useState<ServiceAssignment[]>([])
+  const [loading, setLoading] = useState(false)
+  
+  useEffect(() => {
+    if (open && request) {
+      setLoading(true)
+      fetchRequestAssignments(request.id)
+        .then(({ assignments }) => setAssignments(assignments))
+        .finally(() => setLoading(false))
+    }
+  }, [open, request])
+  
+  if (!open || !request) return null
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="relative w-full max-w-lg bg-background border border-border rounded-[2px] overflow-hidden max-h-[80vh] overflow-y-auto"
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border sticky top-0 bg-background">
+          <span className="mono-sm text-sm text-foreground">Assigned Executives</span>
+          <button onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        
+        <div className="p-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 text-primary animate-spin" />
+            </div>
+          ) : assignments.length === 0 ? (
+            <div className="text-center py-8">
+              <Users className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+              <p className="mono-xs text-xs text-muted-foreground">No executives assigned yet</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {assignments.map((assignment) => (
+                <div key={assignment.id} className="border border-border rounded-[2px] p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center flex-shrink-0">
+                      {assignment.executive?.avatar_url ? (
+                        <img src={assignment.executive.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        <Users className="w-5 h-5 text-primary" />
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <p className="mono-sm text-sm text-foreground">{assignment.executive?.display_name}</p>
+                      <p className="mono-xs text-[9px] text-muted-foreground">
+                        {assignment.executive?.agro_id} • {assignment.executive?.lga || 'No LGA'}
+                      </p>
+                    </div>
+                    
+                    <span className={`px-2 py-1 border rounded-[2px] mono-xs text-[9px] ${
+                      assignment.status === 'completed' ? 'text-primary bg-primary/10 border-primary/30' :
+                      assignment.status === 'accepted' ? 'text-blue-500 bg-blue-500/10 border-blue-500/30' :
+                      assignment.status === 'declined' ? 'text-destructive bg-destructive/10 border-destructive/30' :
+                      'text-amber-500 bg-amber-500/10 border-amber-500/30'
+                    }`}>
+                      {assignment.status.toUpperCase()}
+                    </span>
+                  </div>
+                  
+                  {assignment.role_description && (
+                    <div className="mt-2 pl-13">
+                      <p className="mono-xs text-[9px] text-muted-foreground">ROLE</p>
+                      <p className="text-xs text-foreground/80">{assignment.role_description}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </motion.div>
     </div>
