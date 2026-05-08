@@ -34,6 +34,7 @@ import {
   Reply,
   Hash,
   Circle,
+  AlertCircle,
 } from 'lucide-react'
 import {
   fetchConversations,
@@ -689,6 +690,7 @@ function NewChatModal({
   }>>([])
   const [loading, setLoading] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   useEffect(() => {
     if (open && search.length >= 2) {
@@ -709,24 +711,24 @@ function NewChatModal({
     setCreating(false)
     
     if (error) {
-      console.log('[v0] Error creating conversation:', error)
-      alert(error)
+      setErrorMessage(error)
       return
     }
     
     if (conversation) {
+      setErrorMessage(null)
       onConversationCreated(conversation)
     }
   }
 
   async function handleJoinCommunityGroup(community: AgroCommunityKey) {
     setCreating(true)
+    setErrorMessage(null)
     const { conversation, error } = await getOrCreateCommunityGroupChat(community)
     setCreating(false)
     
     if (error) {
-      console.log('[v0] Error joining community group:', error)
-      alert(error)
+      setErrorMessage(error)
       return
     }
     
@@ -784,6 +786,29 @@ function NewChatModal({
             Community Groups
           </button>
         </div>
+
+        {/* Error Message */}
+        <AnimatePresence>
+          {errorMessage && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="px-4 pt-3"
+            >
+              <div className="flex items-center gap-2 px-3 py-2.5 bg-destructive/10 border border-destructive/30 rounded-[2px]">
+                <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
+                <p className="mono-xs text-[10px] text-destructive flex-1">{errorMessage}</p>
+                <button 
+                  onClick={() => setErrorMessage(null)}
+                  className="p-0.5 text-destructive/70 hover:text-destructive"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">

@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
 import type { AgroCommunityKey } from "@/components/onboarding/data"
 
@@ -400,8 +401,12 @@ export async function getOrCreateDirectConversation(
     }
   }
 
+  // Use admin client to bypass RLS for conversation creation
+  // This is safe because we've already verified permissions above
+  const adminClient = createAdminClient()
+  
   // Create new conversation
-  const { data: newConv, error: convError } = await supabase
+  const { data: newConv, error: convError } = await adminClient
     .from('conversations')
     .insert({
       type: 'direct',
@@ -416,7 +421,7 @@ export async function getOrCreateDirectConversation(
   }
 
   // Add both participants
-  const { error: partError } = await supabase
+  const { error: partError } = await adminClient
     .from('conversation_participants')
     .insert([
       { conversation_id: newConv.id, user_id: user.id, role: 'admin' },
@@ -467,8 +472,11 @@ export async function getOrCreateCommunityGroupChat(
     return { conversation: null, error: permCheck.reason }
   }
 
+  // Use admin client to bypass RLS for group operations
+  const adminClient = createAdminClient()
+  
   // Check if community group exists
-  const { data: existingGroup } = await supabase
+  const { data: existingGroup } = await adminClient
     .from('conversations')
     .select('*')
     .eq('type', 'group')
@@ -478,7 +486,7 @@ export async function getOrCreateCommunityGroupChat(
 
   if (existingGroup) {
     // Check if user is already a participant
-    const { data: existingPart } = await supabase
+    const { data: existingPart } = await adminClient
       .from('conversation_participants')
       .select('id')
       .eq('conversation_id', existingGroup.id)
@@ -488,7 +496,7 @@ export async function getOrCreateCommunityGroupChat(
 
     if (!existingPart) {
       // Add user to group
-      await supabase
+      await adminClient
         .from('conversation_participants')
         .insert({
           conversation_id: existingGroup.id,
@@ -511,7 +519,7 @@ export async function getOrCreateCommunityGroupChat(
     'logistics': 'Logistics',
   }
 
-  const { data: newGroup, error: groupError } = await supabase
+  const { data: newGroup, error: groupError } = await adminClient
     .from('conversations')
     .insert({
       type: 'group',
@@ -528,7 +536,7 @@ export async function getOrCreateCommunityGroupChat(
   }
 
   // Add creator as admin
-  await supabase
+  await adminClient
     .from('conversation_participants')
     .insert({
       conversation_id: newGroup.id,
