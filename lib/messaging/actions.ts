@@ -86,7 +86,12 @@ export interface Message {
     role: string
     community: string | null
   }
-  reply_to?: Message
+  reply_to?: {
+    id: string
+    content: string
+    sender_id: string
+    sender?: { display_name: string }
+  }
   is_read?: boolean
 }
 
@@ -591,10 +596,6 @@ export async function fetchMessages(
       *,
       sender:profiles!messages_sender_id_fkey (
         id, display_name, agro_id, avatar_url, role, community
-      ),
-      reply_to:messages!messages_reply_to_id_fkey (
-        id, content, sender_id,
-        sender:profiles!messages_sender_id_fkey (display_name)
       )
     `)
     .eq('conversation_id', conversationId)
@@ -613,7 +614,30 @@ export async function fetchMessages(
   }
 
   const hasMore = (messages?.length || 0) > limit
-  const resultMessages = messages?.slice(0, limit).reverse() || []
+  let resultMessages = messages?.slice(0, limit).reverse() || []
+
+  // Fetch reply data for messages that have reply_to_id
+  const replyToIds = resultMessages
+    .filter(m => m.reply_to_id)
+    .map(m => m.reply_to_id)
+  
+  if (replyToIds.length > 0) {
+    const { data: replyMessages } = await supabase
+      .from('messages')
+      .select(`
+        id, content, sender_id,
+        sender:profiles!messages_sender_id_fkey (display_name)
+      `)
+      .in('id', replyToIds)
+    
+    if (replyMessages) {
+      const replyMap = new Map(replyMessages.map(r => [r.id, r]))
+      resultMessages = resultMessages.map(m => ({
+        ...m,
+        reply_to: m.reply_to_id ? replyMap.get(m.reply_to_id) : undefined
+      }))
+    }
+  }
 
   // Mark messages as read
   if (resultMessages.length > 0) {
