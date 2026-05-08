@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import Picker from '@emoji-mart/react'
+import data from '@emoji-mart/data'
 import {
   MessageSquare,
   Search,
@@ -35,6 +37,9 @@ import {
   Hash,
   Circle,
   AlertCircle,
+  FileText,
+  Image as ImageIcon,
+  File,
 } from 'lucide-react'
 import {
   fetchConversations,
@@ -89,6 +94,10 @@ export default function MessagesPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [isMobileView, setIsMobileView] = useState(false)
   const [showMobileChat, setShowMobileChat] = useState(false)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [attachment, setAttachment] = useState<{ file: File; preview: string; type: string } | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const emojiPickerRef = useRef<HTMLDivElement>(null)
 
   // Load conversations on mount
   useEffect(() => {
@@ -134,17 +143,21 @@ export default function MessagesPage() {
   }
 
   async function handleSendMessage() {
-    if (!selectedConversation || !messageInput.trim()) return
+    if (!selectedConversation || (!messageInput.trim() && !attachment)) return
 
     startSending(async () => {
       const { message, error } = await sendMessage(selectedConversation.id, messageInput, {
         replyToId: replyingTo?.id,
+        attachmentUrl: attachment?.preview,
+        attachmentName: attachment?.file.name,
+        attachmentSize: attachment?.file.size,
       })
       
       if (message) {
         setMessages(prev => [...prev, message])
         setMessageInput('')
         setReplyingTo(null)
+        setAttachment(null)
         // Update conversation last message
         setConversations(prev => prev.map(c => 
           c.id === selectedConversation.id 
@@ -154,6 +167,62 @@ export default function MessagesPage() {
       }
     })
   }
+  
+  // Handle emoji selection
+  function handleEmojiSelect(emoji: any) {
+    setMessageInput(prev => prev + emoji.native)
+    setShowEmojiPicker(false)
+  }
+  
+  // Handle file selection
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size must be less than 10MB')
+      return
+    }
+    
+    // Create preview for images
+    const isImage = file.type.startsWith('image/')
+    if (isImage) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setAttachment({
+          file,
+          preview: reader.result as string,
+          type: 'image',
+        })
+      }
+      reader.readAsDataURL(file)
+    } else {
+      // For non-image files, we'd upload to blob storage
+      // For now, just store file info
+      setAttachment({
+        file,
+        preview: URL.createObjectURL(file),
+        type: file.type.includes('pdf') ? 'pdf' : 'file',
+      })
+    }
+    
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+  
+  // Close emoji picker on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
+        setShowEmojiPicker(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   async function handleSelectConversation(conv: Conversation) {
     setSelectedConversation(conv)
@@ -527,9 +596,53 @@ export default function MessagesPage() {
                                   : 'bg-secondary/60 border border-border rounded-bl-none'
                               }`}
                             >
-                              <p className={`text-[12px] leading-relaxed ${isMine ? 'text-background' : 'text-foreground'}`}>
-                                {message.content}
-                              </p>
+                              {/* Attachment */}
+                              {message.attachment_url && (
+                                <div className="mb-2">
+                                  {message.attachment_name?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                                    <a href={message.attachment_url} target="_blank" rel="noopener noreferrer">
+                                      <img 
+                                        src={message.attachment_url} 
+                                        alt={message.attachment_name} 
+                                        className="max-w-full rounded-[2px] max-h-48 object-cover"
+                                      />
+                                    </a>
+                                  ) : (
+                                    <a 
+                                      href={message.attachment_url} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className={`flex items-center gap-2 p-2 rounded-[2px] border ${
+                                        isMine 
+                                          ? 'bg-background/10 border-background/20' 
+                                          : 'bg-primary/5 border-primary/20'
+                                      }`}
+                                    >
+                                      {message.attachment_name?.endsWith('.pdf') ? (
+                                        <FileText className={`w-5 h-5 ${isMine ? 'text-background' : 'text-primary'}`} />
+                                      ) : (
+                                        <File className={`w-5 h-5 ${isMine ? 'text-background' : 'text-primary'}`} />
+                                      )}
+                                      <div className="flex-1 min-w-0">
+                                        <p className={`mono-xs text-[10px] truncate ${isMine ? 'text-background' : 'text-foreground'}`}>
+                                          {message.attachment_name}
+                                        </p>
+                                        {message.attachment_size && (
+                                          <p className={`mono-xs text-[8px] ${isMine ? 'text-background/60' : 'text-muted-foreground'}`}>
+                                            {(message.attachment_size / 1024).toFixed(1)} KB
+                                          </p>
+                                        )}
+                                      </div>
+                                    </a>
+                                  )}
+                                </div>
+                              )}
+                              
+                              {message.content && (
+                                <p className={`text-[12px] leading-relaxed ${isMine ? 'text-background' : 'text-foreground'}`}>
+                                  {message.content}
+                                </p>
+                              )}
                               
                               {/* Reply button */}
                               <button
@@ -590,11 +703,56 @@ export default function MessagesPage() {
               </AnimatePresence>
 
               {/* Message Input */}
-              <div className="p-4 border-t border-border bg-background/80 backdrop-blur-sm">
-                <div className="flex items-center gap-2">
-                  <button className="p-2.5 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-[2px] transition-colors">
+              <div className="border-t border-border bg-background/80 backdrop-blur-sm">
+                {/* Attachment Preview */}
+                <AnimatePresence>
+                  {attachment && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="px-4 pt-3"
+                    >
+                      <div className="flex items-center gap-3 p-2 bg-secondary/50 border border-border rounded-[3px]">
+                        {attachment.type === 'image' ? (
+                          <img src={attachment.preview} alt="Preview" className="w-12 h-12 rounded-[2px] object-cover" />
+                        ) : (
+                          <div className="w-12 h-12 rounded-[2px] bg-primary/10 border border-primary/30 flex items-center justify-center">
+                            {attachment.type === 'pdf' ? <FileText className="w-5 h-5 text-primary" /> : <File className="w-5 h-5 text-primary" />}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="mono-xs text-[11px] text-foreground truncate">{attachment.file.name}</p>
+                          <p className="mono-xs text-[9px] text-muted-foreground">{(attachment.file.size / 1024).toFixed(1)} KB</p>
+                        </div>
+                        <button 
+                          onClick={() => setAttachment(null)}
+                          className="p-1 text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div className="p-4 flex items-center gap-2">
+                  {/* Hidden file input */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    onChange={handleFileSelect}
+                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                  />
+                  
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-2.5 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-[2px] transition-colors"
+                  >
                     <Paperclip className="w-4 h-4" />
                   </button>
+                  
                   <div className="flex-1 flex items-center gap-2 px-4 py-3 bg-secondary/30 border border-border rounded-[3px] focus-within:border-primary/50 transition-colors">
                     <input
                       type="text"
@@ -604,13 +762,41 @@ export default function MessagesPage() {
                       placeholder="Type a message..."
                       className="flex-1 bg-transparent text-[13px] text-foreground placeholder:text-muted-foreground/50 outline-none"
                     />
-                    <button className="text-muted-foreground hover:text-foreground transition-colors">
-                      <Smile className="w-4 h-4" />
-                    </button>
+                    
+                    {/* Emoji Picker */}
+                    <div className="relative" ref={emojiPickerRef}>
+                      <button 
+                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                        className={`text-muted-foreground hover:text-foreground transition-colors ${showEmojiPicker ? 'text-primary' : ''}`}
+                      >
+                        <Smile className="w-4 h-4" />
+                      </button>
+                      
+                      <AnimatePresence>
+                        {showEmojiPicker && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                            className="absolute bottom-full right-0 mb-2 z-50"
+                          >
+                            <Picker 
+                              data={data} 
+                              onEmojiSelect={handleEmojiSelect}
+                              theme="dark"
+                              previewPosition="none"
+                              skinTonePosition="search"
+                              maxFrequentRows={2}
+                            />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
                   </div>
+                  
                   <button 
                     onClick={handleSendMessage}
-                    disabled={!messageInput.trim() || isSending}
+                    disabled={(!messageInput.trim() && !attachment) || isSending}
                     className="p-2.5 bg-primary rounded-[3px] text-background hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSending ? (
