@@ -167,16 +167,33 @@ export async function canJoinCommunityGroup(
   user: UserProfile,
   community: string
 ): Promise<{ allowed: boolean; reason?: string }> {
-  // Only executives in the same community can join community group chats
-  if (user.role !== 'executive') {
-    return { allowed: false, reason: 'Only executives can join community group chats' }
+  // Executives can only join their own community group chat
+  if (user.role === 'executive') {
+    if (user.community !== community) {
+      return { allowed: false, reason: 'You can only join your own community group chat' }
+    }
+    return { allowed: true }
+  }
+  
+  // GCMs can join their own community group chat
+  if (user.role === 'gcm') {
+    if (user.community !== community) {
+      return { allowed: false, reason: 'You can only join your own community group chat' }
+    }
+    return { allowed: true }
+  }
+  
+  // Admin and SCC can join any community group chat
+  if (user.role === 'admin' || user.role === 'scc') {
+    return { allowed: true }
+  }
+  
+  // LGPA can join community groups in their LGA jurisdiction
+  if (user.role === 'lgpa') {
+    return { allowed: true }
   }
 
-  if (user.community !== community) {
-    return { allowed: false, reason: 'You can only join your own community group chat' }
-  }
-
-  return { allowed: true }
+  return { allowed: false, reason: 'You do not have permission to join community group chats' }
 }
 
 // =============================================

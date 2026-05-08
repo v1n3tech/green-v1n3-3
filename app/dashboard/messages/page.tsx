@@ -708,6 +708,12 @@ function NewChatModal({
     const { conversation, error } = await getOrCreateDirectConversation(userId)
     setCreating(false)
     
+    if (error) {
+      console.log('[v0] Error creating conversation:', error)
+      alert(error)
+      return
+    }
+    
     if (conversation) {
       onConversationCreated(conversation)
     }
@@ -717,6 +723,12 @@ function NewChatModal({
     setCreating(true)
     const { conversation, error } = await getOrCreateCommunityGroupChat(community)
     setCreating(false)
+    
+    if (error) {
+      console.log('[v0] Error joining community group:', error)
+      alert(error)
+      return
+    }
     
     if (conversation) {
       onConversationCreated(conversation)
