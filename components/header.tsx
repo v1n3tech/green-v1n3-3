@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Wallet, Menu, X } from 'lucide-react'
 import { ConnectModal } from '@/components/auth/connect-modal'
 import { UserMenu, type UserMenuProfile } from '@/components/header/user-menu'
+import { ThemeToggleCompact } from '@/components/theme-toggle'
 import { createClient } from '@/lib/supabase/client'
 import { signOut } from '@/lib/auth/actions'
 
@@ -142,6 +143,7 @@ export function Header() {
 
             {/* Actions */}
             <div className="flex items-center gap-2 sm:gap-3 lg:gap-5">
+              <ThemeToggleCompact />
               {profile ? (
                 <UserMenu profile={profile} onSignOut={handleSignOut} />
               ) : (

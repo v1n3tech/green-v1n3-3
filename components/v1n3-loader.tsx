@@ -101,14 +101,9 @@ export function V1n3Loader() {
       aria-hidden={fading}
       role="status"
       aria-label="Loading"
-      className={`fixed inset-0 z-[9999] flex items-center justify-center transition-opacity duration-500 ease-out ${
+      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-background/90 backdrop-blur-sm transition-opacity duration-500 ease-out ${
         fading ? 'opacity-0' : 'opacity-100'
       }`}
-      style={{
-        backgroundColor: 'rgba(2, 8, 4, 0.18)',
-        backdropFilter: 'blur(3px)',
-        WebkitBackdropFilter: 'blur(3px)',
-      }}
     >
       {/* Soft green ambient wash behind the wordmark */}
       <div
