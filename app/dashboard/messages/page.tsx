@@ -133,7 +133,7 @@ export default function MessagesPage() {
     
     // Subscribe to new messages in the selected conversation
     const channel = supabase
-      .channel(`messages:${selectedConversation.id}`)
+      .channel(`messages-${selectedConversation.id}`)
       .on(
         'postgres_changes',
         {
@@ -143,9 +143,7 @@ export default function MessagesPage() {
           filter: `conversation_id=eq.${selectedConversation.id}`,
         },
         async (payload) => {
-          // Don't add if we already have this message (from sending)
           const newMsg = payload.new as any
-          if (messages.some(m => m.id === newMsg.id)) return
           
           // Fetch the full message with sender info
           const { data: fullMessage } = await supabase
@@ -160,7 +158,11 @@ export default function MessagesPage() {
             .single()
           
           if (fullMessage) {
-            setMessages(prev => [...prev, fullMessage as Message])
+            setMessages(prev => {
+              // Don't add if we already have this message
+              if (prev.some(m => m.id === fullMessage.id)) return prev
+              return [...prev, fullMessage as Message]
+            })
           }
         }
       )
@@ -169,7 +171,7 @@ export default function MessagesPage() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [selectedConversation?.id, messages])
+  }, [selectedConversation?.id])
 
   // Update online presence
   useEffect(() => {
