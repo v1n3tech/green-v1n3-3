@@ -1,0 +1,14 @@
+-- Migration: Messaging system updates
+-- Date: 2026-05-16
+-- Description: No schema changes needed, only code updates for:
+-- 1. Real-time message subscriptions using Supabase realtime
+-- 2. Online presence tracking using existing last_active_at column
+-- 3. Fixed community key mapping to match database enum values
+--
+-- Note: The last_active_at column already exists in profiles table.
+-- No DDL changes required for this feature update.
+
+-- Verify last_active_at column exists (informational only)
+-- SELECT column_name, data_type 
+-- FROM information_schema.columns 
+-- WHERE table_name = 'profiles' AND column_name = 'last_active_at';

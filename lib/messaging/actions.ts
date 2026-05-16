@@ -47,6 +47,7 @@ export interface Conversation {
     avatar_url: string | null
     role: string
     community: string | null
+    last_active_at?: string
   }
 }
 
@@ -293,7 +294,7 @@ export async function fetchConversations(options?: {
       .select(`
         conversation_id,
         user:profiles!conversation_participants_user_id_fkey (
-          id, display_name, agro_id, avatar_url, role, community
+          id, display_name, agro_id, avatar_url, role, community, last_active_at
         )
       `)
       .in('conversation_id', directConvIds)
@@ -525,13 +526,20 @@ export async function getOrCreateCommunityGroupChat(
 
   // Create new community group
   const communityNames: Record<string, string> = {
-    'agro-technology': 'Agro Technology',
-    'livestock': 'Livestock',
-    'crops': 'Crops',
-    'media-branding': 'Media & Branding',
-    'health': 'Health',
-    'finance-legal': 'Finance & Legal',
-    'logistics': 'Logistics',
+    'agro_technology': 'Agro Technology',
+    'animal_farming': 'Livestock',
+    'crop_farming': 'Crops',
+    'agro_media_branding': 'Media & Branding',
+    'agro_healthcare': 'Health',
+    'agro_management_legislation': 'Finance & Legal',
+    'agro_logistics': 'Logistics',
+    'agro_marketing': 'Agro Marketing',
+    'agro_processing': 'Agro Processing',
+    'agro_tourism': 'Agro Tourism',
+    'agro_security': 'Agro Security',
+    'agro_literature': 'Agro Literature',
+    'agro_motivation_training': 'Motivation & Training',
+    'agro_real_estate': 'Green Real Estate',
   }
 
   const { data: newGroup, error: groupError } = await adminClient
