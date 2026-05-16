@@ -915,3 +915,91 @@ export async function toggleMuteConversation(
   revalidatePath('/dashboard/messages')
   return { success: true }
 }
+
+// =============================================
+// MESSAGE REACTIONS
+// =============================================
+
+export interface Reaction {
+  id: string
+  message_id: string
+  user_id: string
+  emoji: string
+  created_at: string
+  user?: { display_name: string; agro_id: string }
+}
+
+/**
+ * Add a reaction to a message
+ */
+export async function addReaction(
+  messageId: string,
+  emoji: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Not authenticated' }
+
+  const { error } = await supabase
+    .from('message_reactions')
+    .upsert({
+      message_id: messageId,
+      user_id: user.id,
+      emoji,
+    }, { onConflict: 'message_id,user_id,emoji' })
+
+  if (error) return { success: false, error: error.message }
+  return { success: true }
+}
+
+/**
+ * Remove a reaction from a message
+ */
+export async function removeReaction(
+  messageId: string,
+  emoji: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Not authenticated' }
+
+  const { error } = await supabase
+    .from('message_reactions')
+    .delete()
+    .eq('message_id', messageId)
+    .eq('user_id', user.id)
+    .eq('emoji', emoji)
+
+  if (error) return { success: false, error: error.message }
+  return { success: true }
+}
+
+/**
+ * Fetch reactions for messages in a conversation
+ */
+export async function fetchReactions(
+  messageIds: string[]
+): Promise<{ reactions: Record<string, Reaction[]> }> {
+  const supabase = await createClient()
+  
+  const { data, error } = await supabase
+    .from('message_reactions')
+    .select(`
+      *,
+      user:profiles!message_reactions_user_id_fkey ( display_name, agro_id )
+    `)
+    .in('message_id', messageIds)
+    .order('created_at', { ascending: true })
+
+  if (error || !data) return { reactions: {} }
+
+  // Group by message_id
+  const reactions: Record<string, Reaction[]> = {}
+  for (const r of data) {
+    if (!reactions[r.message_id]) reactions[r.message_id] = []
+    reactions[r.message_id].push(r as Reaction)
+  }
+  return { reactions }
+}

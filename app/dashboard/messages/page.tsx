@@ -50,9 +50,13 @@ import {
   searchUsers,
   getCurrentUserId,
   fetchConversationParticipants,
+  addReaction,
+  removeReaction,
+  fetchReactions,
   type Conversation,
   type Message,
   type ConversationParticipant,
+  type Reaction,
 } from '@/lib/messaging/actions'
 import { createClient } from '@/lib/supabase/client'
 import type { AgroCommunityKey } from '@/components/onboarding/data'
@@ -100,6 +104,8 @@ export default function MessagesPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const emojiPickerRef = useRef<HTMLDivElement>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [reactions, setReactions] = useState<Record<string, Reaction[]>>({})
+  const [reactionPickerMessageId, setReactionPickerMessageId] = useState<string | null>(null)
 
   // Load current user ID and conversations on mount
   useEffect(() => {
@@ -145,7 +151,7 @@ export default function MessagesPage() {
         async (payload) => {
           const newMsg = payload.new as any
           
-          // Fetch the full message with sender info
+          // Fetch the full message with sender info and reply data
           const { data: fullMessage } = await supabase
             .from('messages')
             .select(`
@@ -158,11 +164,57 @@ export default function MessagesPage() {
             .single()
           
           if (fullMessage) {
+            // If it has a reply_to_id, fetch the reply data
+            let replyData = null
+            if (fullMessage.reply_to_id) {
+              const { data: replyMsg } = await supabase
+                .from('messages')
+                .select(`
+                  id, content, sender_id,
+                  sender:profiles!messages_sender_id_fkey ( display_name )
+                `)
+                .eq('id', fullMessage.reply_to_id)
+                .single()
+              replyData = replyMsg
+            }
+            
+            const messageWithReply = {
+              ...fullMessage,
+              reply_to: replyData,
+            } as Message
+            
             setMessages(prev => {
-              // Don't add if we already have this message
-              if (prev.some(m => m.id === fullMessage.id)) return prev
-              return [...prev, fullMessage as Message]
+              if (prev.some(m => m.id === messageWithReply.id)) return prev
+              return [...prev, messageWithReply]
             })
+          }
+        }
+      )
+      .subscribe()
+
+    // Subscribe to reactions in this conversation's messages
+    const reactionsChannel = supabase
+      .channel(`reactions-${selectedConversation.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'message_reactions',
+        },
+        async (payload) => {
+          // Refresh reactions for the affected message
+          const msgId = (payload.new as any)?.message_id || (payload.old as any)?.message_id
+          if (!msgId) return
+          
+          const { data } = await supabase
+            .from('message_reactions')
+            .select(`*, user:profiles!message_reactions_user_id_fkey ( display_name, agro_id )`)
+            .eq('message_id', msgId)
+            .order('created_at', { ascending: true })
+          
+          if (data) {
+            setReactions(prev => ({ ...prev, [msgId]: data as Reaction[] }))
           }
         }
       )
@@ -170,6 +222,7 @@ export default function MessagesPage() {
 
     return () => {
       supabase.removeChannel(channel)
+      supabase.removeChannel(reactionsChannel)
     }
   }, [selectedConversation?.id])
 
@@ -211,6 +264,11 @@ export default function MessagesPage() {
     const { messages } = await fetchMessages(conversationId)
     setMessages(messages)
     setMessagesLoading(false)
+    // Load reactions for these messages
+    if (messages.length > 0) {
+      const { reactions: rxns } = await fetchReactions(messages.map(m => m.id))
+      setReactions(rxns)
+    }
   }
 
   async function loadParticipants(conversationId: string) {
@@ -221,16 +279,23 @@ export default function MessagesPage() {
   async function handleSendMessage() {
     if (!selectedConversation || (!messageInput.trim() && !attachment)) return
 
+    const currentReply = replyingTo // capture before clearing
+
     startSending(async () => {
       const { message, error } = await sendMessage(selectedConversation.id, messageInput, {
-        replyToId: replyingTo?.id,
+        replyToId: currentReply?.id,
         attachmentUrl: attachment?.preview,
         attachmentName: attachment?.file.name,
         attachmentSize: attachment?.file.size,
       })
       
       if (message) {
-        setMessages(prev => [...prev, message])
+        // Attach reply_to data if this was a reply
+        const messageWithReply = currentReply
+          ? { ...message, reply_to: { id: currentReply.id, content: currentReply.content, sender_id: currentReply.sender_id, sender: currentReply.sender ? { display_name: currentReply.sender.display_name } : undefined } }
+          : message
+        
+        setMessages(prev => [...prev, messageWithReply])
         setMessageInput('')
         setReplyingTo(null)
         setAttachment(null)
@@ -248,6 +313,63 @@ export default function MessagesPage() {
   function handleEmojiSelect(emoji: any) {
     setMessageInput(prev => prev + emoji.native)
     setShowEmojiPicker(false)
+  }
+
+  // Handle reaction emoji selection
+  async function handleReactionSelect(emoji: any) {
+    if (!reactionPickerMessageId || !currentUserId) return
+    const emojiChar = emoji.native
+    const messageReactions = reactions[reactionPickerMessageId] || []
+    const existing = messageReactions.find(r => r.emoji === emojiChar && r.user_id === currentUserId)
+    
+    if (existing) {
+      await removeReaction(reactionPickerMessageId, emojiChar)
+      setReactions(prev => ({
+        ...prev,
+        [reactionPickerMessageId]: (prev[reactionPickerMessageId] || []).filter(r => r.id !== existing.id)
+      }))
+    } else {
+      await addReaction(reactionPickerMessageId, emojiChar)
+      // Optimistic update
+      setReactions(prev => ({
+        ...prev,
+        [reactionPickerMessageId]: [...(prev[reactionPickerMessageId] || []), {
+          id: crypto.randomUUID(),
+          message_id: reactionPickerMessageId,
+          user_id: currentUserId,
+          emoji: emojiChar,
+          created_at: new Date().toISOString(),
+        }]
+      }))
+    }
+    setReactionPickerMessageId(null)
+  }
+
+  // Toggle a quick reaction
+  async function toggleReaction(messageId: string, emojiChar: string) {
+    if (!currentUserId) return
+    const messageReactions = reactions[messageId] || []
+    const existing = messageReactions.find(r => r.emoji === emojiChar && r.user_id === currentUserId)
+    
+    if (existing) {
+      await removeReaction(messageId, emojiChar)
+      setReactions(prev => ({
+        ...prev,
+        [messageId]: (prev[messageId] || []).filter(r => r.id !== existing.id)
+      }))
+    } else {
+      await addReaction(messageId, emojiChar)
+      setReactions(prev => ({
+        ...prev,
+        [messageId]: [...(prev[messageId] || []), {
+          id: crypto.randomUUID(),
+          message_id: messageId,
+          user_id: currentUserId,
+          emoji: emojiChar,
+          created_at: new Date().toISOString(),
+        }]
+      }))
+    }
   }
   
   // Handle file selection
@@ -295,10 +417,14 @@ export default function MessagesPage() {
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
         setShowEmojiPicker(false)
       }
+      // Close reaction picker on outside click
+      if (reactionPickerMessageId) {
+        setReactionPickerMessageId(null)
+      }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }, [reactionPickerMessageId])
 
   async function handleSelectConversation(conv: Conversation) {
     setSelectedConversation(conv)
@@ -773,14 +899,84 @@ export default function MessagesPage() {
                                 </p>
                               )}
                               
-                              {/* Reply button */}
+                              {/* Hover actions: Reply + Reaction */}
+                              <div className={`absolute -top-2 ${isMine ? 'left-0' : 'right-0'} opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-all`}>
+                                <button
+                                  onClick={() => setReplyingTo(message)}
+                                  className="p-1 bg-background border border-border rounded-[2px] text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                  <Reply className="w-3 h-3" />
+                                </button>
+                              </div>
+                              
+                              {/* Reaction trigger - bottom right of bubble */}
                               <button
-                                onClick={() => setReplyingTo(message)}
-                                className={`absolute -top-2 ${isMine ? 'left-0' : 'right-0'} opacity-0 group-hover:opacity-100 p-1 bg-background border border-border rounded-[2px] text-muted-foreground hover:text-foreground transition-all`}
+                                onClick={() => setReactionPickerMessageId(reactionPickerMessageId === message.id ? null : message.id)}
+                                className={`absolute -bottom-2 ${isMine ? 'left-1' : 'right-1'} w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all ${
+                                  isMine 
+                                    ? 'bg-primary-foreground/20 hover:bg-primary-foreground/40 text-primary-foreground' 
+                                    : 'bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground'
+                                } backdrop-blur-sm border border-border/30`}
                               >
-                                <Reply className="w-3 h-3" />
+                                <Smile className="w-3 h-3" />
                               </button>
+                              
+                              {/* Reaction picker popup */}
+                              {reactionPickerMessageId === message.id && (
+                                <div className={`absolute ${isMine ? 'left-0' : 'right-0'} -bottom-10 z-50`}>
+                                  <div className="flex items-center gap-1 p-1.5 bg-popover border border-border rounded-[4px] shadow-lg">
+                                    {['👍', '❤️', '😂', '😮', '😢', '🙏'].map(emoji => (
+                                      <button
+                                        key={emoji}
+                                        onClick={() => {
+                                          toggleReaction(message.id, emoji)
+                                          setReactionPickerMessageId(null)
+                                        }}
+                                        className="w-7 h-7 flex items-center justify-center rounded-[2px] hover:bg-secondary transition-colors text-sm"
+                                      >
+                                        {emoji}
+                                      </button>
+                                    ))}
+                                    <button
+                                      onClick={() => {
+                                        // Keep the picker message ID set - will use the full emoji picker
+                                      }}
+                                      className="w-7 h-7 flex items-center justify-center rounded-[2px] hover:bg-secondary transition-colors text-muted-foreground"
+                                    >
+                                      <Smile className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
+                            
+                            {/* Reactions display */}
+                            {reactions[message.id] && reactions[message.id].length > 0 && (
+                              <div className={`flex flex-wrap gap-1 mt-1 ${isMine ? 'justify-end mr-1' : 'ml-1'}`}>
+                                {Object.entries(
+                                  reactions[message.id].reduce((acc, r) => {
+                                    acc[r.emoji] = (acc[r.emoji] || 0) + 1
+                                    return acc
+                                  }, {} as Record<string, number>)
+                                ).map(([emoji, count]) => {
+                                  const iReacted = reactions[message.id].some(r => r.emoji === emoji && r.user_id === currentUserId)
+                                  return (
+                                    <button
+                                      key={emoji}
+                                      onClick={() => toggleReaction(message.id, emoji)}
+                                      className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] border transition-colors ${
+                                        iReacted
+                                          ? 'bg-primary/10 border-primary/30 text-primary'
+                                          : 'bg-secondary/60 border-border/50 text-muted-foreground hover:border-primary/30'
+                                      }`}
+                                    >
+                                      <span>{emoji}</span>
+                                      {(count as number) > 1 && <span className="mono-xs text-[8px]">{count as number}</span>}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            )}
                             
                             {/* Time and read status */}
                             <div className={`flex items-center gap-1.5 mt-1 ${isMine ? 'justify-end mr-1' : 'ml-1'}`}>
