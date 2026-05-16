@@ -609,8 +609,6 @@ export default function MessagesPage() {
                           {selectedConversation.other_participant?.agro_id || ''}
                         </>
                       )}
-                        </>
-                      )}
                     </p>
                   </div>
                 </div>
