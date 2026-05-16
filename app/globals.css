@@ -35,31 +35,31 @@
 
 /* Light mode - muted, soft tones (not harsh white) */
 .light {
-  --background: #f4f7f4;
+  --background: #e4e9e4;
   --foreground: #1a2e1a;
-  --card: #ffffff;
+  --card: #f0f4f0;
   --card-foreground: #1a2e1a;
-  --popover: #ffffff;
+  --popover: #edf1ed;
   --popover-foreground: #1a2e1a;
   --primary: #00a844;
   --primary-foreground: #ffffff;
-  --secondary: #e8efe8;
+  --secondary: #d8e2d8;
   --secondary-foreground: #1a2e1a;
-  --muted: #dce5dc;
-  --muted-foreground: #5a6e5a;
+  --muted: #ccd6cc;
+  --muted-foreground: #4a5e4a;
   --accent: #c49500;
   --accent-foreground: #ffffff;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
   --orange: #e85d00;
   --orange-soft: rgba(232, 93, 0, 0.10);
-  --border: rgba(0, 168, 68, 0.15);
-  --border-strong: rgba(0, 168, 68, 0.35);
-  --input: #e8efe8;
+  --border: rgba(0, 100, 40, 0.18);
+  --border-strong: rgba(0, 168, 68, 0.40);
+  --input: #d8e2d8;
   --ring: #00a844;
-  --glow-color: rgba(0, 168, 68, 0.12);
-  --grid-color: rgba(0, 168, 68, 0.04);
-  --scrollbar-thumb: rgba(0, 168, 68, 0.35);
+  --glow-color: rgba(0, 168, 68, 0.10);
+  --grid-color: rgba(0, 100, 40, 0.05);
+  --scrollbar-thumb: rgba(0, 100, 40, 0.30);
 }
 
 @theme inline {
