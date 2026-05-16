@@ -40,6 +40,7 @@ import {
   Check,
 } from 'lucide-react'
 import { signOut } from '@/lib/auth/actions'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { 
   fetchAllUsers, 
   updateUserRole, 
@@ -317,6 +318,7 @@ export function AdminDashboard({ profile, stats }: AdminDashboardProps) {
           </div>
           <div className="flex items-center gap-3 sm:gap-4">
             <span className="mono-xs text-muted-foreground text-[10px] hidden sm:block">{time} WAT</span>
+            <ThemeToggle />
             <button className="relative p-2 text-muted-foreground hover:text-foreground transition-colors rounded hover:bg-secondary">
               <Bell className="w-5 h-5" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-orange rounded-full" />

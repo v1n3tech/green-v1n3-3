@@ -45,12 +45,10 @@ import {
   fetchConversations,
   fetchMessages,
   sendMessage,
-  searchUsersForMessaging,
   getOrCreateDirectConversation,
   getOrCreateCommunityGroupChat,
-  togglePinConversation,
-  toggleMuteConversation,
-  fetchConversationParticipants,
+  searchUsers,
+  getCurrentUserId,
   type Conversation,
   type Message,
   type ConversationParticipant,
@@ -92,16 +90,23 @@ export default function MessagesPage() {
   const [replyingTo, setReplyingTo] = useState<Message | null>(null)
   const [isSending, startSending] = useTransition()
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const [isMobileView, setIsMobileView] = useState(false)
   const [showMobileChat, setShowMobileChat] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [attachment, setAttachment] = useState<{ file: File; preview: string; type: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const emojiPickerRef = useRef<HTMLDivElement>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
-  // Load conversations on mount
+  // Load current user ID and conversations on mount
   useEffect(() => {
-    loadConversations()
+    async function init() {
+      const userId = await getCurrentUserId()
+      setCurrentUserId(userId)
+      loadConversations()
+    }
+    init()
     
     // Check for mobile view
     const checkMobile = () => setIsMobileView(window.innerWidth < 768)
@@ -335,13 +340,13 @@ export default function MessagesPage() {
                 onClick={() => setFilter(tab.key as typeof filter)}
                 className={`shrink-0 px-3 py-1.5 mono-xs text-[9px] rounded-[2px] transition-all ${
                   filter === tab.key
-                    ? 'bg-primary text-background'
+                    ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
                 }`}
               >
                 {tab.label}
                 {tab.count > 0 && (
-                  <span className={`ml-1.5 ${filter === tab.key ? 'text-background/70' : 'text-muted-foreground/50'}`}>
+                  <span className={`ml-1.5 ${filter === tab.key ? 'text-primary-foreground/70' : 'text-muted-foreground/50'}`}>
                     {tab.count}
                   </span>
                 )}
@@ -439,7 +444,7 @@ export default function MessagesPage() {
                             {conversation.last_message?.content || 'No messages yet'}
                           </p>
                           {(conversation.unread_count || 0) > 0 && (
-                            <span className="shrink-0 min-w-[20px] h-[20px] flex items-center justify-center px-1.5 bg-primary text-background rounded-full mono-xs text-[9px] font-bold">
+                            <span className="shrink-0 min-w-[20px] h-[20px] flex items-center justify-center px-1.5 bg-primary text-primary-foreground rounded-full mono-xs text-[9px] font-bold">
                               {conversation.unread_count}
                             </span>
                           )}
@@ -539,20 +544,33 @@ export default function MessagesPage() {
                 ) : (
                   <>
                     {messages.map((message, index) => {
-                      const isMine = message.sender?.id === undefined // TODO: compare with current user
+                      const isMine = message.sender_id === currentUserId
                       const showSender = selectedConversation.type === 'group' || !isMine
                       const prevMessage = messages[index - 1]
                       const showAvatar = !prevMessage || prevMessage.sender_id !== message.sender_id
                       const senderRole = message.sender?.role ? ROLE_CONFIG[message.sender.role] : null
                       
+                      // Function to scroll to replied message
+                      const scrollToMessage = (messageId: string) => {
+                        const element = document.getElementById(`message-${messageId}`)
+                        if (element) {
+                          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                          element.classList.add('ring-2', 'ring-primary', 'ring-offset-2', 'ring-offset-background')
+                          setTimeout(() => {
+                            element.classList.remove('ring-2', 'ring-primary', 'ring-offset-2', 'ring-offset-background')
+                          }, 2000)
+                        }
+                      }
+                      
                       return (
                         <motion.div
                           key={message.id}
+                          id={`message-${message.id}`}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className={`flex ${isMine ? 'justify-end' : 'justify-start'} ${showAvatar ? 'mt-4' : 'mt-0.5'}`}
+                          className={`flex ${isMine ? 'justify-end' : 'justify-start'} ${showAvatar ? 'mt-4' : 'mt-0.5'} transition-all duration-300`}
                         >
-                          {/* Avatar */}
+                          {/* Avatar - only for other users */}
                           {!isMine && showAvatar && (
                             <div className="w-8 h-8 rounded-[2px] bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center mono-xs text-[9px] text-primary font-bold mr-2 shrink-0">
                               {message.sender?.display_name?.slice(0, 2).toUpperCase() || '??'}
@@ -560,8 +578,8 @@ export default function MessagesPage() {
                           )}
                           {!isMine && !showAvatar && <div className="w-8 mr-2" />}
                           
-                          <div className={`max-w-[70%] ${isMine ? 'order-1' : ''}`}>
-                            {/* Sender name for group chats */}
+                          <div className={`max-w-[70%] ${isMine ? 'items-end' : 'items-start'} flex flex-col`}>
+                            {/* Sender name for group chats - only for other users */}
                             {showSender && showAvatar && !isMine && (
                               <div className="flex items-center gap-1.5 mb-1 ml-1">
                                 <span className="mono-xs text-[10px] text-foreground/80 font-medium">
@@ -578,21 +596,29 @@ export default function MessagesPage() {
                               </div>
                             )}
                             
-                            {/* Reply indicator */}
+                            {/* Reply quote - clickable, hanging off the message */}
                             {message.reply_to && (
-                              <div className="flex items-center gap-1.5 mb-1 ml-1">
-                                <Reply className="w-3 h-3 text-muted-foreground/50 rotate-180" />
-                                <span className="mono-xs text-[9px] text-muted-foreground/70 truncate max-w-[200px]">
+                              <button
+                                onClick={() => scrollToMessage(message.reply_to!.id)}
+                                className={`flex items-center gap-1.5 mb-0.5 px-2 py-1 rounded-t-[3px] bg-muted/50 border border-b-0 border-border/50 hover:bg-muted transition-colors ${
+                                  isMine ? 'mr-2 self-end' : 'ml-2 self-start'
+                                }`}
+                              >
+                                <Reply className="w-2.5 h-2.5 text-muted-foreground/60 rotate-180" />
+                                <span className="mono-xs text-[8px] text-muted-foreground/80 font-medium">
+                                  {message.reply_to.sender?.display_name || 'Unknown'}
+                                </span>
+                                <span className="mono-xs text-[9px] text-muted-foreground/60 truncate max-w-[150px]">
                                   {message.reply_to.content}
                                 </span>
-                              </div>
+                              </button>
                             )}
                             
                             {/* Message bubble */}
                             <div 
                               className={`group relative px-3.5 py-2.5 rounded-[4px] ${
                                 isMine
-                                  ? 'bg-primary text-background rounded-br-none'
+                                  ? 'bg-primary text-primary-foreground rounded-br-none'
                                   : 'bg-secondary/60 border border-border rounded-bl-none'
                               }`}
                             >
@@ -614,21 +640,21 @@ export default function MessagesPage() {
                                       rel="noopener noreferrer"
                                       className={`flex items-center gap-2 p-2 rounded-[2px] border ${
                                         isMine 
-                                          ? 'bg-background/10 border-background/20' 
+                                          ? 'bg-primary-foreground/10 border-primary-foreground/20' 
                                           : 'bg-primary/5 border-primary/20'
                                       }`}
                                     >
                                       {message.attachment_name?.endsWith('.pdf') ? (
-                                        <FileText className={`w-5 h-5 ${isMine ? 'text-background' : 'text-primary'}`} />
+                                        <FileText className={`w-5 h-5 ${isMine ? 'text-primary-foreground' : 'text-primary'}`} />
                                       ) : (
-                                        <File className={`w-5 h-5 ${isMine ? 'text-background' : 'text-primary'}`} />
+                                        <File className={`w-5 h-5 ${isMine ? 'text-primary-foreground' : 'text-primary'}`} />
                                       )}
                                       <div className="flex-1 min-w-0">
-                                        <p className={`mono-xs text-[10px] truncate ${isMine ? 'text-background' : 'text-foreground'}`}>
+                                        <p className={`mono-xs text-[10px] truncate ${isMine ? 'text-primary-foreground' : 'text-foreground'}`}>
                                           {message.attachment_name}
                                         </p>
                                         {message.attachment_size && (
-                                          <p className={`mono-xs text-[8px] ${isMine ? 'text-background/60' : 'text-muted-foreground'}`}>
+                                          <p className={`mono-xs text-[8px] ${isMine ? 'text-primary-foreground/60' : 'text-muted-foreground'}`}>
                                             {(message.attachment_size / 1024).toFixed(1)} KB
                                           </p>
                                         )}
@@ -639,7 +665,7 @@ export default function MessagesPage() {
                               )}
                               
                               {message.content && (
-                                <p className={`text-[12px] leading-relaxed ${isMine ? 'text-background' : 'text-foreground'}`}>
+                                <p className={`text-[12px] leading-relaxed ${isMine ? 'text-primary-foreground' : 'text-foreground'}`}>
                                   {message.content}
                                 </p>
                               )}
@@ -797,7 +823,7 @@ export default function MessagesPage() {
                   <button 
                     onClick={handleSendMessage}
                     disabled={(!messageInput.trim() && !attachment) || isSending}
-                    className="p-2.5 bg-primary rounded-[3px] text-background hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2.5 bg-primary rounded-[3px] text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSending ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -819,7 +845,7 @@ export default function MessagesPage() {
               </p>
               <button
                 onClick={() => setShowNewChat(true)}
-                className="mt-5 flex items-center gap-2 px-4 py-2 bg-primary text-background rounded-[3px] mono-xs text-[11px] hover:bg-primary/90 transition-colors"
+                className="mt-5 flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-[3px] mono-xs text-[11px] hover:bg-primary/90 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 Start New Conversation
@@ -956,7 +982,7 @@ function NewChatModal({
           <button
             onClick={() => setTab('users')}
             className={`px-3 py-1.5 mono-xs text-[10px] rounded-[2px] transition-all ${
-              tab === 'users' ? 'bg-primary text-background' : 'text-muted-foreground hover:text-foreground'
+              tab === 'users' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <User className="w-3 h-3 inline mr-1.5" />
@@ -965,7 +991,7 @@ function NewChatModal({
           <button
             onClick={() => setTab('groups')}
             className={`px-3 py-1.5 mono-xs text-[10px] rounded-[2px] transition-all ${
-              tab === 'groups' ? 'bg-primary text-background' : 'text-muted-foreground hover:text-foreground'
+              tab === 'groups' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <Users className="w-3 h-3 inline mr-1.5" />
