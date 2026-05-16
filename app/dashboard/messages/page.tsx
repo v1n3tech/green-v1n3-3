@@ -49,10 +49,12 @@ import {
   getOrCreateCommunityGroupChat,
   searchUsers,
   getCurrentUserId,
+  fetchConversationParticipants,
   type Conversation,
   type Message,
   type ConversationParticipant,
 } from '@/lib/messaging/actions'
+import { createClient } from '@/lib/supabase/client'
 import type { AgroCommunityKey } from '@/components/onboarding/data'
 
 // Role display config
@@ -122,6 +124,73 @@ export default function MessagesPage() {
       loadParticipants(selectedConversation.id)
     }
   }, [selectedConversation?.id])
+
+  // Real-time subscription for new messages
+  useEffect(() => {
+    if (!selectedConversation) return
+
+    const supabase = createClient()
+    
+    // Subscribe to new messages in the selected conversation
+    const channel = supabase
+      .channel(`messages:${selectedConversation.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${selectedConversation.id}`,
+        },
+        async (payload) => {
+          // Don't add if we already have this message (from sending)
+          const newMsg = payload.new as any
+          if (messages.some(m => m.id === newMsg.id)) return
+          
+          // Fetch the full message with sender info
+          const { data: fullMessage } = await supabase
+            .from('messages')
+            .select(`
+              *,
+              sender:profiles!messages_sender_id_fkey (
+                id, display_name, agro_id, avatar_url, role, community
+              )
+            `)
+            .eq('id', newMsg.id)
+            .single()
+          
+          if (fullMessage) {
+            setMessages(prev => [...prev, fullMessage as Message])
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [selectedConversation?.id, messages])
+
+  // Update online presence
+  useEffect(() => {
+    if (!currentUserId) return
+    
+    const supabase = createClient()
+    
+    // Update last_active_at periodically
+    const updatePresence = async () => {
+      await supabase
+        .from('profiles')
+        .update({ last_active_at: new Date().toISOString() })
+        .eq('id', currentUserId)
+    }
+    
+    // Update immediately and then every 30 seconds
+    updatePresence()
+    const interval = setInterval(updatePresence, 30000)
+    
+    return () => clearInterval(interval)
+  }, [currentUserId])
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -287,6 +356,15 @@ export default function MessagesPage() {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
 
+  // Check if user is online (active within last 2 minutes)
+  function isUserOnline(lastActiveAt?: string): boolean {
+    if (!lastActiveAt) return false
+    const lastActive = new Date(lastActiveAt)
+    const now = new Date()
+    const diffMs = now.getTime() - lastActive.getTime()
+    return diffMs < 2 * 60 * 1000 // 2 minutes
+  }
+
   // Mobile back button handler
   function handleMobileBack() {
     setShowMobileChat(false)
@@ -406,7 +484,9 @@ export default function MessagesPage() {
                         </div>
                         {conversation.type === 'direct' && conversation.other_participant && (
                           <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background ${
-                            COMMUNITY_COLORS[conversation.other_participant.community || ''] || 'bg-muted'
+                            isUserOnline(conversation.other_participant.last_active_at) 
+                              ? 'bg-primary' 
+                              : 'bg-muted-foreground/30'
                           }`} />
                         )}
                       </div>
@@ -471,15 +551,24 @@ export default function MessagesPage() {
                     </button>
                   )}
                   
-                  <div className={`w-10 h-10 rounded-[3px] flex items-center justify-center mono-xs text-[10px] font-bold ${
-                    selectedConversation.type === 'group'
-                      ? 'bg-gradient-to-br from-orange/20 to-orange/5 border border-orange/30 text-orange'
-                      : 'bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 text-primary'
-                  }`}>
-                    {selectedConversation.type === 'group' ? (
-                      <Users className="w-5 h-5" />
-                    ) : (
-                      getConversationAvatar(selectedConversation)
+                  <div className="relative">
+                    <div className={`w-10 h-10 rounded-[3px] flex items-center justify-center mono-xs text-[10px] font-bold ${
+                      selectedConversation.type === 'group'
+                        ? 'bg-gradient-to-br from-orange/20 to-orange/5 border border-orange/30 text-orange'
+                        : 'bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 text-primary'
+                    }`}>
+                      {selectedConversation.type === 'group' ? (
+                        <Users className="w-5 h-5" />
+                      ) : (
+                        getConversationAvatar(selectedConversation)
+                      )}
+                    </div>
+                    {selectedConversation.type === 'direct' && selectedConversation.other_participant && (
+                      <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background ${
+                        isUserOnline(selectedConversation.other_participant.last_active_at) 
+                          ? 'bg-primary' 
+                          : 'bg-muted-foreground/30'
+                      }`} />
                     )}
                   </div>
                   
@@ -502,10 +591,24 @@ export default function MessagesPage() {
                           <Users className="w-3 h-3" />
                           {participants.length} members
                         </>
+                      ) : selectedConversation.other_participant ? (
+                        isUserOnline(selectedConversation.other_participant.last_active_at) ? (
+                          <>
+                            <Circle className="w-2 h-2 fill-primary text-primary" />
+                            <span className="text-primary">Online</span>
+                          </>
+                        ) : (
+                          <>
+                            <AtSign className="w-3 h-3" />
+                            {selectedConversation.other_participant.agro_id}
+                          </>
+                        )
                       ) : (
                         <>
                           <AtSign className="w-3 h-3" />
                           {selectedConversation.other_participant?.agro_id || ''}
+                        </>
+                      )}
                         </>
                       )}
                     </p>
@@ -952,13 +1055,20 @@ function NewChatModal({
   if (!open) return null
 
   const communities: { key: AgroCommunityKey; name: string }[] = [
-    { key: 'agro-technology', name: 'Agro Technology' },
-    { key: 'livestock', name: 'Livestock' },
-    { key: 'crops', name: 'Crops' },
-    { key: 'media-branding', name: 'Media & Branding' },
-    { key: 'health', name: 'Health' },
-    { key: 'finance-legal', name: 'Finance & Legal' },
-    { key: 'logistics', name: 'Logistics' },
+    { key: 'agro_technology', name: 'Agro Technology' },
+    { key: 'animal_farming', name: 'Livestock' },
+    { key: 'crop_farming', name: 'Crops' },
+    { key: 'agro_media_branding', name: 'Media & Branding' },
+    { key: 'agro_healthcare', name: 'Health' },
+    { key: 'agro_management_legislation', name: 'Finance & Legal' },
+    { key: 'agro_logistics', name: 'Logistics' },
+    { key: 'agro_marketing', name: 'Agro Marketing' },
+    { key: 'agro_processing', name: 'Agro Processing' },
+    { key: 'agro_tourism', name: 'Agro Tourism' },
+    { key: 'agro_security', name: 'Agro Security' },
+    { key: 'agro_literature', name: 'Agro Literature' },
+    { key: 'agro_motivation_training', name: 'Motivation & Training' },
+    { key: 'agro_real_estate', name: 'Green Real Estate' },
   ]
 
   return (
