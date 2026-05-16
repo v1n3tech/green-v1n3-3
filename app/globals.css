@@ -201,8 +201,8 @@
     linear-gradient(var(--grid-color) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid-color) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
-  background-size: 64px 32px, 64px 32px, 64px 32px;
-  background-position: 0 0, 0 0, 32px 16px;
+  background-size: 100% 32px, 96px 64px, 96px 64px;
+  background-position: 0 0, 0 0, 48px 32px;
 }
 
 /* Hexagon card */
