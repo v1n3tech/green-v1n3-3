@@ -75,6 +75,50 @@ export function Header() {
     return () => subscription.unsubscribe()
   }, [checkUser])
 
+  // Realtime subscription for profile updates (e.g., display_name changes)
+  useEffect(() => {
+    const supabase = createClient()
+    
+    // Get current user ID for subscription filter
+    const setupProfileSubscription = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (!authUser) return null
+      
+      const channel = supabase
+        .channel(`profile-${authUser.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'profiles',
+            filter: `id=eq.${authUser.id}`,
+          },
+          (payload) => {
+            const updated = payload.new as any
+            setProfile(prev => prev ? {
+              ...prev,
+              displayName: updated.display_name ?? prev.displayName,
+              walletAddress: updated.wallet_address ?? prev.walletAddress,
+              agroId: updated.agro_id ?? prev.agroId,
+              role: updated.role ?? prev.role,
+              avatarUrl: updated.avatar_url ?? prev.avatarUrl,
+            } : null)
+          }
+        )
+        .subscribe()
+      
+      return channel
+    }
+    
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    setupProfileSubscription().then(ch => { channel = ch })
+    
+    return () => {
+      if (channel) supabase.removeChannel(channel)
+    }
+  }, [])
+
   const handleSignOut = async () => {
     await signOut()
     setProfile(null)
