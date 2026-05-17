@@ -903,52 +903,40 @@ export default function MessagesPage() {
                                 </p>
                               )}
                               
-                              {/* Hover actions: Reply + Reaction */}
-                              <div className={`absolute -top-2 ${isMine ? 'left-0' : 'right-0'} opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-all`}>
+                              {/* Hover actions toolbar: Reply + Reaction */}
+                              <div className={`absolute -top-3 ${isMine ? 'left-0' : 'right-0'} opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-all z-10`}>
                                 <button
                                   onClick={() => setReplyingTo(message)}
-                                  className="p-1 bg-background border border-border rounded-[2px] text-muted-foreground hover:text-foreground transition-colors"
+                                  className="p-1.5 bg-popover border border-border rounded-[4px] text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                                  title="Reply"
                                 >
-                                  <Reply className="w-3 h-3" />
+                                  <Reply className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => setReactionPickerMessageId(reactionPickerMessageId === message.id ? null : message.id)}
+                                  className="p-1.5 bg-popover border border-border rounded-[4px] text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                                  title="React"
+                                >
+                                  <Smile className="w-3.5 h-3.5" />
                                 </button>
                               </div>
                               
-                              {/* Reaction trigger - bottom right of bubble */}
-                              <button
-                                onClick={() => setReactionPickerMessageId(reactionPickerMessageId === message.id ? null : message.id)}
-                                className={`absolute -bottom-2 ${isMine ? 'left-1' : 'right-1'} w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all ${
-                                  isMine 
-                                    ? 'bg-primary-foreground/20 hover:bg-primary-foreground/40 text-primary-foreground' 
-                                    : 'bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground'
-                                } backdrop-blur-sm border border-border/30`}
-                              >
-                                <Smile className="w-3 h-3" />
-                              </button>
-                              
-                              {/* Reaction picker popup */}
+                              {/* Reaction picker popup - positioned above the toolbar */}
                               {reactionPickerMessageId === message.id && (
-                                <div data-reaction-picker className={`absolute ${isMine ? 'left-0' : 'right-0'} -bottom-10 z-50`}>
-                                  <div className="flex items-center gap-1 p-1.5 bg-popover border border-border rounded-[4px] shadow-lg">
-                                    {['👍', '❤️', '😂', '😮', '😢', '🙏'].map(emoji => (
+                                <div data-reaction-picker className={`absolute ${isMine ? 'left-0' : 'right-0'} -top-16 z-50`}>
+                                  <div className="grid grid-cols-4 gap-1 p-2 bg-popover border border-border rounded-[6px] shadow-lg min-w-[144px]">
+                                    {['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '👏'].map(emoji => (
                                       <button
                                         key={emoji}
                                         onClick={() => {
                                           toggleReaction(message.id, emoji)
                                           setReactionPickerMessageId(null)
                                         }}
-                                        className="w-7 h-7 flex items-center justify-center rounded-[2px] hover:bg-secondary transition-colors text-sm"
+                                        className="w-8 h-8 flex items-center justify-center rounded-[4px] hover:bg-secondary transition-colors text-base"
                                       >
                                         {emoji}
                                       </button>
                                     ))}
-                                    <button
-                                      onClick={() => {
-                                        // Keep the picker message ID set - will use the full emoji picker
-                                      }}
-                                      className="w-7 h-7 flex items-center justify-center rounded-[2px] hover:bg-secondary transition-colors text-muted-foreground"
-                                    >
-                                      <Smile className="w-4 h-4" />
-                                    </button>
                                   </div>
                                 </div>
                               )}
