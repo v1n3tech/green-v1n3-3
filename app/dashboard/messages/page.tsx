@@ -305,7 +305,8 @@ export default function MessagesPage() {
             ? { ...c, last_message: message, last_message_at: message.created_at }
             : c
         ))
-    }
+      }
+    })
   }
 
   // Handle emoji selection
