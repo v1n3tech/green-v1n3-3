@@ -195,14 +195,10 @@
   50% { opacity: 0.4; }
 }
 
-/* Grid pattern - running bond brick wall */
+/* Grid pattern - running bond brick wall using inline SVG */
 .grid-pattern {
-  background-image: 
-    linear-gradient(var(--grid-color) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
-  background-size: 100% 32px, 96px 64px, 96px 64px;
-  background-position: 0 0, 0 0, 48px 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='64' fill='none'%3E%3Crect x='0' y='0' width='96' height='32' stroke='%2300c853' stroke-opacity='0.04' stroke-width='1'/%3E%3Crect x='-48' y='32' width='96' height='32' stroke='%2300c853' stroke-opacity='0.04' stroke-width='1'/%3E%3Crect x='48' y='32' width='96' height='32' stroke='%2300c853' stroke-opacity='0.04' stroke-width='1'/%3E%3C/svg%3E");
+  background-size: 96px 64px;
 }
 
 /* Hexagon card */
