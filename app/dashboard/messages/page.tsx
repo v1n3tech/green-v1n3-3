@@ -371,10 +371,6 @@ export default function MessagesPage() {
       }))
     }
   }
-        }]
-      }))
-    }
-  }
   
   // Handle file selection
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
