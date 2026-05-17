@@ -371,6 +371,10 @@ export default function MessagesPage() {
       }))
     }
   }
+        }]
+      }))
+    }
+  }
   
   // Handle file selection
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -417,8 +421,9 @@ export default function MessagesPage() {
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
         setShowEmojiPicker(false)
       }
-      // Close reaction picker on outside click
-      if (reactionPickerMessageId) {
+      // Close reaction picker on outside click - but not if clicking inside the picker
+      const target = e.target as HTMLElement
+      if (reactionPickerMessageId && !target.closest('[data-reaction-picker]')) {
         setReactionPickerMessageId(null)
       }
     }
@@ -923,7 +928,7 @@ export default function MessagesPage() {
                               
                               {/* Reaction picker popup */}
                               {reactionPickerMessageId === message.id && (
-                                <div className={`absolute ${isMine ? 'left-0' : 'right-0'} -bottom-10 z-50`}>
+                                <div data-reaction-picker className={`absolute ${isMine ? 'left-0' : 'right-0'} -bottom-10 z-50`}>
                                   <div className="flex items-center gap-1 p-1.5 bg-popover border border-border rounded-[4px] shadow-lg">
                                     {['👍', '❤️', '😂', '😮', '😢', '🙏'].map(emoji => (
                                       <button
