@@ -198,14 +198,16 @@ function HexCard({ community, accent, isSelected, onClick }: HexCardProps) {
   const Icon = community.icon
   const isOrange = accent === 'orange'
 
-  // Filamental palette — thin threads, low-opacity strokes, near-transparent fills
+  // Filamental palette — thin threads, low-opacity strokes
+  // Uses CSS custom properties for light/dark mode support
   const stroke = isSelected
     ? (isOrange ? '#ff6b1a' : '#00c853')
     : (isOrange ? 'rgba(255, 107, 26, 0.32)' : 'rgba(0, 200, 83, 0.30)')
 
+  // For fill, use transparent in light mode and dark fill in dark mode via CSS variable
   const fill = isSelected
     ? (isOrange ? 'rgba(255, 107, 26, 0.10)' : 'rgba(0, 200, 83, 0.08)')
-    : '#060906'
+    : 'var(--hex-fill, rgba(0, 0, 0, 0.02))'
 
   const idColor = isSelected
     ? (isOrange ? 'text-orange' : 'text-primary')
