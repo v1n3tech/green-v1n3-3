@@ -45,9 +45,6 @@ export function HeroSection() {
             <span className="mono-xs text-primary">BUILT ON SOLANA</span>
           </div>
           <div className="hidden sm:flex items-center gap-2.5 px-2.5 py-1 rounded-[4px] border border-orange/30 bg-orange-soft">
-            <span className="relative flex h-1.5 w-1.5 items-center justify-center">
-              <span className="relative h-1.5 w-1.5 rounded-full bg-orange" />
-            </span>
             <span className="mono-xs text-orange tracking-[0.12em]">PHASE 01 : PLATEAU STATE</span>
           </div>
         </motion.div>
