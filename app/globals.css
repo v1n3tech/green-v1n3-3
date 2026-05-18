@@ -31,6 +31,7 @@
   --glow-color: rgba(0, 200, 83, 0.15);
   --grid-color: rgba(0, 200, 83, 0.025);
   --scrollbar-thumb: rgba(0, 200, 83, 0.3);
+  --hex-fill: #060906;
 }
 
 /* Light mode - muted, soft tones (not harsh white) */
@@ -60,6 +61,7 @@
   --glow-color: rgba(0, 168, 68, 0.10);
   --grid-color: rgba(0, 100, 40, 0.05);
   --scrollbar-thumb: rgba(0, 100, 40, 0.30);
+  --hex-fill: rgba(0, 100, 40, 0.04);
 }
 
 @theme inline {

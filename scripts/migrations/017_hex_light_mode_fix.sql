@@ -1,0 +1,10 @@
+-- Migration: 017_hex_light_mode_fix
+-- Date: 2026-05-17
+-- Description: CSS-only changes for honeycomb hex light/dark mode support
+-- 
+-- Changes:
+-- 1. Added --hex-fill CSS variable to :root (dark mode): #060906
+-- 2. Added --hex-fill CSS variable to .light: rgba(0, 100, 40, 0.04)
+-- 3. Updated HexCard component in communities-section.tsx to use var(--hex-fill)
+--
+-- No database changes required for this migration.
