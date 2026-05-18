@@ -53,6 +53,7 @@ import {
   addReaction,
   removeReaction,
   fetchReactions,
+  markConversationAsRead,
   type Conversation,
   type Message,
   type ConversationParticipant,
@@ -436,6 +437,10 @@ export default function MessagesPage() {
     setConversations(prev => prev.map(c => 
       c.id === conv.id ? { ...c, unread_count: 0 } : c
     ))
+    // Persist read status to database
+    if ((conv.unread_count || 0) > 0) {
+      await markConversationAsRead(conv.id)
+    }
   }
 
   const filteredConversations = conversations.filter(c => {
@@ -1222,18 +1227,26 @@ function NewChatModal({
   }
 
   async function handleJoinCommunityGroup(community: AgroCommunityKey) {
+    console.log('[v0] handleJoinCommunityGroup called:', community)
     setCreating(true)
     setErrorMessage(null)
-    const { conversation, error } = await getOrCreateCommunityGroupChat(community)
-    setCreating(false)
-    
-    if (error) {
-      setErrorMessage(error)
-      return
-    }
-    
-    if (conversation) {
-      onConversationCreated(conversation)
+    try {
+      const { conversation, error } = await getOrCreateCommunityGroupChat(community)
+      console.log('[v0] getOrCreateCommunityGroupChat result:', { conversation, error })
+      setCreating(false)
+      
+      if (error) {
+        setErrorMessage(error)
+        return
+      }
+      
+      if (conversation) {
+        onConversationCreated(conversation)
+      }
+    } catch (err) {
+      console.error('[v0] handleJoinCommunityGroup error:', err)
+      setCreating(false)
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to join community group')
     }
   }
 
