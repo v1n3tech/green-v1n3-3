@@ -464,32 +464,34 @@ export async function getOrCreateDirectConversation(
 export async function getOrCreateCommunityGroupChat(
   community: AgroCommunityKey
 ): Promise<{ conversation: Conversation | null; error?: string }> {
-  const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return { conversation: null, error: 'Not authenticated' }
-  }
+  try {
+    const supabase = await createClient()
+    
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return { conversation: null, error: 'Not authenticated' }
+    }
 
-  // Get user profile
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, role, community')
-    .eq('id', user.id)
-    .single()
+    // Get user profile
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, role, community')
+      .eq('id', user.id)
+      .single()
 
-  if (!profile) {
-    return { conversation: null, error: 'Profile not found' }
-  }
+    if (profileError || !profile) {
+      console.error('[v0] Profile fetch error:', profileError)
+      return { conversation: null, error: 'Profile not found' }
+    }
 
-  // Check permission
-  const permCheck = await canJoinCommunityGroup(profile as UserProfile, community)
-  if (!permCheck.allowed) {
-    return { conversation: null, error: permCheck.reason }
-  }
+    // Check permission
+    const permCheck = await canJoinCommunityGroup(profile as UserProfile, community)
+    if (!permCheck.allowed) {
+      return { conversation: null, error: permCheck.reason }
+    }
 
-  // Use admin client to bypass RLS for group operations
-  const adminClient = createAdminClient()
+    // Use admin client to bypass RLS for group operations
+    const adminClient = createAdminClient()
   
   // Check if community group exists
   const { data: existingGroup } = await adminClient
@@ -570,6 +572,10 @@ export async function getOrCreateCommunityGroupChat(
   revalidatePath('/dashboard/messages')
 
   return { conversation: newGroup }
+  } catch (error) {
+    console.error('[v0] getOrCreateCommunityGroupChat error:', error)
+    return { conversation: null, error: error instanceof Error ? error.message : 'Failed to join community group' }
+  }
 }
 
 // =============================================
@@ -674,10 +680,44 @@ export async function fetchMessages(
           })),
           { onConflict: 'message_id,user_id' }
         )
+      
+      // Reset unread_count in conversation_participants
+      await supabase
+        .from('conversation_participants')
+        .update({ unread_count: 0, last_read_at: new Date().toISOString() })
+        .eq('conversation_id', conversationId)
+        .eq('user_id', user.id)
     }
   }
 
   return { messages: resultMessages as Message[], hasMore }
+}
+
+/**
+ * Mark a conversation as read (reset unread count)
+ */
+export async function markConversationAsRead(
+  conversationId: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { success: false, error: 'Not authenticated' }
+  }
+
+  const { error } = await supabase
+    .from('conversation_participants')
+    .update({ unread_count: 0, last_read_at: new Date().toISOString() })
+    .eq('conversation_id', conversationId)
+    .eq('user_id', user.id)
+
+  if (error) {
+    console.error('[v0] Failed to mark conversation as read:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true }
 }
 
 /**
