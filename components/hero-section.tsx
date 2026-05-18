@@ -29,33 +29,28 @@ export function HeroSection() {
     <section className="pt-24 sm:pt-28 md:pt-32 lg:pt-[120px] pb-12 sm:pb-16 md:pb-20 relative overflow-hidden">
       {/* Grid Pattern Background */}
       <div className="absolute inset-0 grid-pattern" />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         {/* Status Badges */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           className="flex flex-wrap items-center gap-2 sm:gap-3 mb-6 sm:mb-8 md:mb-10"
         >
           <div className="flex items-center gap-2 sm:gap-2.5">
-            <span className="status-dot" />
             <span className="mono-xs text-foreground/90">AGROV1N3 PROGRAM</span>
           </div>
           <div className="px-2 sm:px-3 py-1 sm:py-1.5 border border-primary/50 rounded-[2px]">
             <span className="mono-xs text-primary">BUILT ON SOLANA</span>
           </div>
           <div className="hidden sm:flex items-center gap-2.5 px-2.5 py-1 rounded-[4px] border border-orange/30 bg-orange-soft">
-            <span className="relative flex h-1.5 w-1.5 items-center justify-center">
-              <span className="absolute inset-0 rounded-full bg-orange rec-ping" />
-              <span className="relative h-1.5 w-1.5 rounded-full bg-orange" />
-            </span>
             <span className="mono-xs text-orange tracking-[0.12em]">PHASE 01 : PLATEAU STATE</span>
           </div>
         </motion.div>
 
         {/* Section Label */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
@@ -87,7 +82,7 @@ export function HeroSection() {
             </h1>
 
             <p className="mt-6 sm:mt-8 md:mt-10 text-sm sm:text-base md:text-lg text-foreground/50 max-w-lg leading-relaxed">
-              Green V1n3 is the operating system for the AgroV1n3 program — a country-scale field 
+              Green V1n3 is the operating system for the AgroV1n3 program — a country-scale field
               network where ten thousand young Nigerians work fourteen agricultural disciplines, on-chain.
             </p>
 

@@ -71,15 +71,22 @@ const ROLE_CONFIG: Record<string, { label: string; color: string; icon: typeof U
   admin: { label: 'ADMIN', color: 'text-destructive bg-destructive/10 border-destructive/30', icon: Shield },
 }
 
-// Community colors
+// Community colors - keys must match AgroCommunityKey values
 const COMMUNITY_COLORS: Record<string, string> = {
-  'agro-technology': 'bg-emerald-500',
-  'livestock': 'bg-amber-500',
-  'crops': 'bg-green-500',
-  'media-branding': 'bg-violet-500',
-  'health': 'bg-red-500',
-  'finance-legal': 'bg-blue-500',
-  'logistics': 'bg-orange-500',
+  'agro_technology': 'bg-emerald-500',
+  'animal_farming': 'bg-amber-500',
+  'crop_farming': 'bg-green-500',
+  'agro_media_branding': 'bg-violet-500',
+  'agro_healthcare': 'bg-red-500',
+  'agro_management_legislation': 'bg-blue-500',
+  'agro_logistics': 'bg-orange-500',
+  'agro_marketing': 'bg-teal-500',
+  'agro_processing': 'bg-lime-500',
+  'agro_tourism': 'bg-cyan-500',
+  'agro_security': 'bg-slate-500',
+  'agro_literature': 'bg-indigo-500',
+  'agro_motivation_training': 'bg-pink-500',
+  'agro_real_estate': 'bg-yellow-500',
 }
 
 export default function MessagesPage() {
@@ -1418,8 +1425,8 @@ function NewChatModal({
                   disabled={creating}
                   className="w-full flex items-center gap-3 p-3 border border-border rounded-[2px] text-left hover:border-primary/50 hover:bg-primary/5 transition-all"
                 >
-                  <div className={`w-10 h-10 rounded-[2px] flex items-center justify-center ${COMMUNITY_COLORS[community.key]}/20 border border-white/10`}>
-                    <Hash className={`w-5 h-5 ${COMMUNITY_COLORS[community.key].replace('bg-', 'text-')}`} />
+                  <div className={`w-10 h-10 rounded-[2px] flex items-center justify-center ${COMMUNITY_COLORS[community.key] || 'bg-primary'}/20 border border-white/10`}>
+                    <Hash className={`w-5 h-5 ${(COMMUNITY_COLORS[community.key] || 'bg-primary').replace('bg-', 'text-')}`} />
                   </div>
                   <div className="flex-1">
                     <span className="mono-xs text-[11px] text-foreground font-medium">{community.name}</span>
