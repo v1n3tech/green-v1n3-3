@@ -28,6 +28,7 @@ import {
   type Notification,
   type NotificationType,
 } from '@/lib/notifications/actions'
+import { createClient } from '@/lib/supabase/client'
 
 // Icon mapping for notification types
 const NOTIFICATION_ICONS: Record<NotificationType, typeof MessageSquare> = {
@@ -148,20 +149,87 @@ export function NotificationDropdown() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(false)
   const [markingAllRead, setMarkingAllRead] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Fetch unread count on mount and periodically
+  // Get current user ID for real-time subscription
+  useEffect(() => {
+    const getUserId = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) setCurrentUserId(user.id)
+    }
+    getUserId()
+  }, [])
+
+  // Initial fetch of unread count
   useEffect(() => {
     const fetchCount = async () => {
       const count = await getUnreadNotificationCount()
       setUnreadCount(count)
     }
     fetchCount()
-    
-    // Poll every 30 seconds
-    const interval = setInterval(fetchCount, 30000)
-    return () => clearInterval(interval)
   }, [])
+
+  // Real-time subscription for new notifications
+  useEffect(() => {
+    if (!currentUserId) return
+
+    const supabase = createClient()
+    
+    const channel = supabase
+      .channel(`notifications-${currentUserId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${currentUserId}`,
+        },
+        (payload) => {
+          // New notification received
+          const newNotification = payload.new as Notification
+          setNotifications(prev => [newNotification, ...prev].slice(0, 10))
+          setUnreadCount(prev => prev + 1)
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${currentUserId}`,
+        },
+        (payload) => {
+          // Notification updated (e.g., marked as read)
+          const updatedNotification = payload.new as Notification
+          setNotifications(prev =>
+            prev.map(n => (n.id === updatedNotification.id ? updatedNotification : n))
+          )
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${currentUserId}`,
+        },
+        (payload) => {
+          // Notification deleted
+          const deletedId = (payload.old as { id: string }).id
+          setNotifications(prev => prev.filter(n => n.id !== deletedId))
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [currentUserId])
 
   // Fetch notifications when dropdown opens
   useEffect(() => {
