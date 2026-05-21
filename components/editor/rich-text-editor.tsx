@@ -12,7 +12,7 @@ import Highlight from '@tiptap/extension-highlight'
 import Typography from '@tiptap/extension-typography'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import { common, createLowlight } from 'lowlight'
-import { useCallback, useState } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import {
   Bold,
   Italic,
@@ -105,6 +105,7 @@ function ToolbarGroup({ children }: { children: React.ReactNode }) {
 export function RichTextEditor({ content, onChange, placeholder = 'Start writing...' }: RichTextEditorProps) {
   const [linkUrl, setLinkUrl] = useState('')
   const [showLinkInput, setShowLinkInput] = useState(false)
+  const [, setForceUpdate] = useState(0)
 
   const editor = useEditor({
     extensions: [
@@ -149,6 +150,14 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start writing
     },
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML())
+    },
+    onSelectionUpdate: () => {
+      // Force re-render to update toolbar button states
+      setForceUpdate(n => n + 1)
+    },
+    onTransaction: () => {
+      // Force re-render on any transaction (including mark toggles)
+      setForceUpdate(n => n + 1)
     },
   })
 
