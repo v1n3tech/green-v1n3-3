@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
+import { createNotification } from "@/lib/notifications/actions"
 
 export interface LocationDetails {
   state: string
@@ -393,6 +394,7 @@ export async function assignExecutives(
     
     // Create notification for executive
     if (letter) {
+      // Old executive_notifications table (for legacy support)
       await supabase
         .from("executive_notifications")
         .insert({
@@ -404,6 +406,18 @@ export async function assignExecutives(
           title: "New Assignment",
           message: `You have been assigned to: ${request.service?.title}. Please review your assignment letter.`,
         })
+      
+      // New unified notifications system
+      await createNotification({
+        userId: exec.executiveId,
+        type: 'assignment_new',
+        title: 'New Assignment Received',
+        body: `You have been assigned to: ${request.service?.title}. Please review your assignment letter and accept or decline.`,
+        referenceType: 'assignment',
+        referenceId: assignment.id,
+        actionUrl: `/dashboard/assignments?id=${assignment.id}`,
+        metadata: { letterReference: letter.letter_reference },
+      })
     }
   }
   

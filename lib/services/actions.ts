@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import type { AgroCommunityKey } from "@/components/onboarding/data"
+import { createNotification } from "@/lib/notifications/actions"
 
 export type ServiceRequestStatus = 
   | "pending" 
@@ -464,6 +465,21 @@ export async function createServiceRequest(data: {
     console.error("[v0] createServiceRequest error:", error)
     return { request: null, error: error.message }
   }
+
+  // Notify the GCM about the new request
+  try {
+    await createNotification({
+      userId: data.gcmId,
+      type: 'request_received',
+      title: 'New service request received',
+      body: `You have a new ${data.serviceType} request${data.notes ? `: ${data.notes.substring(0, 60)}...` : ''}`,
+      referenceType: 'request',
+      referenceId: request.id,
+      actionUrl: `/dashboard/requests?id=${request.id}`,
+    })
+  } catch (notifError) {
+    console.error('[Services] Notification error:', notifError)
+  }
   
   revalidatePath("/dashboard/requests")
   
@@ -546,6 +562,33 @@ export async function respondToRequest(
   if (error) {
     console.error("[v0] respondToRequest error:", error)
     return { success: false, error: error.message }
+  }
+
+  // Notify the other party about the response
+  try {
+    const recipientId = isGcm ? request.requester_id : request.gcm_id
+    const notificationTitles: Record<string, string> = {
+      accept: 'Your request has been accepted!',
+      reject: 'Your request was declined',
+      counter: 'You have a counter offer on your request',
+    }
+    const notificationBodies: Record<string, string> = {
+      accept: 'The GCM has accepted your service request. You can now proceed with payment.',
+      reject: 'Unfortunately, the GCM was unable to accept your request at this time.',
+      counter: data?.response || 'Please review the new offer on your service request.',
+    }
+    
+    await createNotification({
+      userId: recipientId,
+      type: action === 'accept' ? 'request_approved' : action === 'reject' ? 'request_rejected' : 'request_received',
+      title: notificationTitles[action],
+      body: notificationBodies[action],
+      referenceType: 'request',
+      referenceId: requestId,
+      actionUrl: `/dashboard/requests?id=${requestId}`,
+    })
+  } catch (notifError) {
+    console.error('[Services] Notification error:', notifError)
   }
   
   revalidatePath("/dashboard/requests")

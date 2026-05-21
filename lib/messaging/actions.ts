@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
 import type { AgroCommunityKey } from "@/components/onboarding/data"
+import { createNotification } from "@/lib/notifications/actions"
 
 // =============================================
 // HELPER: Get current user ID
@@ -776,6 +777,50 @@ export async function sendMessage(
 
   if (error) {
     return { message: null, error: error.message }
+  }
+
+  // Notify other participants about new message
+  try {
+    // Get all other participants
+    const { data: otherParticipants } = await supabase
+      .from('conversation_participants')
+      .select('user_id')
+      .eq('conversation_id', conversationId)
+      .neq('user_id', user.id)
+      .is('left_at', null)
+
+    if (otherParticipants && otherParticipants.length > 0) {
+      // Get sender name
+      const { data: senderProfile } = await supabase
+        .from('profiles')
+        .select('display_name, agro_id')
+        .eq('id', user.id)
+        .single()
+
+      const senderName = senderProfile?.display_name || senderProfile?.agro_id || 'Someone'
+
+      // Create notifications for each participant
+      for (const participant of otherParticipants) {
+        await createNotification({
+          userId: participant.user_id,
+          type: 'message',
+          title: `New message from ${senderName}`,
+          body: content.length > 80 ? content.substring(0, 80) + '...' : content,
+          referenceType: 'conversation',
+          referenceId: conversationId,
+          actionUrl: `/dashboard/messages?conversation=${conversationId}`,
+        })
+      }
+
+      // Also increment unread count for other participants
+      await supabase.rpc('increment_unread_count', {
+        p_conversation_id: conversationId,
+        p_exclude_user_id: user.id
+      }).then(() => {}).catch(() => {})
+    }
+  } catch (notifError) {
+    // Don't fail the message send if notification fails
+    console.error('[Messaging] Notification error:', notifError)
   }
 
   revalidatePath('/dashboard/messages')

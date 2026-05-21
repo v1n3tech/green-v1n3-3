@@ -11,7 +11,6 @@ import {
   ShoppingBag,
   Wallet,
   TrendingUp,
-  Bell,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -33,6 +32,7 @@ import {
 } from 'lucide-react'
 import { signOut } from '@/lib/auth/actions'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { NotificationDropdown } from '@/components/notifications/notification-dropdown'
 
 export interface DashboardProfile {
   id: string
@@ -402,10 +402,7 @@ export function DashboardShell({
             <div className="flex items-center gap-2 sm:gap-4">
               <span className="mono-xs text-muted-foreground text-[10px]">{time} WAT</span>
               <ThemeToggle />
-              <button className="relative p-2 text-muted-foreground hover:text-foreground transition-colors">
-                <Bell className="w-4 h-4" />
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-orange rounded-full" />
-              </button>
+              <NotificationDropdown />
               <button className="p-2 text-muted-foreground hover:text-foreground transition-colors">
                 <HelpCircle className="w-4 h-4" />
               </button>
