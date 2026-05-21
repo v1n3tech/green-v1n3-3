@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useRef, useCallback, ChangeEvent } from 'react'
+import { useState, useRef, ChangeEvent } from 'react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus,
@@ -24,15 +25,6 @@ import {
   Save,
   X,
   Image as ImageIcon,
-  Bold,
-  Italic,
-  List,
-  Link2,
-  Heading1,
-  Heading2,
-  Quote,
-  Code,
-  ListOrdered,
   Sparkles,
   Twitter,
   Facebook,
@@ -45,15 +37,22 @@ import {
   Upload,
   Loader2,
   Type,
-  AlignLeft,
-  Underline,
-  Strikethrough,
-  Minus,
-  Table,
-  Undo,
-  Redo,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+
+// Dynamically import the rich text editor to avoid SSR issues
+const RichTextEditor = dynamic(
+  () => import('@/components/editor/rich-text-editor').then(mod => mod.RichTextEditor),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="border border-border rounded-[2px] overflow-hidden bg-card">
+        <div className="h-12 bg-secondary/50 animate-pulse" />
+        <div className="h-[400px] bg-background animate-pulse" />
+      </div>
+    )
+  }
+)
 
 interface Profile {
   id: string
@@ -129,7 +128,6 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
   const [showSocialLinks, setShowSocialLinks] = useState(false)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
-  const contentRef = useRef<HTMLTextAreaElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
 
   // Form state
@@ -154,43 +152,6 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
   })
 
   const supabase = createClient()
-
-  // Text formatting functions
-  const insertFormatting = useCallback((prefix: string, suffix: string = prefix) => {
-    const textarea = contentRef.current
-    if (!textarea) return
-
-    const start = textarea.selectionStart
-    const end = textarea.selectionEnd
-    const selectedText = formData.content.substring(start, end)
-    const beforeText = formData.content.substring(0, start)
-    const afterText = formData.content.substring(end)
-
-    const newText = `${beforeText}${prefix}${selectedText}${suffix}${afterText}`
-    setFormData(prev => ({ ...prev, content: newText }))
-
-    // Restore cursor position
-    setTimeout(() => {
-      textarea.focus()
-      const newCursorPos = start + prefix.length + selectedText.length + suffix.length
-      textarea.setSelectionRange(newCursorPos, newCursorPos)
-    }, 0)
-  }, [formData.content])
-
-  const formatBold = () => insertFormatting('**')
-  const formatItalic = () => insertFormatting('*')
-  const formatUnderline = () => insertFormatting('<u>', '</u>')
-  const formatStrikethrough = () => insertFormatting('~~')
-  const formatH1 = () => insertFormatting('# ', '')
-  const formatH2 = () => insertFormatting('## ', '')
-  const formatH3 = () => insertFormatting('### ', '')
-  const formatQuote = () => insertFormatting('> ', '')
-  const formatCode = () => insertFormatting('`')
-  const formatCodeBlock = () => insertFormatting('```\n', '\n```')
-  const formatLink = () => insertFormatting('[', '](url)')
-  const formatList = () => insertFormatting('- ', '')
-  const formatOrderedList = () => insertFormatting('1. ', '')
-  const formatHorizontalRule = () => insertFormatting('\n---\n', '')
 
   // Image upload handler
   const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -781,209 +742,13 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
                       <Type className="w-4 h-4 text-primary" />
                       CONTENT EDITOR
                     </label>
-                    <span className="mono-xs text-primary/70 text-[9px] px-2 py-0.5 bg-primary/10 rounded">MARKDOWN</span>
+                    <span className="mono-xs text-primary/70 text-[9px] px-2 py-0.5 bg-primary/10 rounded">RICH TEXT</span>
                   </div>
-                  <div className="border border-border rounded-[2px] overflow-hidden bg-card shadow-lg">
-                    {/* Professional Formatting Toolbar */}
-                    <div className="bg-gradient-to-r from-secondary via-secondary/80 to-secondary/60 border-b border-border">
-                      {/* Primary Toolbar Row */}
-                      <div className="flex items-center px-2 py-1.5 gap-0.5 flex-wrap">
-                        {/* Text Formatting Group */}
-                        <div className="flex items-center bg-background/50 rounded p-0.5 mr-1">
-                          <button 
-                            type="button"
-                            onClick={formatBold}
-                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-primary/20 rounded transition-all duration-200 group" 
-                            title="Bold (Ctrl+B)"
-                          >
-                            <Bold className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={formatItalic}
-                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-primary/20 rounded transition-all duration-200 group" 
-                            title="Italic (Ctrl+I)"
-                          >
-                            <Italic className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={formatUnderline}
-                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-primary/20 rounded transition-all duration-200 group" 
-                            title="Underline"
-                          >
-                            <Underline className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={formatStrikethrough}
-                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-primary/20 rounded transition-all duration-200 group" 
-                            title="Strikethrough"
-                          >
-                            <Strikethrough className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                          </button>
-                        </div>
-
-                        {/* Divider */}
-                        <div className="w-px h-6 bg-border/50 mx-1" />
-
-                        {/* Headings Group */}
-                        <div className="flex items-center bg-background/50 rounded p-0.5 mr-1">
-                          <button 
-                            type="button"
-                            onClick={formatH1}
-                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-orange/20 rounded transition-all duration-200 group" 
-                            title="Heading 1"
-                          >
-                            <Heading1 className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={formatH2}
-                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-orange/20 rounded transition-all duration-200 group" 
-                            title="Heading 2"
-                          >
-                            <Heading2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={formatH3}
-                            className="px-2 py-1.5 text-muted-foreground hover:text-foreground hover:bg-orange/20 rounded transition-all duration-200 mono-xs text-[10px] font-bold" 
-                            title="Heading 3"
-                          >
-                            H3
-                          </button>
-                        </div>
-
-                        {/* Divider */}
-                        <div className="w-px h-6 bg-border/50 mx-1" />
-
-                        {/* Lists Group */}
-                        <div className="flex items-center bg-background/50 rounded p-0.5 mr-1">
-                          <button 
-                            type="button"
-                            onClick={formatList}
-                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent/20 rounded transition-all duration-200 group" 
-                            title="Bullet List"
-                          >
-                            <List className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={formatOrderedList}
-                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent/20 rounded transition-all duration-200 group" 
-                            title="Numbered List"
-                          >
-                            <ListOrdered className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                          </button>
-                        </div>
-
-                        {/* Divider */}
-                        <div className="w-px h-6 bg-border/50 mx-1" />
-
-                        {/* Insert Group */}
-                        <div className="flex items-center bg-background/50 rounded p-0.5 mr-1">
-                          <button 
-                            type="button"
-                            onClick={formatQuote}
-                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-cyan-500/20 rounded transition-all duration-200 group" 
-                            title="Block Quote"
-                          >
-                            <Quote className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={formatCode}
-                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-cyan-500/20 rounded transition-all duration-200 group" 
-                            title="Inline Code"
-                          >
-                            <Code className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={formatCodeBlock}
-                            className="px-2 py-1.5 text-muted-foreground hover:text-foreground hover:bg-cyan-500/20 rounded transition-all duration-200 mono-xs text-[9px]" 
-                            title="Code Block"
-                          >
-                            {"</>"}
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={formatHorizontalRule}
-                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-cyan-500/20 rounded transition-all duration-200 group" 
-                            title="Horizontal Rule"
-                          >
-                            <Minus className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                          </button>
-                        </div>
-
-                        {/* Divider */}
-                        <div className="w-px h-6 bg-border/50 mx-1" />
-
-                        {/* Links & Media Group */}
-                        <div className="flex items-center bg-background/50 rounded p-0.5">
-                          <button 
-                            type="button"
-                            onClick={formatLink}
-                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-blue-500/20 rounded transition-all duration-200 group" 
-                            title="Insert Link"
-                          >
-                            <Link2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                          </button>
-                          <button 
-                            type="button"
-                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-blue-500/20 rounded transition-all duration-200 group" 
-                            title="Insert Image"
-                          >
-                            <ImageIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                          </button>
-                        </div>
-
-                        {/* Right side - Word count / Status */}
-                        <div className="ml-auto flex items-center gap-3 text-muted-foreground/60">
-                          <span className="mono-xs text-[9px] hidden md:block">
-                            {formData.content.split(/\s+/).filter(Boolean).length} words
-                          </span>
-                          <span className="mono-xs text-[9px] hidden lg:block">
-                            {formData.content.length} chars
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Editor Area */}
-                    <textarea
-                      ref={contentRef}
-                      value={formData.content}
-                      onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                      placeholder="Start writing your article...
-
-Markdown Quick Reference:
-━━━━━━━━━━━━━━━━━━━━━━━━━
-**bold**     *italic*     ~~strikethrough~~
-# Heading 1   ## Heading 2   ### Heading 3
-- Bullet item  1. Numbered item
-> Block quote
-\`inline code\`
-[Link text](https://url.com)
----  (horizontal rule)"
-                      rows={22}
-                      className="w-full px-5 py-4 bg-background text-foreground placeholder:text-muted-foreground/40 outline-none resize-none font-mono text-[13px] leading-relaxed tracking-wide"
-                    />
-
-                    {/* Status Bar */}
-                    <div className="flex items-center justify-between px-4 py-2 bg-secondary/30 border-t border-border text-muted-foreground/60">
-                      <div className="flex items-center gap-4">
-                        <span className="mono-xs text-[9px] flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                          Auto-save enabled
-                        </span>
-                      </div>
-                      <div className="mono-xs text-[9px]">
-                        Line {(formData.content.substring(0, contentRef.current?.selectionStart || 0).match(/\n/g) || []).length + 1}
-                      </div>
-                    </div>
-                  </div>
+                  <RichTextEditor
+                    content={formData.content}
+                    onChange={(content) => setFormData(prev => ({ ...prev, content }))}
+                    placeholder="Start writing your article..."
+                  />
                 </div>
               </div>
 
