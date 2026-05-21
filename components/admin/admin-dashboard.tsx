@@ -38,6 +38,7 @@ import {
   Calendar,
   XCircle,
   Check,
+  Loader2,
 } from 'lucide-react'
 import { signOut } from '@/lib/auth/actions'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -49,6 +50,15 @@ import {
   type UserProfile,
   type UserRole 
 } from '@/lib/admin/actions'
+import {
+  fetchBroadcasts,
+  createAndSendBroadcast,
+  deleteBroadcast,
+  getBroadcastStats,
+  type Broadcast,
+  type BroadcastAudience,
+  type BroadcastPriority,
+} from '@/lib/admin/broadcast-actions'
 import {
   Dialog,
   DialogContent,
@@ -917,13 +927,92 @@ function MessagesTab() {
 function BroadcastTab() {
   const [title, setTitle] = useState('')
   const [message, setMessage] = useState('')
-  const [audience, setAudience] = useState('all')
+  const [audience, setAudience] = useState<BroadcastAudience>('all')
+  const [priority, setPriority] = useState<BroadcastPriority>('normal')
+  const [broadcasts, setBroadcasts] = useState<Broadcast[]>([])
+  const [loading, setLoading] = useState(true)
+  const [sending, setSending] = useState(false)
+  const [stats, setStats] = useState({ total: 0, sent: 0, draft: 0, scheduled: 0, totalRecipients: 0, totalReads: 0 })
+  const [successMessage, setSuccessMessage] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
 
-  const recentBroadcasts = [
-    { id: '1', title: 'Platform Update v2.1', audience: 'All Users', sent: '2026-05-01', reads: 1234 },
-    { id: '2', title: 'New Community Guidelines', audience: 'Agro Executives', sent: '2026-04-28', reads: 890 },
-    { id: '3', title: 'Marketplace Launch', audience: 'All Users', sent: '2026-04-25', reads: 2100 },
-  ]
+  // Load broadcasts and stats
+  useEffect(() => {
+    async function load() {
+      const [broadcastsResult, statsResult] = await Promise.all([
+        fetchBroadcasts({ limit: 10 }),
+        getBroadcastStats()
+      ])
+      setBroadcasts(broadcastsResult.broadcasts)
+      setStats(statsResult)
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  // Send broadcast
+  async function handleSend() {
+    if (!title.trim() || !message.trim()) return
+
+    setSending(true)
+    setSuccessMessage('')
+    setErrorMessage('')
+
+    const { recipientsCount, broadcast, error } = await createAndSendBroadcast({
+      title: title.trim(),
+      message: message.trim(),
+      audience,
+      priority,
+    })
+
+    setSending(false)
+
+    if (error) {
+      setErrorMessage(error)
+      return
+    }
+
+    setSuccessMessage(`Broadcast sent to ${recipientsCount.toLocaleString()} recipients!`)
+    setTitle('')
+    setMessage('')
+    setAudience('all')
+    setPriority('normal')
+
+    // Refresh broadcasts list
+    if (broadcast) {
+      setBroadcasts(prev => [{ ...broadcast, status: 'sent', recipients_count: recipientsCount } as Broadcast, ...prev])
+      setStats(prev => ({
+        ...prev,
+        total: prev.total + 1,
+        sent: prev.sent + 1,
+        totalRecipients: prev.totalRecipients + recipientsCount,
+      }))
+    }
+  }
+
+  // Delete broadcast
+  async function handleDelete(id: string) {
+    const { success } = await deleteBroadcast(id)
+    if (success) {
+      setBroadcasts(prev => prev.filter(b => b.id !== id))
+    }
+  }
+
+  const audienceLabels: Record<BroadcastAudience, string> = {
+    all: 'All Users',
+    executives: 'Agro Executives',
+    gcm: 'GCMs Only',
+    lgpa: 'LGPAs Only',
+    scc: 'SCC Members',
+    admins: 'Admins Only',
+  }
+
+  const priorityColors: Record<BroadcastPriority, string> = {
+    low: 'text-muted-foreground bg-secondary',
+    normal: 'text-primary bg-primary/10',
+    high: 'text-orange bg-orange/10',
+    urgent: 'text-destructive bg-destructive/10',
+  }
 
   return (
     <div className="space-y-6">
@@ -935,6 +1024,38 @@ function BroadcastTab() {
         </div>
       </div>
 
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="border border-border rounded bg-card p-4">
+          <div className="flex items-center justify-between mb-2">
+            <Megaphone className="w-4 h-4 text-primary" />
+            <span className="mono-xs text-[9px] text-muted-foreground">TOTAL</span>
+          </div>
+          <p className="mono text-2xl text-foreground">{stats.total}</p>
+        </div>
+        <div className="border border-border rounded bg-card p-4">
+          <div className="flex items-center justify-between mb-2">
+            <Send className="w-4 h-4 text-primary" />
+            <span className="mono-xs text-[9px] text-muted-foreground">SENT</span>
+          </div>
+          <p className="mono text-2xl text-foreground">{stats.sent}</p>
+        </div>
+        <div className="border border-border rounded bg-card p-4">
+          <div className="flex items-center justify-between mb-2">
+            <Users className="w-4 h-4 text-orange" />
+            <span className="mono-xs text-[9px] text-muted-foreground">RECIPIENTS</span>
+          </div>
+          <p className="mono text-2xl text-foreground">{stats.totalRecipients.toLocaleString()}</p>
+        </div>
+        <div className="border border-border rounded bg-card p-4">
+          <div className="flex items-center justify-between mb-2">
+            <Eye className="w-4 h-4 text-accent" />
+            <span className="mono-xs text-[9px] text-muted-foreground">READS</span>
+          </div>
+          <p className="mono text-2xl text-foreground">{stats.totalReads.toLocaleString()}</p>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Compose */}
         <div className="border border-border rounded bg-card">
@@ -942,6 +1063,20 @@ function BroadcastTab() {
             <span className="mono-xs text-muted-foreground text-[10px] tracking-wider">/ COMPOSE MESSAGE</span>
           </div>
           <div className="p-5 space-y-5">
+            {/* Success/Error Messages */}
+            {successMessage && (
+              <div className="flex items-center gap-2 p-3 bg-primary/10 border border-primary/30 rounded">
+                <CheckCircle className="w-4 h-4 text-primary shrink-0" />
+                <span className="mono-xs text-primary text-[11px]">{successMessage}</span>
+              </div>
+            )}
+            {errorMessage && (
+              <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded">
+                <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
+                <span className="mono-xs text-destructive text-[11px]">{errorMessage}</span>
+              </div>
+            )}
+
             <div>
               <label className="mono-xs text-muted-foreground text-[9px] tracking-wider mb-2 block">TITLE</label>
               <input
@@ -952,20 +1087,38 @@ function BroadcastTab() {
                 className="w-full px-4 py-3 bg-secondary/50 border border-border rounded text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50 transition-colors"
               />
             </div>
-            <div>
-              <label className="mono-xs text-muted-foreground text-[9px] tracking-wider mb-2 block">AUDIENCE</label>
-              <select
-                value={audience}
-                onChange={(e) => setAudience(e.target.value)}
-                className="w-full px-4 py-3 bg-secondary/50 border border-border rounded text-sm text-foreground outline-none focus:border-primary/50"
-              >
-                <option value="all">All Users</option>
-                <option value="executives">Agro Executives Only</option>
-                <option value="gcm">GCMs Only</option>
-                <option value="lgpa">LGPAs Only</option>
-                <option value="scc">SCC Members Only</option>
-              </select>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mono-xs text-muted-foreground text-[9px] tracking-wider mb-2 block">AUDIENCE</label>
+                <select
+                  value={audience}
+                  onChange={(e) => setAudience(e.target.value as BroadcastAudience)}
+                  className="w-full px-4 py-3 bg-secondary/50 border border-border rounded text-sm text-foreground outline-none focus:border-primary/50"
+                >
+                  <option value="all">All Users</option>
+                  <option value="executives">Agro Executives Only</option>
+                  <option value="gcm">GCMs Only</option>
+                  <option value="lgpa">LGPAs Only</option>
+                  <option value="scc">SCC Members Only</option>
+                  <option value="admins">Admins Only</option>
+                </select>
+              </div>
+              <div>
+                <label className="mono-xs text-muted-foreground text-[9px] tracking-wider mb-2 block">PRIORITY</label>
+                <select
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as BroadcastPriority)}
+                  className="w-full px-4 py-3 bg-secondary/50 border border-border rounded text-sm text-foreground outline-none focus:border-primary/50"
+                >
+                  <option value="low">Low</option>
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
             </div>
+
             <div>
               <label className="mono-xs text-muted-foreground text-[9px] tracking-wider mb-2 block">MESSAGE</label>
               <textarea
@@ -976,39 +1129,72 @@ function BroadcastTab() {
                 className="w-full px-4 py-3 bg-secondary/50 border border-border rounded text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50 resize-none transition-colors"
               />
             </div>
+
             <button 
-              disabled={!title || !message}
+              onClick={handleSend}
+              disabled={!title.trim() || !message.trim() || sending}
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-orange text-background rounded hover:bg-orange/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Send className="w-4 h-4" />
-              <span className="mono-xs text-[11px]">SEND BROADCAST</span>
+              {sending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              <span className="mono-xs text-[11px]">{sending ? 'SENDING...' : 'SEND BROADCAST'}</span>
             </button>
           </div>
         </div>
 
         {/* Recent Broadcasts */}
         <div className="border border-border rounded bg-card">
-          <div className="px-4 h-12 border-b border-border flex items-center">
+          <div className="px-4 h-12 border-b border-border flex items-center justify-between">
             <span className="mono-xs text-muted-foreground text-[10px] tracking-wider">/ RECENT BROADCASTS</span>
+            {loading && <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />}
           </div>
-          <div className="divide-y divide-border">
-            {recentBroadcasts.map((b) => (
-              <div key={b.id} className="p-4 hover:bg-secondary/30 transition-colors">
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <h4 className="mono-xs text-foreground text-[11px]">{b.title}</h4>
-                  <span className="mono-xs text-muted-foreground text-[9px] shrink-0">{b.sent}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="px-2 py-1 bg-secondary border border-border rounded mono-xs text-foreground/70 text-[9px]">
-                    {b.audience}
-                  </span>
-                  <span className="flex items-center gap-1 mono-xs text-muted-foreground text-[9px]">
-                    <Eye className="w-3 h-3" />
-                    {b.reads.toLocaleString()} reads
-                  </span>
-                </div>
+          <div className="divide-y divide-border max-h-[500px] overflow-y-auto">
+            {!loading && broadcasts.length === 0 ? (
+              <div className="p-8 text-center">
+                <Megaphone className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                <p className="mono-xs text-muted-foreground text-[11px]">No broadcasts yet</p>
               </div>
-            ))}
+            ) : (
+              broadcasts.map((b) => (
+                <div key={b.id} className="p-4 hover:bg-secondary/30 transition-colors">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <h4 className="mono-xs text-foreground text-[11px] font-medium">{b.title}</h4>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`px-1.5 py-0.5 rounded mono-xs text-[8px] ${priorityColors[b.priority]}`}>
+                        {b.priority.toUpperCase()}
+                      </span>
+                      <button
+                        onClick={() => handleDelete(b.id)}
+                        className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="mono-xs text-muted-foreground text-[10px] mb-2 line-clamp-2">{b.message}</p>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="px-2 py-1 bg-secondary border border-border rounded mono-xs text-foreground/70 text-[9px]">
+                      {audienceLabels[b.audience]}
+                    </span>
+                    <span className="flex items-center gap-1 mono-xs text-muted-foreground text-[9px]">
+                      <Users className="w-3 h-3" />
+                      {b.recipients_count.toLocaleString()} sent
+                    </span>
+                    <span className="flex items-center gap-1 mono-xs text-muted-foreground text-[9px]">
+                      <Eye className="w-3 h-3" />
+                      {b.reads_count.toLocaleString()} reads
+                    </span>
+                    <span className="mono-xs text-muted-foreground/50 text-[9px]">
+                      {b.sent_at ? new Date(b.sent_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' }) : 'Draft'}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

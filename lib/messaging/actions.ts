@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
 import type { AgroCommunityKey } from "@/components/onboarding/data"
+import { createNotification } from "@/lib/notifications/actions"
 
 // =============================================
 // HELPER: Get current user ID
@@ -778,6 +779,50 @@ export async function sendMessage(
     return { message: null, error: error.message }
   }
 
+  // Notify other participants about new message
+  try {
+    // Get all other participants
+    const { data: otherParticipants } = await supabase
+      .from('conversation_participants')
+      .select('user_id')
+      .eq('conversation_id', conversationId)
+      .neq('user_id', user.id)
+      .is('left_at', null)
+
+    if (otherParticipants && otherParticipants.length > 0) {
+      // Get sender name
+      const { data: senderProfile } = await supabase
+        .from('profiles')
+        .select('display_name, agro_id')
+        .eq('id', user.id)
+        .single()
+
+      const senderName = senderProfile?.display_name || senderProfile?.agro_id || 'Someone'
+
+      // Create notifications for each participant
+      for (const participant of otherParticipants) {
+        await createNotification({
+          userId: participant.user_id,
+          type: 'message',
+          title: `New message from ${senderName}`,
+          body: content.length > 80 ? content.substring(0, 80) + '...' : content,
+          referenceType: 'conversation',
+          referenceId: conversationId,
+          actionUrl: `/dashboard/messages?conversation=${conversationId}`,
+        })
+      }
+
+      // Also increment unread count for other participants
+      await supabase.rpc('increment_unread_count', {
+        p_conversation_id: conversationId,
+        p_exclude_user_id: user.id
+      }).then(() => {}).catch(() => {})
+    }
+  } catch (notifError) {
+    // Don't fail the message send if notification fails
+    console.error('[Messaging] Notification error:', notifError)
+  }
+
   revalidatePath('/dashboard/messages')
 
   return { message: message as Message }
@@ -1043,3 +1088,82 @@ export async function fetchReactions(
   }
   return { reactions }
 }
+
+// =============================================
+// TYPING INDICATORS
+// =============================================
+
+export interface TypingUser {
+  user_id: string
+  display_name: string | null
+  started_at: string
+}
+
+/**
+ * Set typing status - call this when user starts typing
+ */
+export async function setTypingStatus(conversationId: string): Promise<void> {
+  const supabase = await createClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  // Upsert typing indicator
+  await supabase
+    .from('typing_indicators')
+    .upsert({
+      conversation_id: conversationId,
+      user_id: user.id,
+      started_at: new Date().toISOString(),
+    }, {
+      onConflict: 'conversation_id,user_id'
+    })
+}
+
+/**
+ * Clear typing status - call this when user stops typing or sends message
+ */
+export async function clearTypingStatus(conversationId: string): Promise<void> {
+  const supabase = await createClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  await supabase
+    .from('typing_indicators')
+    .delete()
+    .eq('conversation_id', conversationId)
+    .eq('user_id', user.id)
+}
+
+/**
+ * Get current typing users in a conversation
+ */
+export async function getTypingUsers(
+  conversationId: string
+): Promise<{ users: TypingUser[] }> {
+  const supabase = await createClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { users: [] }
+
+  const { data } = await supabase
+    .from('typing_indicators')
+    .select(`
+      user_id,
+      started_at,
+      user:profiles!typing_indicators_user_id_fkey ( display_name )
+    `)
+    .eq('conversation_id', conversationId)
+    .neq('user_id', user.id)
+    .gt('started_at', new Date(Date.now() - 5000).toISOString()) // Only show typing from last 5 seconds
+
+  return { 
+    users: (data || []).map(t => ({
+      user_id: t.user_id,
+      display_name: (t.user as any)?.display_name || null,
+      started_at: t.started_at,
+    }))
+  }
+}
+

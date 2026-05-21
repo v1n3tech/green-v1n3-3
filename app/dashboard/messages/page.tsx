@@ -54,10 +54,13 @@ import {
   removeReaction,
   fetchReactions,
   markConversationAsRead,
+  setTypingStatus,
+  clearTypingStatus,
   type Conversation,
   type Message,
   type ConversationParticipant,
   type Reaction,
+  type TypingUser,
 } from '@/lib/messaging/actions'
 import { createClient } from '@/lib/supabase/client'
 import type { AgroCommunityKey } from '@/components/onboarding/data'
@@ -114,6 +117,8 @@ export default function MessagesPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [reactions, setReactions] = useState<Record<string, Reaction[]>>({})
   const [reactionPickerMessageId, setReactionPickerMessageId] = useState<string | null>(null)
+  const [typingUsers, setTypingUsers] = useState<TypingUser[]>([])
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Load current user ID and conversations on mount
   useEffect(() => {
@@ -228,11 +233,47 @@ export default function MessagesPage() {
       )
       .subscribe()
 
+    // Subscribe to typing indicators
+    const typingChannel = supabase
+      .channel(`typing-${selectedConversation.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'typing_indicators',
+          filter: `conversation_id=eq.${selectedConversation.id}`,
+        },
+        async (payload) => {
+          // Refresh typing users
+          const { data: typingData } = await supabase
+            .from('typing_indicators')
+            .select(`
+              user_id,
+              started_at,
+              user:profiles!typing_indicators_user_id_fkey ( display_name )
+            `)
+            .eq('conversation_id', selectedConversation.id)
+            .neq('user_id', currentUserId || '')
+            .gt('started_at', new Date(Date.now() - 5000).toISOString())
+
+          setTypingUsers(
+            (typingData || []).map(t => ({
+              user_id: t.user_id,
+              display_name: (t.user as any)?.display_name || null,
+              started_at: t.started_at,
+            }))
+          )
+        }
+      )
+      .subscribe()
+
     return () => {
       supabase.removeChannel(channel)
       supabase.removeChannel(reactionsChannel)
+      supabase.removeChannel(typingChannel)
     }
-  }, [selectedConversation?.id])
+  }, [selectedConversation?.id, currentUserId])
 
   // Update online presence
   useEffect(() => {
@@ -287,6 +328,13 @@ export default function MessagesPage() {
   async function handleSendMessage() {
     if (!selectedConversation || (!messageInput.trim() && !attachment)) return
 
+    // Clear typing status when sending
+    await clearTypingStatus(selectedConversation.id)
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current)
+      typingTimeoutRef.current = null
+    }
+
     const currentReply = replyingTo // capture before clearing
 
     startSending(async () => {
@@ -315,6 +363,26 @@ export default function MessagesPage() {
         ))
       }
     })
+  }
+
+  // Handle typing indicator
+  function handleTyping() {
+    if (!selectedConversation) return
+
+    // Set typing status
+    setTypingStatus(selectedConversation.id)
+
+    // Clear any existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current)
+    }
+
+    // Clear typing status after 3 seconds of no typing
+    typingTimeoutRef.current = setTimeout(() => {
+      if (selectedConversation) {
+        clearTypingStatus(selectedConversation.id)
+      }
+    }, 3000)
   }
 
   // Handle emoji selection
@@ -1030,6 +1098,31 @@ export default function MessagesPage() {
 
               {/* Message Input */}
               <div className="border-t border-border bg-background/80 backdrop-blur-sm">
+                {/* Typing Indicator */}
+                <AnimatePresence>
+                  {typingUsers.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="px-4 pt-2"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                        <span className="mono-xs text-[10px] text-muted-foreground">
+                          {typingUsers.length === 1
+                            ? `${typingUsers[0].display_name || 'Someone'} is typing...`
+                            : `${typingUsers.length} people are typing...`}
+                        </span>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {/* Attachment Preview */}
                 <AnimatePresence>
                   {attachment && (
@@ -1083,7 +1176,10 @@ export default function MessagesPage() {
                     <input
                       type="text"
                       value={messageInput}
-                      onChange={(e) => setMessageInput(e.target.value)}
+                      onChange={(e) => {
+                        setMessageInput(e.target.value)
+                        handleTyping()
+                      }}
                       onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
                       placeholder="Type a message..."
                       className="flex-1 bg-transparent text-[13px] text-foreground placeholder:text-muted-foreground/50 outline-none"
