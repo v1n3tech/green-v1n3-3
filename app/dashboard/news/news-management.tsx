@@ -37,6 +37,7 @@ import {
   Upload,
   Loader2,
   Type,
+  Link2,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
