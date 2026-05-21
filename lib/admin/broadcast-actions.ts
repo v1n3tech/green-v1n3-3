@@ -297,6 +297,124 @@ export async function createAndSendBroadcast(data: {
 }
 
 // =============================================
+// RESEND BROADCAST (for failed broadcasts)
+// =============================================
+
+export async function resendBroadcast(
+  broadcastId: string
+): Promise<{ recipientsCount: number; error?: string }> {
+  const supabase = await createClient()
+  const adminClient = createAdminClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { recipientsCount: 0, error: 'Not authenticated' }
+  }
+
+  // Check if user is admin
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.role !== 'admin') {
+    return { recipientsCount: 0, error: 'Unauthorized' }
+  }
+
+  // Get the broadcast
+  const { data: broadcast, error: fetchError } = await adminClient
+    .from('broadcasts')
+    .select('*')
+    .eq('id', broadcastId)
+    .single()
+
+  if (fetchError || !broadcast) {
+    return { recipientsCount: 0, error: 'Broadcast not found' }
+  }
+
+  // Delete existing notifications for this broadcast (they may have failed)
+  await adminClient
+    .from('notifications')
+    .delete()
+    .eq('reference_type', 'broadcast')
+    .eq('reference_id', broadcastId)
+
+  // Build audience query
+  let recipientsQuery = adminClient
+    .from('profiles')
+    .select('id')
+    .eq('is_active', true)
+
+  if (broadcast.audience !== 'all') {
+    const roleMap: Record<string, string> = {
+      'executives': 'agro_executive',
+      'gcm': 'gcm',
+      'lgpa': 'lgpa',
+      'scc': 'scc_member',
+      'admins': 'admin',
+    }
+    recipientsQuery = recipientsQuery.eq('role', roleMap[broadcast.audience])
+  }
+
+  if (broadcast.target_community) {
+    recipientsQuery = recipientsQuery.eq('community', broadcast.target_community)
+  }
+
+  const { data: recipients, error: recipientsError } = await recipientsQuery
+
+  if (recipientsError) {
+    console.error('[Broadcasts] Recipients query error:', recipientsError)
+    return { recipientsCount: 0, error: 'Failed to find recipients' }
+  }
+
+  if (!recipients || recipients.length === 0) {
+    return { recipientsCount: 0, error: 'No recipients match the criteria' }
+  }
+
+  // Create notifications for all recipients
+  const notifications = recipients.map(r => ({
+    user_id: r.id,
+    type: 'system',
+    title: broadcast.title,
+    body: broadcast.message,
+    reference_type: 'broadcast',
+    reference_id: broadcastId,
+    action_url: '/dashboard/notifications',
+    metadata: { priority: broadcast.priority, broadcast_id: broadcastId },
+  }))
+
+  // Insert notifications in batches of 100
+  const batchSize = 100
+  let insertedCount = 0
+  for (let i = 0; i < notifications.length; i += batchSize) {
+    const batch = notifications.slice(i, i + batchSize)
+    const { error: insertError, data } = await adminClient
+      .from('notifications')
+      .insert(batch)
+      .select('id')
+
+    if (insertError) {
+      console.error('[Broadcasts] Notification insert error:', insertError)
+    } else {
+      insertedCount += data?.length || 0
+    }
+  }
+
+  // Update broadcast status
+  await adminClient
+    .from('broadcasts')
+    .update({
+      recipients_count: insertedCount,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', broadcastId)
+
+  revalidatePath('/admin')
+  return { recipientsCount: insertedCount }
+}
+
+// =============================================
 // DELETE BROADCAST
 // =============================================
 

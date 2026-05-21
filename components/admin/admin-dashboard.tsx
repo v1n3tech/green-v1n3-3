@@ -54,6 +54,7 @@ import {
   fetchBroadcasts,
   createAndSendBroadcast,
   deleteBroadcast,
+  resendBroadcast,
   getBroadcastStats,
   type Broadcast,
   type BroadcastAudience,
@@ -998,6 +999,25 @@ function BroadcastTab() {
     }
   }
 
+  // Resend broadcast (for failed broadcasts)
+  const [resending, setResending] = useState<string | null>(null)
+  async function handleResend(id: string) {
+    setResending(id)
+    const { recipientsCount, error } = await resendBroadcast(id)
+    setResending(null)
+    
+    if (error) {
+      alert(`Failed to resend: ${error}`)
+      return
+    }
+    
+    // Update the broadcast in the list
+    setBroadcasts(prev => prev.map(b => 
+      b.id === id ? { ...b, recipients_count: recipientsCount } : b
+    ))
+    alert(`Successfully resent to ${recipientsCount} recipients!`)
+  }
+
   const audienceLabels: Record<BroadcastAudience, string> = {
     all: 'All Users',
     executives: 'Agro Executives',
@@ -1166,6 +1186,14 @@ function BroadcastTab() {
                       <span className={`px-1.5 py-0.5 rounded mono-xs text-[8px] ${priorityColors[b.priority]}`}>
                         {b.priority.toUpperCase()}
                       </span>
+                      <button
+                        onClick={() => handleResend(b.id)}
+                        disabled={resending === b.id}
+                        className="p-1 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+                        title="Resend to recipients"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${resending === b.id ? 'animate-spin' : ''}`} />
+                      </button>
                       <button
                         onClick={() => handleDelete(b.id)}
                         className="p-1 text-muted-foreground hover:text-destructive transition-colors"
