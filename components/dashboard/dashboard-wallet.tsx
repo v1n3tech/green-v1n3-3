@@ -78,6 +78,7 @@ export function DashboardWallet({
   const [hasATA, setHasATA] = useState<boolean | null>(null)
   const [ataAddress, setAtaAddress] = useState<string | null>(null)
   const [creatingATA, setCreatingATA] = useState(false)
+  const [walletOrigin, setWalletOrigin] = useState<'minted' | 'external' | null>(null)
   
   // Solana wallet adapter hooks
   const { publicKey, connected, disconnect, signTransaction } = useWallet()
@@ -94,9 +95,9 @@ export function DashboardWallet({
   const displayBalance = balanceLoading ? dbBalance : onChainBalance
   const ngnValue = v1n3ToNGN(displayBalance)
 
-  // Check ATA status on mount
+  // Check ATA status and wallet origin on mount
   useEffect(() => {
-    const checkATA = async () => {
+    const checkWalletInfo = async () => {
       if (!walletAddress) return
       try {
         const response = await fetch('/api/wallet/ensure-ata')
@@ -104,12 +105,13 @@ export function DashboardWallet({
           const data = await response.json()
           setHasATA(data.hasATA)
           setAtaAddress(data.ataAddress)
+          setWalletOrigin(data.origin || null)
         }
       } catch (err) {
-        console.error('[v0] Error checking ATA:', err)
+        console.error('[v0] Error checking wallet info:', err)
       }
     }
-    checkATA()
+    checkWalletInfo()
   }, [walletAddress])
 
   // Create ATA if needed
@@ -267,12 +269,6 @@ export function DashboardWallet({
   const handleSend = async () => {
     if (!walletAddress || !sendTo || !sendAmount) return
     
-    // Check if external wallet is connected for signing
-    if (!connected || !publicKey || !signTransaction) {
-      setSendError('Please connect your wallet to send V1N3')
-      return
-    }
-    
     setSendLoading(true)
     setSendError(null)
     setSendSignature(null)
@@ -293,6 +289,40 @@ export function DashboardWallet({
         recipientPubkey = new PublicKey(sendTo)
       } catch {
         throw new Error('Invalid Solana address')
+      }
+      
+      // CUSTODIAL WALLET: Use server-side signing via API
+      if (walletOrigin === 'minted') {
+        const response = await fetch('/api/wallet/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            toAddress: sendTo,
+            amount,
+            memo: sendMemo || null,
+          }),
+        })
+        
+        const result = await response.json()
+        
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to send')
+        }
+        
+        setSendSignature(result.signature)
+        setSendSuccess(true)
+        setSendTo('')
+        setSendAmount('')
+        setSendMemo('')
+        await handleRefresh()
+        return
+      }
+      
+      // EXTERNAL WALLET: Use client-side signing with wallet adapter
+      if (!connected || !publicKey || !signTransaction) {
+        setSendError('Please connect your wallet to send V1N3')
+        setSendLoading(false)
+        return
       }
       
       // Get source and destination ATAs (Token-2022)
@@ -901,13 +931,13 @@ export function DashboardWallet({
                     CLOSE
                   </button>
                 </div>
-              ) : !connected ? (
+              ) : (walletOrigin === 'external' && !connected) ? (
                 <div className="text-center py-8">
                   <div className="w-16 h-16 rounded-full bg-muted/20 flex items-center justify-center mx-auto mb-4">
                     <Wallet className="w-8 h-8 text-muted-foreground" />
                   </div>
                   <p className="font-mono text-lg text-foreground mb-2">Connect Wallet</p>
-                  <p className="mono-xs text-muted-foreground mb-4">Connect your wallet to send V1N3</p>
+                  <p className="mono-xs text-muted-foreground mb-4">Connect your external wallet to send V1N3</p>
                   <button
                     onClick={handleConnectWallet}
                     className="w-full py-2.5 bg-primary text-background mono-xs text-[11px] rounded-[2px] hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
