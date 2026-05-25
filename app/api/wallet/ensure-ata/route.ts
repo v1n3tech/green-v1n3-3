@@ -84,6 +84,10 @@ export async function GET() {
       .eq('id', user.id)
       .single()
     
+    console.log('[v0] GET /api/wallet/ensure-ata:')
+    console.log('[v0]   User ID:', user.id)
+    console.log('[v0]   Profile wallet_address:', profile?.wallet_address)
+    
     if (profileError || !profile?.wallet_address) {
       return NextResponse.json({ error: 'Wallet not found' }, { status: 404 })
     }
@@ -91,6 +95,9 @@ export async function GET() {
     // Check if ATA exists
     const hasATA = await hasV1N3TokenAccount(profile.wallet_address)
     const ataAddress = await getV1N3TokenAccountAddress(profile.wallet_address)
+    
+    console.log('[v0]   hasATA:', hasATA)
+    console.log('[v0]   ataAddress:', ataAddress)
     
     return NextResponse.json({
       hasATA,

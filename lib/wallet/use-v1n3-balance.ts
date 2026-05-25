@@ -40,6 +40,7 @@ export function useV1N3Balance(walletAddress?: string | null): UseV1N3BalanceRes
       )
 
       console.log('[v0] Fetching V1N3 balance for:', walletAddress)
+      console.log('[v0] Using mint address:', V1N3_MINT_PUBKEY.toBase58())
       console.log('[v0] Token account address:', tokenAccountAddress.toBase58())
 
       try {

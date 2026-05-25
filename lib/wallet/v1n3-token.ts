@@ -1,7 +1,8 @@
 import { PublicKey, Connection, clusterApiUrl, Transaction, sendAndConfirmTransaction, Keypair } from '@solana/web3.js'
-import { getAccount, getAssociatedTokenAddress, TOKEN_PROGRAM_ID, createAssociatedTokenAccountInstruction, ASSOCIATED_TOKEN_PROGRAM_ID, getOrCreateAssociatedTokenAccount, createTransferInstruction } from '@solana/spl-token'
+import { getAccount, getAssociatedTokenAddress, TOKEN_2022_PROGRAM_ID, createAssociatedTokenAccountInstruction, ASSOCIATED_TOKEN_PROGRAM_ID, getOrCreateAssociatedTokenAccount, createTransferInstruction } from '@solana/spl-token'
 
 // V1N3 Token Configuration
+// NOTE: V1N3 uses Token-2022 program, NOT the legacy Token program!
 export const V1N3_TOKEN = {
   name: 'V1n3',
   symbol: 'V1N3',
@@ -131,22 +132,37 @@ export const V1N3_IDL = {
   ],
 } as const
 
-// Get Associated Token Account address for V1N3
+// Get Associated Token Account address for V1N3 (using Token-2022)
 export async function getV1N3TokenAccountAddress(walletAddress: string): Promise<string> {
   const walletPubkey = new PublicKey(walletAddress)
-  const ata = await getAssociatedTokenAddress(V1N3_MINT_PUBKEY, walletPubkey)
+  const ata = await getAssociatedTokenAddress(
+    V1N3_MINT_PUBKEY, 
+    walletPubkey,
+    false, // allowOwnerOffCurve
+    TOKEN_2022_PROGRAM_ID // V1N3 uses Token-2022
+  )
+  console.log('[v0] getV1N3TokenAccountAddress:')
+  console.log('[v0]   Wallet:', walletAddress)
+  console.log('[v0]   Mint:', V1N3_TOKEN.mintAddress)
+  console.log('[v0]   Using Token-2022 Program')
+  console.log('[v0]   Computed ATA:', ata.toBase58())
   return ata.toBase58()
 }
 
-// Check if V1N3 ATA exists for a wallet
+// Check if V1N3 ATA exists for a wallet (using Token-2022)
 export async function hasV1N3TokenAccount(walletAddress: string): Promise<boolean> {
   try {
     const connection = getConnection()
     const walletPubkey = new PublicKey(walletAddress)
-    const ata = await getAssociatedTokenAddress(V1N3_MINT_PUBKEY, walletPubkey)
+    const ata = await getAssociatedTokenAddress(
+      V1N3_MINT_PUBKEY, 
+      walletPubkey,
+      false,
+      TOKEN_2022_PROGRAM_ID
+    )
     
     try {
-      await getAccount(connection, ata)
+      await getAccount(connection, ata, 'confirmed', TOKEN_2022_PROGRAM_ID)
       return true
     } catch {
       return false
@@ -156,7 +172,7 @@ export async function hasV1N3TokenAccount(walletAddress: string): Promise<boolea
   }
 }
 
-// Create ATA instruction (for building transactions)
+// Create ATA instruction (for building transactions) - Token-2022
 export function createV1N3ATAInstruction(
   payer: PublicKey,
   walletAddress: PublicKey,
@@ -167,12 +183,12 @@ export function createV1N3ATAInstruction(
     ataAddress,
     walletAddress,
     V1N3_MINT_PUBKEY,
-    TOKEN_PROGRAM_ID,
+    TOKEN_2022_PROGRAM_ID, // V1N3 uses Token-2022
     ASSOCIATED_TOKEN_PROGRAM_ID
   )
 }
 
-// Ensure ATA exists for a wallet (creates if needed) - requires payer keypair
+// Ensure ATA exists for a wallet (creates if needed) - requires payer keypair (Token-2022)
 export async function ensureV1N3TokenAccount(
   walletAddress: string,
   payerKeypair: Keypair
@@ -185,7 +201,11 @@ export async function ensureV1N3TokenAccount(
       connection,
       payerKeypair,
       V1N3_MINT_PUBKEY,
-      walletPubkey
+      walletPubkey,
+      false, // allowOwnerOffCurve
+      'confirmed',
+      undefined, // confirmOptions
+      TOKEN_2022_PROGRAM_ID // V1N3 uses Token-2022
     )
     
     // Check if it was just created by comparing creation time
@@ -287,6 +307,7 @@ export async function getV1N3Transactions(
 }
 
 // Transfer V1N3 tokens
+// Transfer V1N3 tokens (using Token-2022)
 export async function transferV1N3(
   fromKeypair: Keypair,
   toAddress: string,
@@ -297,16 +318,16 @@ export async function transferV1N3(
     const toPubkey = new PublicKey(toAddress)
     const fromPubkey = fromKeypair.publicKey
     
-    // Get source and destination ATAs
-    const fromAta = await getAssociatedTokenAddress(V1N3_MINT_PUBKEY, fromPubkey)
-    const toAta = await getAssociatedTokenAddress(V1N3_MINT_PUBKEY, toPubkey)
+    // Get source and destination ATAs (Token-2022)
+    const fromAta = await getAssociatedTokenAddress(V1N3_MINT_PUBKEY, fromPubkey, false, TOKEN_2022_PROGRAM_ID)
+    const toAta = await getAssociatedTokenAddress(V1N3_MINT_PUBKEY, toPubkey, false, TOKEN_2022_PROGRAM_ID)
     
     // Build transaction
     const transaction = new Transaction()
     
     // Check if destination ATA exists, create if not
     try {
-      await getAccount(connection, toAta)
+      await getAccount(connection, toAta, 'confirmed', TOKEN_2022_PROGRAM_ID)
     } catch {
       // ATA doesn't exist, add instruction to create it
       transaction.add(
@@ -315,7 +336,7 @@ export async function transferV1N3(
           toAta, // ata
           toPubkey, // owner
           V1N3_MINT_PUBKEY,
-          TOKEN_PROGRAM_ID,
+          TOKEN_2022_PROGRAM_ID, // V1N3 uses Token-2022
           ASSOCIATED_TOKEN_PROGRAM_ID
         )
       )
@@ -330,7 +351,7 @@ export async function transferV1N3(
         fromPubkey,
         amountInLamports,
         [],
-        TOKEN_PROGRAM_ID
+        TOKEN_2022_PROGRAM_ID // V1N3 uses Token-2022
       )
     )
     
