@@ -85,10 +85,6 @@ export async function GET() {
       .eq('id', user.id)
       .single()
     
-    console.log('[v0] GET /api/wallet/ensure-ata:')
-    console.log('[v0]   User ID:', user.id)
-    console.log('[v0]   Profile wallet_address:', profile?.wallet_address)
-    
     if (profileError || !profile?.wallet_address) {
       return NextResponse.json({ error: 'Wallet not found' }, { status: 404 })
     }

@@ -41,19 +41,13 @@ export function useV1N3Balance(walletAddress?: string | null): UseV1N3BalanceRes
         TOKEN_2022_PROGRAM_ID // V1N3 uses Token-2022
       )
 
-      console.log('[v0] Fetching V1N3 balance for:', walletAddress)
-      console.log('[v0] Using mint address:', V1N3_MINT_PUBKEY.toBase58())
-      console.log('[v0] Token account address (Token-2022):', tokenAccountAddress.toBase58())
-
       try {
         const tokenAccount = await getAccount(devnetConnection, tokenAccountAddress, 'confirmed', TOKEN_2022_PROGRAM_ID)
         // Convert from lamports (raw amount) to token amount
         const tokenBalance = Number(tokenAccount.amount) / Math.pow(10, V1N3_TOKEN.decimals)
-        console.log('[v0] V1N3 balance:', tokenBalance)
         setBalance(tokenBalance)
       } catch (err) {
         // Token account doesn't exist yet - balance is 0
-        console.log('[v0] Token account not found, balance is 0:', err)
         setBalance(0)
       }
     } catch (err) {
@@ -93,14 +87,13 @@ export function useV1N3Balance(walletAddress?: string | null): UseV1N3BalanceRes
             if (accountInfo.data.length >= 72) {
               const amount = accountInfo.data.readBigUInt64LE(64)
               const tokenBalance = Number(amount) / Math.pow(10, V1N3_TOKEN.decimals)
-              console.log('[v0] V1N3 balance updated via subscription:', tokenBalance)
               setBalance(tokenBalance)
             }
           },
           'confirmed'
         )
       } catch (err) {
-        console.error('[v0] Error subscribing to account changes:', err)
+        console.error('Error subscribing to account changes:', err)
       }
     }
 
@@ -137,10 +130,9 @@ export function useSOLBalance(walletAddress?: string | null) {
       setLoading(true)
       const walletPubkey = new PublicKey(walletAddress)
       const lamports = await devnetConnection.getBalance(walletPubkey)
-      console.log('[v0] SOL balance:', lamports / 1e9)
       setBalance(lamports / 1e9)
     } catch (err) {
-      console.error('[v0] Error fetching SOL balance:', err)
+      console.error('Error fetching SOL balance:', err)
       setBalance(0)
     } finally {
       setLoading(false)
