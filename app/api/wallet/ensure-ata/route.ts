@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getCustodialKeypair } from '@/lib/wallet/mint'
 import { ensureV1N3TokenAccount, hasV1N3TokenAccount, getV1N3TokenAccountAddress } from '@/lib/wallet/v1n3-token'
 
@@ -96,13 +97,21 @@ export async function GET() {
     const hasATA = await hasV1N3TokenAccount(profile.wallet_address)
     const ataAddress = await getV1N3TokenAccountAddress(profile.wallet_address)
     
-    console.log('[v0]   hasATA:', hasATA)
-    console.log('[v0]   ataAddress:', ataAddress)
+    // Check wallet origin (minted = custodial, null = external)
+    const admin = createAdminClient()
+    const { data: walletData } = await admin
+      .from('user_wallets')
+      .select('origin')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    
+    const origin = walletData?.origin || 'external'
     
     return NextResponse.json({
       hasATA,
       ataAddress,
       walletAddress: profile.wallet_address,
+      origin,
     })
   } catch (error) {
     console.error('[v0] Error checking ATA:', error)
