@@ -69,6 +69,7 @@ export function DashboardWallet({
   const [sendTo, setSendTo] = useState('')
   const [sendAmount, setSendAmount] = useState('')
   const [sendMemo, setSendMemo] = useState('')
+  const [sendToken, setSendToken] = useState<'V1N3' | 'SOL'>('V1N3')
   const [sendLoading, setSendLoading] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
   const [sendSuccess, setSendSuccess] = useState(false)
@@ -283,6 +284,12 @@ export function DashboardWallet({
         throw new Error('Insufficient balance')
       }
       
+      // Check balance based on selected token
+      const checkBalance = sendToken === 'SOL' ? solBalance : displayBalance
+      if (amount > checkBalance) {
+        throw new Error(`Insufficient ${sendToken} balance`)
+      }
+      
       // Validate recipient address
       let recipientPubkey: PublicKey
       try {
@@ -300,6 +307,7 @@ export function DashboardWallet({
             toAddress: sendTo,
             amount,
             memo: sendMemo || null,
+            token: sendToken,
           }),
         })
         
@@ -314,6 +322,7 @@ export function DashboardWallet({
         setSendTo('')
         setSendAmount('')
         setSendMemo('')
+        setSendToken('V1N3')
         await handleRefresh()
         return
       }
@@ -631,40 +640,42 @@ export function DashboardWallet({
             )}
           </div>
 
-          {/* External Wallet Connection */}
-          <div className="bg-background border border-border rounded-[2px] p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Link2 className="w-4 h-4 text-accent" />
-              <span className="mono-xs text-[9px] text-muted-foreground tracking-[0.18em]">/ EXTERNAL WALLET</span>
-            </div>
-            {connected && publicKey ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <p className="font-mono text-[11px] text-foreground truncate flex-1">
-                    {publicKey.toBase58().slice(0, 8)}...{publicKey.toBase58().slice(-8)}
-                  </p>
-                  <button
-                    onClick={() => disconnect()}
-                    className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
-                    title="Disconnect"
-                  >
-                    <Unlink className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                  <span className="mono-xs text-[10px] text-primary">Connected</span>
-                </div>
+          {/* External Wallet Connection - only show for external wallet users */}
+          {walletOrigin === 'external' && (
+            <div className="bg-background border border-border rounded-[2px] p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Link2 className="w-4 h-4 text-accent" />
+                <span className="mono-xs text-[9px] text-muted-foreground tracking-[0.18em]">/ EXTERNAL WALLET</span>
               </div>
-            ) : (
-              <button
-                onClick={handleConnectWallet}
-                className="w-full py-2 px-3 bg-primary/10 border border-primary/30 rounded-[2px] hover:bg-primary/20 transition-colors"
-              >
-                <span className="mono-xs text-[10px] text-primary">CONNECT WALLET</span>
-              </button>
-            )}
-          </div>
+              {connected && publicKey ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <p className="font-mono text-[11px] text-foreground truncate flex-1">
+                      {publicKey.toBase58().slice(0, 8)}...{publicKey.toBase58().slice(-8)}
+                    </p>
+                    <button
+                      onClick={() => disconnect()}
+                      className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
+                      title="Disconnect"
+                    >
+                      <Unlink className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                    <span className="mono-xs text-[10px] text-primary">Connected</span>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={handleConnectWallet}
+                  className="w-full py-2 px-3 bg-primary/10 border border-primary/30 rounded-[2px] hover:bg-primary/20 transition-colors"
+                >
+                  <span className="mono-xs text-[10px] text-primary">CONNECT WALLET</span>
+                </button>
+              )}
+            </div>
+          )}
         </motion.div>
       </div>
 
@@ -892,7 +903,7 @@ export function DashboardWallet({
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-mono text-lg text-foreground">Send V1N3</h3>
+                <h3 className="font-mono text-lg text-foreground">Send {sendToken}</h3>
                 <button 
                   onClick={() => !sendLoading && setShowSendModal(false)}
                   className="p-1 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
@@ -949,6 +960,39 @@ export function DashboardWallet({
               ) : (
                 <>
                   <div className="space-y-4 mb-4">
+                    {/* Token Selection */}
+                    <div>
+                      <label className="mono-xs text-[9px] text-muted-foreground tracking-[0.18em] block mb-2">
+                        TOKEN
+                      </label>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSendToken('V1N3')}
+                          disabled={sendLoading}
+                          className={`flex-1 py-2 px-3 rounded-[2px] mono-xs text-[11px] transition-colors ${
+                            sendToken === 'V1N3'
+                              ? 'bg-primary text-background'
+                              : 'bg-secondary/50 border border-border text-foreground hover:bg-secondary'
+                          }`}
+                        >
+                          V1N3
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSendToken('SOL')}
+                          disabled={sendLoading}
+                          className={`flex-1 py-2 px-3 rounded-[2px] mono-xs text-[11px] transition-colors ${
+                            sendToken === 'SOL'
+                              ? 'bg-primary text-background'
+                              : 'bg-secondary/50 border border-border text-foreground hover:bg-secondary'
+                          }`}
+                        >
+                          SOL
+                        </button>
+                      </div>
+                    </div>
+                    
                     {/* Recipient */}
                     <div>
                       <label className="mono-xs text-[9px] text-muted-foreground tracking-[0.18em] block mb-2">
@@ -981,10 +1025,10 @@ export function DashboardWallet({
                           disabled={sendLoading}
                         />
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                          <span className="mono-xs text-[10px] text-muted-foreground">V1N3</span>
+                          <span className="mono-xs text-[10px] text-muted-foreground">{sendToken}</span>
                           <button
                             type="button"
-                            onClick={() => setSendAmount(displayBalance.toString())}
+                            onClick={() => setSendAmount((sendToken === 'SOL' ? solBalance : displayBalance).toString())}
                             className="mono-xs text-[9px] text-primary hover:text-primary/80"
                             disabled={sendLoading}
                           >
@@ -993,7 +1037,9 @@ export function DashboardWallet({
                         </div>
                       </div>
                       <p className="mono-xs text-[10px] text-muted-foreground mt-1">
-                        Available: {formatV1N3Balance(displayBalance)} V1N3
+                        Available: {sendToken === 'SOL' 
+                          ? solBalance.toFixed(6) 
+                          : formatV1N3Balance(displayBalance)} {sendToken}
                       </p>
                     </div>
                     
@@ -1035,7 +1081,7 @@ export function DashboardWallet({
                     ) : (
                       <>
                         <Send className="w-4 h-4" />
-                        SEND V1N3
+                        SEND {sendToken}
                       </>
                     )}
                   </button>
