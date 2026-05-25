@@ -16,6 +16,7 @@ import {
   Zap,
 } from 'lucide-react'
 import Link from 'next/link'
+import { useV1N3Balance } from '@/lib/wallet/use-v1n3-balance'
 
 interface DashboardOverviewProps {
   profile: {
@@ -34,6 +35,10 @@ interface DashboardOverviewProps {
 }
 
 export function DashboardOverview({ profile }: DashboardOverviewProps) {
+  // Fetch on-chain V1N3 balance
+  const { balance: onChainBalance, loading: balanceLoading } = useV1N3Balance(profile.walletAddress)
+  const displayBalance = balanceLoading ? profile.v1n3Balance : onChainBalance
+  
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -121,8 +126,8 @@ export function DashboardOverview({ profile }: DashboardOverviewProps) {
               <p className="mono-xs text-muted-foreground/70 text-[9px] mb-1.5 tracking-[0.18em]">/ V1N3 BALANCE</p>
               <div className="flex items-baseline gap-2">
                 <span className="font-mono text-2xl lg:text-3xl text-foreground tracking-tight">
-                  {Number(profile.v1n3Balance).toLocaleString(undefined, {
-                    minimumFractionDigits: profile.v1n3Balance < 1 ? 4 : 2,
+                  {Number(displayBalance).toLocaleString(undefined, {
+                    minimumFractionDigits: displayBalance < 1 ? 4 : 2,
                     maximumFractionDigits: 4,
                   })}
                 </span>

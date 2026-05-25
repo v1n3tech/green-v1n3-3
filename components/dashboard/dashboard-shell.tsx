@@ -33,6 +33,7 @@ import {
 import { signOut } from '@/lib/auth/actions'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { NotificationDropdown } from '@/components/notifications/notification-dropdown'
+import { useV1N3Balance } from '@/lib/wallet/use-v1n3-balance'
 
 export interface DashboardProfile {
   id: string
@@ -110,6 +111,10 @@ export function DashboardShell({
   const [mobileOpen, setMobileOpen] = useState(false)
   const [time, setTime] = useState('')
   const pathname = usePathname()
+  
+  // Fetch on-chain V1N3 balance
+  const { balance: onChainBalance, loading: balanceLoading } = useV1N3Balance(profile.walletAddress)
+  const displayBalance = balanceLoading ? (profile.v1n3Balance ?? 0) : onChainBalance
 
   useEffect(() => {
     const updateTime = () => {
@@ -395,7 +400,7 @@ export function DashboardShell({
                 <span className="mono-xs text-muted-foreground text-[10px]">SOLANA</span>
                 <span className="text-border-strong/50">/</span>
                 <span className="mono-xs text-foreground/80 text-[10px]">
-                  V1N3: {profile.v1n3Balance?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }) ?? '0.00'}
+                  V1N3: {displayBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
                 </span>
                 <span className="mono-xs text-primary text-[10px]">+2.4%</span>
               </div>
