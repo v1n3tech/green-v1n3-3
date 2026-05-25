@@ -84,8 +84,8 @@ export function DashboardWallet({
   const { balance: onChainBalance, loading: balanceLoading, refetch: refetchBalance } = useV1N3Balance(walletAddress)
   const { balance: solBalance, loading: solLoading, refetch: refetchSol } = useSOLBalance(walletAddress)
   
-  // Use on-chain balance if available, otherwise fall back to DB balance
-  const displayBalance = onChainBalance > 0 ? onChainBalance : dbBalance
+  // Use on-chain balance (it's accurate even if 0), only fall back to DB if blockchain fails
+  const displayBalance = balanceLoading ? dbBalance : onChainBalance
   const ngnValue = v1n3ToNGN(displayBalance)
 
   // Check ATA status on mount
@@ -699,7 +699,7 @@ export function DashboardWallet({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-background border border-border rounded-[2px] p-6 max-w-md w-full"
+              className="bg-background border border-border rounded-[2px] p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
@@ -713,7 +713,7 @@ export function DashboardWallet({
               </div>
               
               {/* ATA Status */}
-              {hasATA === false && (
+              {hasATA === false && !ataAddress && (
                 <div className="bg-orange/10 border border-orange/30 rounded-[2px] p-4 mb-4">
                   <div className="flex gap-3">
                     <AlertCircle className="w-5 h-5 text-orange shrink-0 mt-0.5" />
@@ -745,7 +745,7 @@ export function DashboardWallet({
                 </div>
               )}
               
-              {hasATA === true && (
+              {(hasATA === true || ataAddress) && (
                 <div className="bg-primary/10 border border-primary/30 rounded-[2px] p-3 mb-4">
                   <div className="flex gap-2">
                     <Check className="w-4 h-4 text-primary shrink-0" />
@@ -807,7 +807,7 @@ export function DashboardWallet({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-background border border-border rounded-[2px] p-6 max-w-md w-full"
+              className="bg-background border border-border rounded-[2px] p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
