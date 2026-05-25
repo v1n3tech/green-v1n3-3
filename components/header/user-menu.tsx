@@ -255,7 +255,7 @@ export function UserMenu({ profile, onSignOut }: UserMenuProps) {
                   onClick={() => setOpen(false)}
                 />
                 <MenuLink
-                  href="/wallet"
+                  href="/dashboard/wallet"
                   index="03"
                   icon={<WalletIcon className="w-3.5 h-3.5" />}
                   label="WALLET"

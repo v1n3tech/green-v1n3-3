@@ -1,12 +1,16 @@
 import "server-only"
-import { Keypair } from "@solana/web3.js"
+import { Keypair, Connection, clusterApiUrl } from "@solana/web3.js"
 import bs58 from "bs58"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { encrypt, decrypt } from "@/lib/wallet/encryption"
+import { getOrCreateAssociatedTokenAccount } from "@solana/spl-token"
+import { V1N3_MINT_PUBKEY, SOLANA_NETWORK } from "@/lib/wallet/v1n3-token"
 
 export interface MintResult {
   publicKey: string
   alreadyExisted: boolean
+  ataAddress?: string
+  ataCreated?: boolean
 }
 
 /**
@@ -93,7 +97,33 @@ export async function ensureCustodialWallet(
     )
   }
 
-  return { publicKey, alreadyExisted: false }
+  // Try to create V1N3 ATA for the new wallet (requires SOL for fees)
+  // This is a best-effort operation - if it fails, the user can create it later
+  let ataAddress: string | undefined
+  let ataCreated = false
+  
+  try {
+    const connection = new Connection(clusterApiUrl(SOLANA_NETWORK), 'confirmed')
+    const walletBalance = await connection.getBalance(keypair.publicKey)
+    
+    // Only attempt ATA creation if wallet has some SOL (at least 0.002 SOL for rent + fees)
+    if (walletBalance >= 2_000_000) {
+      const ata = await getOrCreateAssociatedTokenAccount(
+        connection,
+        keypair, // payer
+        V1N3_MINT_PUBKEY,
+        keypair.publicKey // owner
+      )
+      ataAddress = ata.address.toBase58()
+      ataCreated = true
+      console.log(`[v0] mint: Created V1N3 ATA ${ataAddress} for wallet ${publicKey}`)
+    }
+  } catch (ataErr) {
+    // ATA creation failed - this is expected if wallet has no SOL yet
+    console.log(`[v0] mint: ATA creation skipped (will be created when wallet has SOL): ${ataErr}`)
+  }
+
+  return { publicKey, alreadyExisted: false, ataAddress, ataCreated }
 }
 
 /**
