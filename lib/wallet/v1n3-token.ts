@@ -27,20 +27,22 @@ export function getConnection(): Connection {
   return new Connection(SOLANA_RPC_ENDPOINT, 'confirmed')
 }
 
-// Get V1N3 token balance for a wallet address
+// Get V1N3 token balance for a wallet address (Token-2022)
 export async function getV1N3Balance(walletAddress: string): Promise<number> {
   try {
     const connection = getConnection()
     const walletPubkey = new PublicKey(walletAddress)
     
-    // Get the associated token account for V1N3
+    // Get the associated token account for V1N3 (Token-2022)
     const tokenAccountAddress = await getAssociatedTokenAddress(
       V1N3_MINT_PUBKEY,
-      walletPubkey
+      walletPubkey,
+      false,
+      TOKEN_2022_PROGRAM_ID
     )
     
     try {
-      const tokenAccount = await getAccount(connection, tokenAccountAddress)
+      const tokenAccount = await getAccount(connection, tokenAccountAddress, 'confirmed', TOKEN_2022_PROGRAM_ID)
       // Convert from lamports (raw amount) to token amount
       const balance = Number(tokenAccount.amount) / Math.pow(10, V1N3_TOKEN.decimals)
       return balance
@@ -138,14 +140,9 @@ export async function getV1N3TokenAccountAddress(walletAddress: string): Promise
   const ata = await getAssociatedTokenAddress(
     V1N3_MINT_PUBKEY, 
     walletPubkey,
-    false, // allowOwnerOffCurve
-    TOKEN_2022_PROGRAM_ID // V1N3 uses Token-2022
+    false,
+    TOKEN_2022_PROGRAM_ID
   )
-  console.log('[v0] getV1N3TokenAccountAddress:')
-  console.log('[v0]   Wallet:', walletAddress)
-  console.log('[v0]   Mint:', V1N3_TOKEN.mintAddress)
-  console.log('[v0]   Using Token-2022 Program')
-  console.log('[v0]   Computed ATA:', ata.toBase58())
   return ata.toBase58()
 }
 
