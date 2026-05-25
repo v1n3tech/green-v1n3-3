@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { PublicKey, Connection } from '@solana/web3.js'
-import { getAccount, getAssociatedTokenAddress } from '@solana/spl-token'
+import { getAccount, getAssociatedTokenAddress, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token'
 import { V1N3_MINT_PUBKEY, V1N3_TOKEN, SOLANA_RPC_ENDPOINT } from './v1n3-token'
 
 // Create a dedicated devnet connection for V1N3
@@ -33,18 +33,20 @@ export function useV1N3Balance(walletAddress?: string | null): UseV1N3BalanceRes
 
       const walletPubkey = new PublicKey(walletAddress)
       
-      // Get the associated token account for V1N3
+      // Get the associated token account for V1N3 (using Token-2022)
       const tokenAccountAddress = await getAssociatedTokenAddress(
         V1N3_MINT_PUBKEY,
-        walletPubkey
+        walletPubkey,
+        false, // allowOwnerOffCurve
+        TOKEN_2022_PROGRAM_ID // V1N3 uses Token-2022
       )
 
       console.log('[v0] Fetching V1N3 balance for:', walletAddress)
       console.log('[v0] Using mint address:', V1N3_MINT_PUBKEY.toBase58())
-      console.log('[v0] Token account address:', tokenAccountAddress.toBase58())
+      console.log('[v0] Token account address (Token-2022):', tokenAccountAddress.toBase58())
 
       try {
-        const tokenAccount = await getAccount(devnetConnection, tokenAccountAddress)
+        const tokenAccount = await getAccount(devnetConnection, tokenAccountAddress, 'confirmed', TOKEN_2022_PROGRAM_ID)
         // Convert from lamports (raw amount) to token amount
         const tokenBalance = Number(tokenAccount.amount) / Math.pow(10, V1N3_TOKEN.decimals)
         console.log('[v0] V1N3 balance:', tokenBalance)
@@ -78,7 +80,9 @@ export function useV1N3Balance(walletAddress?: string | null): UseV1N3BalanceRes
         const walletPubkey = new PublicKey(walletAddress)
         const tokenAccountAddress = await getAssociatedTokenAddress(
           V1N3_MINT_PUBKEY,
-          walletPubkey
+          walletPubkey,
+          false,
+          TOKEN_2022_PROGRAM_ID
         )
 
         subscriptionId = devnetConnection.onAccountChange(
