@@ -12,7 +12,7 @@ import {
   TorusWalletAdapter,
   LedgerWalletAdapter,
 } from "@solana/wallet-adapter-wallets"
-import { clusterApiUrl } from "@solana/web3.js"
+import { SOLANA_RPC_ENDPOINT } from "@/lib/wallet/v1n3-token"
 
 import "@solana/wallet-adapter-react-ui/styles.css"
 
@@ -21,7 +21,8 @@ interface WalletProviderProps {
 }
 
 export function WalletProvider({ children }: WalletProviderProps) {
-  const endpoint = useMemo(() => clusterApiUrl("mainnet-beta"), [])
+  // Use devnet endpoint for V1N3 token
+  const endpoint = useMemo(() => SOLANA_RPC_ENDPOINT, [])
 
   const wallets = useMemo(
     () => [
