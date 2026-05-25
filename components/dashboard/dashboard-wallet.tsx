@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useWallet } from '@solana/wallet-adapter-react'
+import { useWallet, useConnection } from '@solana/wallet-adapter-react'
 import { useWalletModal } from '@solana/wallet-adapter-react-ui'
+import { PublicKey, Transaction as SolanaTransaction, Connection } from '@solana/web3.js'
+import { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, createTransferInstruction, getAccount, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import {
   Wallet,
   ArrowUpRight,
@@ -26,7 +28,7 @@ import {
   AlertCircle,
   X,
 } from 'lucide-react'
-import { V1N3_TOKEN, getExplorerUrl, formatV1N3Balance, formatNGN, v1n3ToNGN, SOLANA_NETWORK } from '@/lib/wallet/v1n3-token'
+import { V1N3_TOKEN, V1N3_MINT_PUBKEY, getExplorerUrl, formatV1N3Balance, formatNGN, v1n3ToNGN, SOLANA_NETWORK, SOLANA_RPC_ENDPOINT } from '@/lib/wallet/v1n3-token'
 import { useV1N3Balance, useSOLBalance } from '@/lib/wallet/use-v1n3-balance'
 import { createClient } from '@/lib/supabase/client'
 
@@ -70,6 +72,7 @@ export function DashboardWallet({
   const [sendLoading, setSendLoading] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
   const [sendSuccess, setSendSuccess] = useState(false)
+  const [sendSignature, setSendSignature] = useState<string | null>(null)
   
   // ATA state
   const [hasATA, setHasATA] = useState<boolean | null>(null)
@@ -77,8 +80,11 @@ export function DashboardWallet({
   const [creatingATA, setCreatingATA] = useState(false)
   
   // Solana wallet adapter hooks
-  const { publicKey, connected, disconnect } = useWallet()
+  const { publicKey, connected, disconnect, signTransaction } = useWallet()
   const { setVisible } = useWalletModal()
+  
+  // Create devnet connection for V1N3 (Token-2022)
+  const devnetConnection = new Connection(SOLANA_RPC_ENDPOINT, 'confirmed')
   
   // Real-time V1N3 balance from blockchain
   const { balance: onChainBalance, loading: balanceLoading, refetch: refetchBalance } = useV1N3Balance(walletAddress)
@@ -261,8 +267,15 @@ export function DashboardWallet({
   const handleSend = async () => {
     if (!walletAddress || !sendTo || !sendAmount) return
     
+    // Check if external wallet is connected for signing
+    if (!connected || !publicKey || !signTransaction) {
+      setSendError('Please connect your wallet to send V1N3')
+      return
+    }
+    
     setSendLoading(true)
     setSendError(null)
+    setSendSignature(null)
     
     try {
       const amount = parseFloat(sendAmount)
@@ -274,28 +287,80 @@ export function DashboardWallet({
         throw new Error('Insufficient balance')
       }
       
-      // Validate recipient address (basic Solana address check)
-      if (sendTo.length < 32 || sendTo.length > 44) {
+      // Validate recipient address
+      let recipientPubkey: PublicKey
+      try {
+        recipientPubkey = new PublicKey(sendTo)
+      } catch {
         throw new Error('Invalid Solana address')
       }
       
-      // Call the send API endpoint
-      const response = await fetch('/api/wallet/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          toAddress: sendTo,
-          amount,
-          memo: sendMemo || null,
-        }),
-      })
+      // Get source and destination ATAs (Token-2022)
+      const fromAta = await getAssociatedTokenAddress(
+        V1N3_MINT_PUBKEY,
+        publicKey,
+        false,
+        TOKEN_2022_PROGRAM_ID
+      )
+      const toAta = await getAssociatedTokenAddress(
+        V1N3_MINT_PUBKEY,
+        recipientPubkey,
+        false,
+        TOKEN_2022_PROGRAM_ID
+      )
       
-      const result = await response.json()
+      // Build transaction
+      const transaction = new SolanaTransaction()
       
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to send')
+      // Check if destination ATA exists, create if not
+      try {
+        await getAccount(devnetConnection, toAta, 'confirmed', TOKEN_2022_PROGRAM_ID)
+      } catch {
+        // ATA doesn't exist, add instruction to create it
+        transaction.add(
+          createAssociatedTokenAccountInstruction(
+            publicKey, // payer
+            toAta, // ata
+            recipientPubkey, // owner
+            V1N3_MINT_PUBKEY,
+            TOKEN_2022_PROGRAM_ID,
+            ASSOCIATED_TOKEN_PROGRAM_ID
+          )
+        )
       }
       
+      // Add transfer instruction
+      const amountInLamports = BigInt(Math.floor(amount * Math.pow(10, V1N3_TOKEN.decimals)))
+      transaction.add(
+        createTransferInstruction(
+          fromAta,
+          toAta,
+          publicKey,
+          amountInLamports,
+          [],
+          TOKEN_2022_PROGRAM_ID
+        )
+      )
+      
+      // Get recent blockhash
+      const { blockhash, lastValidBlockHeight } = await devnetConnection.getLatestBlockhash()
+      transaction.recentBlockhash = blockhash
+      transaction.feePayer = publicKey
+      
+      // Sign with wallet adapter
+      const signedTx = await signTransaction(transaction)
+      
+      // Send transaction
+      const signature = await devnetConnection.sendRawTransaction(signedTx.serialize())
+      
+      // Confirm transaction
+      await devnetConnection.confirmTransaction({
+        signature,
+        blockhash,
+        lastValidBlockHeight,
+      })
+      
+      setSendSignature(signature)
       setSendSuccess(true)
       setSendTo('')
       setSendAmount('')
@@ -304,12 +369,8 @@ export function DashboardWallet({
       // Refresh data
       await handleRefresh()
       
-      setTimeout(() => {
-        setSendSuccess(false)
-        setShowSendModal(false)
-      }, 2000)
-      
     } catch (err) {
+      console.error('[v0] Send error:', err)
       setSendError(err instanceof Error ? err.message : 'Failed to send')
     } finally {
       setSendLoading(false)
@@ -750,14 +811,14 @@ export function DashboardWallet({
                   <div className="flex gap-2">
                     <Check className="w-4 h-4 text-primary shrink-0" />
                     <p className="mono-xs text-[10px] text-primary">
-                      V1N3 token account is ready to receive tokens
+                      Ready to receive V1N3 tokens
                     </p>
                   </div>
                 </div>
               )}
               
               <p className="mono-xs text-[11px] text-muted-foreground mb-4">
-                Share this address to receive V1N3 tokens. Only send V1N3 or SOL to this address.
+                Share this address to receive V1N3 or SOL.
               </p>
               
               <div className="bg-secondary/50 border border-border rounded-[2px] p-4 mb-4">
@@ -765,20 +826,10 @@ export function DashboardWallet({
                 <p className="font-mono text-xs text-foreground break-all select-all">{walletAddress}</p>
               </div>
               
-              {ataAddress && (
-                <div className="bg-secondary/50 border border-border rounded-[2px] p-4 mb-4">
-                  <p className="mono-xs text-[9px] text-muted-foreground mb-2">V1N3 TOKEN ACCOUNT</p>
-                  <p className="font-mono text-[10px] text-foreground break-all select-all">{ataAddress}</p>
-                </div>
-              )}
-              
               <div className="bg-orange/10 border border-orange/30 rounded-[2px] p-3 mb-4">
-                <div className="flex gap-2">
-                  <AlertCircle className="w-4 h-4 text-orange shrink-0 mt-0.5" />
-                  <p className="mono-xs text-[10px] text-orange">
-                    This is a Solana {SOLANA_NETWORK} address. Only send Solana-based tokens to this address.
-                  </p>
-                </div>
+                <p className="mono-xs text-[10px] text-orange">
+                  Solana {SOLANA_NETWORK} address. Only send Solana-based tokens.
+                </p>
               </div>
               
               <button
@@ -826,8 +877,44 @@ export function DashboardWallet({
                   <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
                     <Check className="w-8 h-8 text-primary" />
                   </div>
-                  <p className="font-mono text-lg text-foreground mb-2">Transaction Submitted</p>
-                  <p className="mono-xs text-muted-foreground">Your transfer is being processed</p>
+                  <p className="font-mono text-lg text-foreground mb-2">Transaction Successful</p>
+                  <p className="mono-xs text-muted-foreground mb-4">Your V1N3 has been sent</p>
+                  {sendSignature && (
+                    <a
+                      href={getExplorerUrl(sendSignature, 'tx')}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-primary hover:text-primary/80 mono-xs text-[11px]"
+                    >
+                      View on Explorer
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                  <button
+                    onClick={() => {
+                      setSendSuccess(false)
+                      setSendSignature(null)
+                      setShowSendModal(false)
+                    }}
+                    className="w-full mt-6 py-2.5 bg-primary text-background mono-xs text-[11px] rounded-[2px] hover:bg-primary/90 transition-colors"
+                  >
+                    CLOSE
+                  </button>
+                </div>
+              ) : !connected ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 rounded-full bg-muted/20 flex items-center justify-center mx-auto mb-4">
+                    <Wallet className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <p className="font-mono text-lg text-foreground mb-2">Connect Wallet</p>
+                  <p className="mono-xs text-muted-foreground mb-4">Connect your wallet to send V1N3</p>
+                  <button
+                    onClick={handleConnectWallet}
+                    className="w-full py-2.5 bg-primary text-background mono-xs text-[11px] rounded-[2px] hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Link2 className="w-4 h-4" />
+                    CONNECT WALLET
+                  </button>
                 </div>
               ) : (
                 <>
