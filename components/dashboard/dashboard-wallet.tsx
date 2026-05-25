@@ -71,6 +71,11 @@ export function DashboardWallet({
   const [sendError, setSendError] = useState<string | null>(null)
   const [sendSuccess, setSendSuccess] = useState(false)
   
+  // ATA state
+  const [hasATA, setHasATA] = useState<boolean | null>(null)
+  const [ataAddress, setAtaAddress] = useState<string | null>(null)
+  const [creatingATA, setCreatingATA] = useState(false)
+  
   // Solana wallet adapter hooks
   const { publicKey, connected, disconnect } = useWallet()
   const { setVisible } = useWalletModal()
@@ -83,30 +88,102 @@ export function DashboardWallet({
   const displayBalance = onChainBalance > 0 ? onChainBalance : dbBalance
   const ngnValue = v1n3ToNGN(displayBalance)
 
-  // Fetch transactions from database
+  // Check ATA status on mount
+  useEffect(() => {
+    const checkATA = async () => {
+      if (!walletAddress) return
+      try {
+        const response = await fetch('/api/wallet/ensure-ata')
+        if (response.ok) {
+          const data = await response.json()
+          setHasATA(data.hasATA)
+          setAtaAddress(data.ataAddress)
+        }
+      } catch (err) {
+        console.error('[v0] Error checking ATA:', err)
+      }
+    }
+    checkATA()
+  }, [walletAddress])
+
+  // Create ATA if needed
+  const handleCreateATA = async () => {
+    setCreatingATA(true)
+    try {
+      const response = await fetch('/api/wallet/ensure-ata', { method: 'POST' })
+      const data = await response.json()
+      if (response.ok) {
+        setHasATA(true)
+        setAtaAddress(data.ataAddress)
+      } else {
+        console.error('[v0] Failed to create ATA:', data.error)
+      }
+    } catch (err) {
+      console.error('[v0] Error creating ATA:', err)
+    } finally {
+      setCreatingATA(false)
+    }
+  }
+
+  // Fetch transactions from API (includes both blockchain and database)
   const fetchTransactions = useCallback(async () => {
     if (!walletAddress) return
     
     setLoadingTx(true)
-    const supabase = createClient()
     
-    const { data, error } = await supabase
-      .from('wallet_transactions')
-      .select('*')
-      .or(`from_address.eq.${walletAddress},to_address.eq.${walletAddress}`)
-      .order('created_at', { ascending: false })
-      .limit(20)
-    
-    if (error) {
-      console.error('[v0] Error fetching transactions:', error)
-    } else {
-      // Map the data to determine if it's send or receive for the current user
-      const mapped = (data || []).map((tx: Record<string, unknown>) => ({
-        ...tx,
-        type: tx.from_address === walletAddress ? 'send' : 'receive',
-      })) as Transaction[]
-      setTransactions(mapped)
+    try {
+      const response = await fetch('/api/wallet/transactions')
+      if (response.ok) {
+        const data = await response.json()
+        
+        // Map API response to Transaction interface
+        const mapped = (data.transactions || []).map((tx: {
+          id: string
+          signature: string | null
+          type: string
+          status: string
+          tokenSymbol: string
+          amount: number
+          fromAddress: string
+          toAddress: string
+          timestamp: number
+          memo: string | null
+        }) => ({
+          id: tx.id,
+          type: tx.type as 'send' | 'receive',
+          amount: tx.amount,
+          token_symbol: tx.tokenSymbol,
+          from_address: tx.fromAddress,
+          to_address: tx.toAddress,
+          created_at: new Date(tx.timestamp).toISOString(),
+          status: tx.status as 'confirmed' | 'pending' | 'failed',
+          signature: tx.signature,
+          memo: tx.memo,
+        })) as Transaction[]
+        
+        setTransactions(mapped)
+      } else {
+        // Fallback to database only
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from('wallet_transactions')
+          .select('*')
+          .or(`from_address.eq.${walletAddress},to_address.eq.${walletAddress}`)
+          .order('created_at', { ascending: false })
+          .limit(20)
+        
+        if (!error && data) {
+          const mapped = data.map((tx: Record<string, unknown>) => ({
+            ...tx,
+            type: tx.from_address === walletAddress ? 'send' : 'receive',
+          })) as Transaction[]
+          setTransactions(mapped)
+        }
+      }
+    } catch (err) {
+      console.error('[v0] Error fetching transactions:', err)
     }
+    
     setLoadingTx(false)
   }, [walletAddress])
 
@@ -202,30 +279,22 @@ export function DashboardWallet({
         throw new Error('Invalid Solana address')
       }
       
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) throw new Error('Not authenticated')
-      
-      // Create transaction record
-      const { error: txError } = await supabase
-        .from('wallet_transactions')
-        .insert({
-          user_id: user.id,
-          type: 'send',
-          status: 'pending',
-          token_symbol: 'V1N3',
-          token_mint: V1N3_TOKEN.mintAddress,
+      // Call the send API endpoint
+      const response = await fetch('/api/wallet/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          toAddress: sendTo,
           amount,
-          from_address: walletAddress,
-          to_address: sendTo,
           memo: sendMemo || null,
-        })
+        }),
+      })
       
-      if (txError) throw txError
+      const result = await response.json()
       
-      // In production, this would trigger the actual blockchain transfer
-      // For now, we mark it as pending and it will be processed by a backend job
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send')
+      }
       
       setSendSuccess(true)
       setSendTo('')
@@ -643,6 +712,50 @@ export function DashboardWallet({
                 </button>
               </div>
               
+              {/* ATA Status */}
+              {hasATA === false && (
+                <div className="bg-orange/10 border border-orange/30 rounded-[2px] p-4 mb-4">
+                  <div className="flex gap-3">
+                    <AlertCircle className="w-5 h-5 text-orange shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="mono-xs text-[11px] text-orange font-medium mb-2">
+                        V1N3 Token Account Required
+                      </p>
+                      <p className="mono-xs text-[10px] text-orange/80 mb-3">
+                        You need a V1N3 token account to receive tokens. This is a one-time setup that costs a small amount of SOL.
+                      </p>
+                      <button
+                        onClick={handleCreateATA}
+                        disabled={creatingATA || solBalance < 0.002}
+                        className="w-full py-2 bg-orange text-background mono-xs text-[10px] rounded-[2px] hover:bg-orange/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        {creatingATA ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            CREATING ACCOUNT...
+                          </>
+                        ) : solBalance < 0.002 ? (
+                          'NEED MORE SOL'
+                        ) : (
+                          'CREATE TOKEN ACCOUNT'
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {hasATA === true && (
+                <div className="bg-primary/10 border border-primary/30 rounded-[2px] p-3 mb-4">
+                  <div className="flex gap-2">
+                    <Check className="w-4 h-4 text-primary shrink-0" />
+                    <p className="mono-xs text-[10px] text-primary">
+                      V1N3 token account is ready to receive tokens
+                    </p>
+                  </div>
+                </div>
+              )}
+              
               <p className="mono-xs text-[11px] text-muted-foreground mb-4">
                 Share this address to receive V1N3 tokens. Only send V1N3 or SOL to this address.
               </p>
@@ -651,6 +764,13 @@ export function DashboardWallet({
                 <p className="mono-xs text-[9px] text-muted-foreground mb-2">YOUR WALLET ADDRESS</p>
                 <p className="font-mono text-xs text-foreground break-all select-all">{walletAddress}</p>
               </div>
+              
+              {ataAddress && (
+                <div className="bg-secondary/50 border border-border rounded-[2px] p-4 mb-4">
+                  <p className="mono-xs text-[9px] text-muted-foreground mb-2">V1N3 TOKEN ACCOUNT</p>
+                  <p className="font-mono text-[10px] text-foreground break-all select-all">{ataAddress}</p>
+                </div>
+              )}
               
               <div className="bg-orange/10 border border-orange/30 rounded-[2px] p-3 mb-4">
                 <div className="flex gap-2">
