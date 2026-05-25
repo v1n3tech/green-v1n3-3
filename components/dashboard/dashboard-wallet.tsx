@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useWalletModal } from '@solana/wallet-adapter-react-ui'
@@ -16,7 +16,6 @@ import {
   Clock,
   ExternalLink,
   RefreshCw,
-  Shield,
   Coins,
   Link2,
   Unlink,
@@ -24,6 +23,8 @@ import {
   Zap,
   Globe,
   ChevronRight,
+  AlertCircle,
+  X,
 } from 'lucide-react'
 import { V1N3_TOKEN, getExplorerUrl, formatV1N3Balance, formatNGN, v1n3ToNGN, SOLANA_NETWORK } from '@/lib/wallet/v1n3-token'
 import { useV1N3Balance, useSOLBalance } from '@/lib/wallet/use-v1n3-balance'
@@ -37,14 +38,15 @@ interface DashboardWalletProps {
 
 interface Transaction {
   id: string
-  type: 'receive' | 'send'
+  type: 'receive' | 'send' | 'swap' | 'stake' | 'unstake' | 'reward'
   amount: number
-  token: string
-  from?: string
-  to?: string
-  timestamp: string
+  token_symbol: string
+  from_address: string
+  to_address: string
+  created_at: string
   status: 'confirmed' | 'pending' | 'failed'
-  signature?: string
+  signature?: string | null
+  memo?: string | null
 }
 
 export function DashboardWallet({
@@ -58,6 +60,16 @@ export function DashboardWallet({
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [showSendModal, setShowSendModal] = useState(false)
   const [showReceiveModal, setShowReceiveModal] = useState(false)
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [loadingTx, setLoadingTx] = useState(true)
+  
+  // Send modal state
+  const [sendTo, setSendTo] = useState('')
+  const [sendAmount, setSendAmount] = useState('')
+  const [sendMemo, setSendMemo] = useState('')
+  const [sendLoading, setSendLoading] = useState(false)
+  const [sendError, setSendError] = useState<string | null>(null)
+  const [sendSuccess, setSendSuccess] = useState(false)
   
   // Solana wallet adapter hooks
   const { publicKey, connected, disconnect } = useWallet()
@@ -65,42 +77,88 @@ export function DashboardWallet({
   
   // Real-time V1N3 balance from blockchain
   const { balance: onChainBalance, loading: balanceLoading, refetch: refetchBalance } = useV1N3Balance(walletAddress)
-  const { balance: solBalance, loading: solLoading } = useSOLBalance(walletAddress)
+  const { balance: solBalance, loading: solLoading, refetch: refetchSol } = useSOLBalance(walletAddress)
   
   // Use on-chain balance if available, otherwise fall back to DB balance
   const displayBalance = onChainBalance > 0 ? onChainBalance : dbBalance
   const ngnValue = v1n3ToNGN(displayBalance)
 
-  // Mock transactions - in production, fetch from blockchain
-  const transactions: Transaction[] = [
-    {
-      id: '1',
-      type: 'receive',
-      amount: 150,
-      token: 'V1N3',
-      from: 'Weekly Rewards',
-      timestamp: '2h ago',
-      status: 'confirmed',
-    },
-    {
-      id: '2',
-      type: 'send',
-      amount: 50,
-      token: 'V1N3',
-      to: '7xKq...m3Pf',
-      timestamp: '1d ago',
-      status: 'confirmed',
-    },
-    {
-      id: '3',
-      type: 'receive',
-      amount: 200,
-      token: 'V1N3',
-      from: 'Training Bonus',
-      timestamp: '3d ago',
-      status: 'confirmed',
-    },
-  ]
+  // Fetch transactions from database
+  const fetchTransactions = useCallback(async () => {
+    if (!walletAddress) return
+    
+    setLoadingTx(true)
+    const supabase = createClient()
+    
+    const { data, error } = await supabase
+      .from('wallet_transactions')
+      .select('*')
+      .or(`from_address.eq.${walletAddress},to_address.eq.${walletAddress}`)
+      .order('created_at', { ascending: false })
+      .limit(20)
+    
+    if (error) {
+      console.error('[v0] Error fetching transactions:', error)
+    } else {
+      // Map the data to determine if it's send or receive for the current user
+      const mapped = (data || []).map((tx: Record<string, unknown>) => ({
+        ...tx,
+        type: tx.from_address === walletAddress ? 'send' : 'receive',
+      })) as Transaction[]
+      setTransactions(mapped)
+    }
+    setLoadingTx(false)
+  }, [walletAddress])
+
+  // Real-time subscription for new transactions
+  useEffect(() => {
+    if (!walletAddress) return
+
+    fetchTransactions()
+
+    const supabase = createClient()
+    
+    const channel = supabase
+      .channel(`wallet-transactions-${walletAddress}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'wallet_transactions',
+        },
+        (payload) => {
+          const newTx = payload.new as Record<string, unknown>
+          // Check if this transaction involves our wallet
+          if (newTx.from_address === walletAddress || newTx.to_address === walletAddress) {
+            const mapped = {
+              ...newTx,
+              type: newTx.from_address === walletAddress ? 'send' : 'receive',
+            } as Transaction
+            setTransactions(prev => [mapped, ...prev].slice(0, 20))
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'wallet_transactions',
+        },
+        (payload) => {
+          const updatedTx = payload.new as Transaction
+          setTransactions(prev => 
+            prev.map(tx => tx.id === updatedTx.id ? { ...updatedTx, type: updatedTx.from_address === walletAddress ? 'send' : 'receive' } : tx)
+          )
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [walletAddress, fetchTransactions])
 
   const handleCopy = (text: string, type: 'address' | 'mint') => {
     navigator.clipboard.writeText(text)
@@ -115,7 +173,7 @@ export function DashboardWallet({
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
-    await refetchBalance()
+    await Promise.all([refetchBalance(), refetchSol(), fetchTransactions()])
     setTimeout(() => setIsRefreshing(false), 1000)
   }
 
@@ -123,11 +181,97 @@ export function DashboardWallet({
     setVisible(true)
   }
 
+  const handleSend = async () => {
+    if (!walletAddress || !sendTo || !sendAmount) return
+    
+    setSendLoading(true)
+    setSendError(null)
+    
+    try {
+      const amount = parseFloat(sendAmount)
+      if (isNaN(amount) || amount <= 0) {
+        throw new Error('Invalid amount')
+      }
+      
+      if (amount > displayBalance) {
+        throw new Error('Insufficient balance')
+      }
+      
+      // Validate recipient address (basic Solana address check)
+      if (sendTo.length < 32 || sendTo.length > 44) {
+        throw new Error('Invalid Solana address')
+      }
+      
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) throw new Error('Not authenticated')
+      
+      // Create transaction record
+      const { error: txError } = await supabase
+        .from('wallet_transactions')
+        .insert({
+          user_id: user.id,
+          type: 'send',
+          status: 'pending',
+          token_symbol: 'V1N3',
+          token_mint: V1N3_TOKEN.mintAddress,
+          amount,
+          from_address: walletAddress,
+          to_address: sendTo,
+          memo: sendMemo || null,
+        })
+      
+      if (txError) throw txError
+      
+      // In production, this would trigger the actual blockchain transfer
+      // For now, we mark it as pending and it will be processed by a backend job
+      
+      setSendSuccess(true)
+      setSendTo('')
+      setSendAmount('')
+      setSendMemo('')
+      
+      // Refresh data
+      await handleRefresh()
+      
+      setTimeout(() => {
+        setSendSuccess(false)
+        setShowSendModal(false)
+      }, 2000)
+      
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : 'Failed to send')
+    } finally {
+      setSendLoading(false)
+    }
+  }
+
   const filteredTransactions = transactions.filter((tx) => {
     if (activeTab === 'all') return true
     if (activeTab === 'sent') return tx.type === 'send'
     return tx.type === 'receive'
   })
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+    
+    if (diffMins < 1) return 'Just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays < 7) return `${diffDays}d ago`
+    return date.toLocaleDateString()
+  }
+
+  const truncateAddress = (addr: string) => {
+    if (!addr) return ''
+    return `${addr.slice(0, 4)}...${addr.slice(-4)}`
+  }
 
   return (
     <div className="space-y-6">
@@ -245,7 +389,8 @@ export function DashboardWallet({
           <div className="grid grid-cols-3 gap-3">
             <button 
               onClick={() => setShowSendModal(true)}
-              className="flex flex-col items-center gap-2 p-4 bg-secondary/50 border border-border rounded-[2px] hover:border-primary/40 transition-colors group"
+              disabled={!walletAddress || displayBalance <= 0}
+              className="flex flex-col items-center gap-2 p-4 bg-secondary/50 border border-border rounded-[2px] hover:border-primary/40 transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                 <Send className="w-4 h-4 text-primary" />
@@ -254,14 +399,15 @@ export function DashboardWallet({
             </button>
             <button 
               onClick={() => setShowReceiveModal(true)}
-              className="flex flex-col items-center gap-2 p-4 bg-secondary/50 border border-border rounded-[2px] hover:border-primary/40 transition-colors group"
+              disabled={!walletAddress}
+              className="flex flex-col items-center gap-2 p-4 bg-secondary/50 border border-border rounded-[2px] hover:border-primary/40 transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                 <QrCode className="w-4 h-4 text-primary" />
               </div>
               <span className="mono-xs text-[10px] text-foreground">RECEIVE</span>
             </button>
-            <button className="flex flex-col items-center gap-2 p-4 bg-secondary/50 border border-border rounded-[2px] hover:border-orange/40 transition-colors group">
+            <button className="flex flex-col items-center gap-2 p-4 bg-secondary/50 border border-border rounded-[2px] hover:border-orange/40 transition-colors group opacity-50 cursor-not-allowed">
               <div className="w-10 h-10 rounded-full bg-orange/10 flex items-center justify-center group-hover:bg-orange/20 transition-colors">
                 <ArrowUpRight className="w-4 h-4 text-orange" />
               </div>
@@ -285,7 +431,7 @@ export function DashboardWallet({
             </div>
             <div className="flex items-baseline gap-2">
               <p className="font-mono text-2xl text-foreground">
-                {solLoading ? '...' : solBalance.toFixed(4)}
+                {solLoading ? '...' : solBalance.toFixed(6)}
               </p>
               <span className="mono-xs text-orange">SOL</span>
             </div>
@@ -374,6 +520,7 @@ export function DashboardWallet({
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-muted-foreground" />
             <span className="mono-xs text-[10px] text-muted-foreground tracking-[0.18em]">/ RECENT TRANSACTIONS</span>
+            {loadingTx && <Loader2 className="w-3 h-3 text-primary animate-spin" />}
           </div>
           <div className="flex gap-1">
             {(['all', 'sent', 'received'] as const).map((tab) => (
@@ -398,9 +545,9 @@ export function DashboardWallet({
             filteredTransactions.map((tx) => (
               <div key={tx.id} className="flex items-center gap-4 p-4 hover:bg-secondary/30 transition-colors">
                 <div className={`w-10 h-10 rounded-[2px] flex items-center justify-center ${
-                  tx.type === 'receive' ? 'bg-primary/10' : 'bg-orange/10'
+                  tx.type === 'receive' || tx.type === 'reward' ? 'bg-primary/10' : 'bg-orange/10'
                 }`}>
-                  {tx.type === 'receive' ? (
+                  {tx.type === 'receive' || tx.type === 'reward' ? (
                     <ArrowDownLeft className="w-5 h-5 text-primary" />
                   ) : (
                     <ArrowUpRight className="w-5 h-5 text-orange" />
@@ -409,7 +556,7 @@ export function DashboardWallet({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="mono-sm text-xs text-foreground">
-                      {tx.type === 'receive' ? 'Received' : 'Sent'}
+                      {tx.type === 'receive' || tx.type === 'reward' ? 'Received' : 'Sent'}
                     </span>
                     <span className={`mono-xs text-[9px] px-1.5 py-0.5 rounded-[2px] ${
                       tx.status === 'confirmed' 
@@ -422,14 +569,17 @@ export function DashboardWallet({
                     </span>
                   </div>
                   <p className="mono-xs text-[10px] text-muted-foreground mt-0.5">
-                    {tx.type === 'receive' ? `From: ${tx.from}` : `To: ${tx.to}`}
+                    {tx.type === 'receive' || tx.type === 'reward' 
+                      ? `From: ${tx.memo || truncateAddress(tx.from_address)}` 
+                      : `To: ${truncateAddress(tx.to_address)}`
+                    }
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className={`font-mono text-sm ${tx.type === 'receive' ? 'text-primary' : 'text-orange'}`}>
-                    {tx.type === 'receive' ? '+' : '-'}{tx.amount} {tx.token}
+                  <p className={`font-mono text-sm ${tx.type === 'receive' || tx.type === 'reward' ? 'text-primary' : 'text-orange'}`}>
+                    {tx.type === 'receive' || tx.type === 'reward' ? '+' : '-'}{tx.amount} {tx.token_symbol}
                   </p>
-                  <p className="mono-xs text-[9px] text-muted-foreground">{tx.timestamp}</p>
+                  <p className="mono-xs text-[9px] text-muted-foreground">{formatTimeAgo(tx.created_at)}</p>
                 </div>
                 {tx.signature && (
                   <a 
@@ -445,7 +595,9 @@ export function DashboardWallet({
             ))
           ) : (
             <div className="p-8 text-center">
-              <p className="mono-xs text-muted-foreground">No transactions found</p>
+              <p className="mono-xs text-muted-foreground">
+                {loadingTx ? 'Loading transactions...' : 'No transactions yet'}
+              </p>
             </div>
           )}
         </div>
@@ -471,33 +623,50 @@ export function DashboardWallet({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4"
             onClick={() => setShowReceiveModal(false)}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-background border border-border rounded-[2px] p-6 max-w-sm w-full mx-4"
+              className="bg-background border border-border rounded-[2px] p-6 max-w-md w-full"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="font-mono text-lg text-foreground mb-4">Receive V1N3</h3>
-              <div className="bg-secondary/50 border border-border rounded-[2px] p-4 mb-4">
-                <p className="mono-xs text-[10px] text-muted-foreground mb-2">YOUR WALLET ADDRESS</p>
-                <p className="font-mono text-xs text-foreground break-all">{walletAddress}</p>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-mono text-lg text-foreground">Receive V1N3</h3>
+                <button 
+                  onClick={() => setShowReceiveModal(false)}
+                  className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
+              
+              <p className="mono-xs text-[11px] text-muted-foreground mb-4">
+                Share this address to receive V1N3 tokens. Only send V1N3 or SOL to this address.
+              </p>
+              
+              <div className="bg-secondary/50 border border-border rounded-[2px] p-4 mb-4">
+                <p className="mono-xs text-[9px] text-muted-foreground mb-2">YOUR WALLET ADDRESS</p>
+                <p className="font-mono text-xs text-foreground break-all select-all">{walletAddress}</p>
+              </div>
+              
+              <div className="bg-orange/10 border border-orange/30 rounded-[2px] p-3 mb-4">
+                <div className="flex gap-2">
+                  <AlertCircle className="w-4 h-4 text-orange shrink-0 mt-0.5" />
+                  <p className="mono-xs text-[10px] text-orange">
+                    This is a Solana {SOLANA_NETWORK} address. Only send Solana-based tokens to this address.
+                  </p>
+                </div>
+              </div>
+              
               <button
                 onClick={() => handleCopy(walletAddress, 'address')}
                 className="w-full py-2.5 bg-primary text-background mono-xs text-[11px] rounded-[2px] hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
               >
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 {copied ? 'COPIED!' : 'COPY ADDRESS'}
-              </button>
-              <button
-                onClick={() => setShowReceiveModal(false)}
-                className="w-full py-2.5 mt-2 border border-border text-foreground mono-xs text-[11px] rounded-[2px] hover:bg-secondary/50 transition-colors"
-              >
-                CLOSE
               </button>
             </motion.div>
           </motion.div>
@@ -506,31 +675,135 @@ export function DashboardWallet({
 
       {/* Send Modal */}
       <AnimatePresence>
-        {showSendModal && (
+        {showSendModal && walletAddress && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
-            onClick={() => setShowSendModal(false)}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4"
+            onClick={() => !sendLoading && setShowSendModal(false)}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-background border border-border rounded-[2px] p-6 max-w-sm w-full mx-4"
+              className="bg-background border border-border rounded-[2px] p-6 max-w-md w-full"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="font-mono text-lg text-foreground mb-4">Send V1N3</h3>
-              <p className="mono-xs text-muted-foreground mb-4">
-                Send functionality will be available soon. Your V1N3 tokens are securely stored.
-              </p>
-              <button
-                onClick={() => setShowSendModal(false)}
-                className="w-full py-2.5 border border-border text-foreground mono-xs text-[11px] rounded-[2px] hover:bg-secondary/50 transition-colors"
-              >
-                CLOSE
-              </button>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-mono text-lg text-foreground">Send V1N3</h3>
+                <button 
+                  onClick={() => !sendLoading && setShowSendModal(false)}
+                  className="p-1 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                  disabled={sendLoading}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              {sendSuccess ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
+                    <Check className="w-8 h-8 text-primary" />
+                  </div>
+                  <p className="font-mono text-lg text-foreground mb-2">Transaction Submitted</p>
+                  <p className="mono-xs text-muted-foreground">Your transfer is being processed</p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-4 mb-4">
+                    {/* Recipient */}
+                    <div>
+                      <label className="mono-xs text-[9px] text-muted-foreground tracking-[0.18em] block mb-2">
+                        RECIPIENT ADDRESS
+                      </label>
+                      <input
+                        type="text"
+                        value={sendTo}
+                        onChange={(e) => setSendTo(e.target.value)}
+                        placeholder="Enter Solana wallet address"
+                        className="w-full px-3 py-2.5 bg-secondary/50 border border-border rounded-[2px] text-foreground font-mono text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50"
+                        disabled={sendLoading}
+                      />
+                    </div>
+                    
+                    {/* Amount */}
+                    <div>
+                      <label className="mono-xs text-[9px] text-muted-foreground tracking-[0.18em] block mb-2">
+                        AMOUNT
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          value={sendAmount}
+                          onChange={(e) => setSendAmount(e.target.value)}
+                          placeholder="0.00"
+                          min="0"
+                          step="0.0001"
+                          className="w-full px-3 py-2.5 bg-secondary/50 border border-border rounded-[2px] text-foreground font-mono text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 pr-20"
+                          disabled={sendLoading}
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                          <span className="mono-xs text-[10px] text-muted-foreground">V1N3</span>
+                          <button
+                            type="button"
+                            onClick={() => setSendAmount(displayBalance.toString())}
+                            className="mono-xs text-[9px] text-primary hover:text-primary/80"
+                            disabled={sendLoading}
+                          >
+                            MAX
+                          </button>
+                        </div>
+                      </div>
+                      <p className="mono-xs text-[10px] text-muted-foreground mt-1">
+                        Available: {formatV1N3Balance(displayBalance)} V1N3
+                      </p>
+                    </div>
+                    
+                    {/* Memo */}
+                    <div>
+                      <label className="mono-xs text-[9px] text-muted-foreground tracking-[0.18em] block mb-2">
+                        MEMO (OPTIONAL)
+                      </label>
+                      <input
+                        type="text"
+                        value={sendMemo}
+                        onChange={(e) => setSendMemo(e.target.value)}
+                        placeholder="Add a note"
+                        className="w-full px-3 py-2.5 bg-secondary/50 border border-border rounded-[2px] text-foreground font-mono text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50"
+                        disabled={sendLoading}
+                      />
+                    </div>
+                  </div>
+                  
+                  {sendError && (
+                    <div className="bg-destructive/10 border border-destructive/30 rounded-[2px] p-3 mb-4">
+                      <div className="flex gap-2">
+                        <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                        <p className="mono-xs text-[10px] text-destructive">{sendError}</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <button
+                    onClick={handleSend}
+                    disabled={sendLoading || !sendTo || !sendAmount}
+                    className="w-full py-2.5 bg-primary text-background mono-xs text-[11px] rounded-[2px] hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {sendLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        SENDING...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        SEND V1N3
+                      </>
+                    )}
+                  </button>
+                </>
+              )}
             </motion.div>
           </motion.div>
         )}
