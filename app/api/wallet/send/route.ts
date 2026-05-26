@@ -119,6 +119,31 @@ export async function POST(request: NextRequest) {
           })
           .eq('id', pendingTx.id)
         
+        // Create receive transaction for the recipient (if they have an account)
+        const { data: recipientProfile } = await admin
+          .from('profiles')
+          .select('id')
+          .eq('wallet_address', toAddress)
+          .maybeSingle()
+        
+        if (recipientProfile) {
+          await admin
+            .from('wallet_transactions')
+            .insert({
+              user_id: recipientProfile.id,
+              type: 'receive',
+              status: 'confirmed',
+              token_symbol: 'SOL',
+              token_mint: null,
+              amount: numAmount,
+              fee: 0,
+              from_address: profile.wallet_address,
+              to_address: toAddress,
+              signature,
+              confirmed_at: new Date().toISOString(),
+            })
+        }
+        
         return NextResponse.json({
           success: true,
           signature,
@@ -188,6 +213,31 @@ export async function POST(request: NextRequest) {
           confirmed_at: new Date().toISOString(),
         })
         .eq('id', pendingTx.id)
+      
+      // Create receive transaction for the recipient (if they have an account)
+      const { data: recipientProfile } = await admin
+        .from('profiles')
+        .select('id')
+        .eq('wallet_address', toAddress)
+        .maybeSingle()
+      
+      if (recipientProfile) {
+        await admin
+          .from('wallet_transactions')
+          .insert({
+            user_id: recipientProfile.id,
+            type: 'receive',
+            status: 'confirmed',
+            token_symbol: 'V1N3',
+            token_mint: V1N3_TOKEN.mintAddress,
+            amount: numAmount,
+            fee: 0,
+            from_address: profile.wallet_address,
+            to_address: toAddress,
+            signature: result.signature,
+            confirmed_at: new Date().toISOString(),
+          })
+      }
       
       // Update user's v1n3_balance in profile
       const newBalance = balance - numAmount
