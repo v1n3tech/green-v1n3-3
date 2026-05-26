@@ -329,38 +329,79 @@ export default function MessagesPage() {
     if (!selectedConversation || (!messageInput.trim() && !attachment)) return
 
     // Clear typing status when sending
-    await clearTypingStatus(selectedConversation.id)
+    clearTypingStatus(selectedConversation.id)
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current)
       typingTimeoutRef.current = null
     }
 
     const currentReply = replyingTo // capture before clearing
+    const currentMessage = messageInput
+    const currentAttachment = attachment
+    
+    // Create optimistic message
+    const optimisticId = `optimistic-${Date.now()}`
+    const optimisticMessage = {
+      id: optimisticId,
+      conversation_id: selectedConversation.id,
+      sender_id: currentUserId,
+      content: currentMessage,
+      created_at: new Date().toISOString(),
+      is_read: true,
+      sender: {
+        display_name: 'You',
+      },
+      reply_to: currentReply ? {
+        id: currentReply.id,
+        content: currentReply.content,
+        sender_id: currentReply.sender_id,
+        sender: currentReply.sender ? { display_name: currentReply.sender.display_name } : undefined,
+      } : undefined,
+      attachment_url: currentAttachment?.preview,
+      attachment_name: currentAttachment?.file.name,
+      attachment_size: currentAttachment?.file.size,
+      _optimistic: true,
+    }
+    
+    // Optimistic update - add message immediately
+    setMessages(prev => [...prev, optimisticMessage as unknown as Message])
+    setMessageInput('')
+    setReplyingTo(null)
+    setAttachment(null)
+    
+    // Optimistic update - update conversation last message
+    setConversations(prev => prev.map(c => 
+      c.id === selectedConversation.id 
+        ? { ...c, last_message: optimisticMessage as unknown as Message, last_message_at: optimisticMessage.created_at }
+        : c
+    ))
 
     startSending(async () => {
-      const { message, error } = await sendMessage(selectedConversation.id, messageInput, {
+      const { message, error } = await sendMessage(selectedConversation.id, currentMessage, {
         replyToId: currentReply?.id,
-        attachmentUrl: attachment?.preview,
-        attachmentName: attachment?.file.name,
-        attachmentSize: attachment?.file.size,
+        attachmentUrl: currentAttachment?.preview,
+        attachmentName: currentAttachment?.file.name,
+        attachmentSize: currentAttachment?.file.size,
       })
       
       if (message) {
-        // Attach reply_to data if this was a reply
+        // Replace optimistic message with real message
         const messageWithReply = currentReply
           ? { ...message, reply_to: { id: currentReply.id, content: currentReply.content, sender_id: currentReply.sender_id, sender: currentReply.sender ? { display_name: currentReply.sender.display_name } : undefined } }
           : message
         
-        setMessages(prev => [...prev, messageWithReply])
-        setMessageInput('')
-        setReplyingTo(null)
-        setAttachment(null)
-        // Update conversation last message
+        setMessages(prev => prev.map(m => 
+          m.id === optimisticId ? messageWithReply : m
+        ))
+        // Update conversation last message with real message
         setConversations(prev => prev.map(c => 
           c.id === selectedConversation.id 
             ? { ...c, last_message: message, last_message_at: message.created_at }
             : c
         ))
+      } else if (error) {
+        // Remove optimistic message on error
+        setMessages(prev => prev.filter(m => m.id !== optimisticId))
       }
     })
   }
