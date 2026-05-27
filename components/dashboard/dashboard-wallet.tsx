@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import Image from 'next/image'
 import { useWallet, useConnection } from '@solana/wallet-adapter-react'
 import { useWalletModal } from '@solana/wallet-adapter-react-ui'
 import { PublicKey, Transaction as SolanaTransaction, Connection } from '@solana/web3.js'
@@ -523,9 +524,13 @@ export function DashboardWallet({
         >
           <div className="flex items-start justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-[2px] bg-primary/20 border border-primary/30 flex items-center justify-center">
-                <Coins className="w-6 h-6 text-primary" />
-              </div>
+              <Image 
+                src="/images/v1n3-token.jpg" 
+                alt="V1N3 Token" 
+                width={48} 
+                height={48}
+                className="rounded-full"
+              />
               <div>
                 <p className="mono-xs text-[9px] text-muted-foreground tracking-[0.18em]">/ V1N3 BALANCE</p>
                 <p className="mono-xs text-[10px] text-primary">SOLANA {SOLANA_NETWORK.toUpperCase()}</p>
