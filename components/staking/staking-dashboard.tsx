@@ -243,9 +243,13 @@ export function StakingDashboard({
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <Coins className="w-5 h-5 text-primary" />
-          </div>
+          <Image 
+            src="/images/v1n3-token.jpg" 
+            alt="V1N3 Token" 
+            width={44} 
+            height={44}
+            className="rounded-full"
+          />
           <div>
             <h1 className="font-mono text-2xl text-foreground">Stake V1N3</h1>
             <p className="mono-xs text-[10px] text-muted-foreground tracking-[0.2em]">
@@ -310,7 +314,10 @@ export function StakingDashboard({
                 <span className="mono-xs text-[9px] text-muted-foreground tracking-[0.18em]">STAKED</span>
               </div>
               <p className="font-mono text-2xl text-foreground">{formatV1N3Balance(totalStaked)}</p>
-              <p className="mono-xs text-[10px] text-muted-foreground">V1N3</p>
+              <div className="flex items-center gap-1.5">
+                <Image src="/images/v1n3-token.jpg" alt="V1N3" width={14} height={14} className="rounded-full" />
+                <span className="mono-xs text-[10px] text-muted-foreground">V1N3</span>
+              </div>
             </motion.div>
 
             {/* Available Balance Card */}
@@ -327,7 +334,10 @@ export function StakingDashboard({
               <p className="font-mono text-2xl text-foreground">
                 {balanceLoading ? '...' : formatV1N3Balance(availableBalance)}
               </p>
-              <p className="mono-xs text-[10px] text-muted-foreground">V1N3</p>
+              <div className="flex items-center gap-1.5">
+                <Image src="/images/v1n3-token.jpg" alt="V1N3" width={14} height={14} className="rounded-full" />
+                <span className="mono-xs text-[10px] text-muted-foreground">V1N3</span>
+              </div>
             </motion.div>
 
             {/* Pending Rewards Card */}
@@ -342,7 +352,10 @@ export function StakingDashboard({
                 <span className="mono-xs text-[9px] text-muted-foreground tracking-[0.18em]">REWARDS</span>
               </div>
               <p className="font-mono text-2xl text-accent">{pendingRewards.toFixed(4)}</p>
-              <p className="mono-xs text-[10px] text-muted-foreground">V1N3</p>
+              <div className="flex items-center gap-1.5">
+                <Image src="/images/v1n3-token.jpg" alt="V1N3" width={14} height={14} className="rounded-full" />
+                <span className="mono-xs text-[10px] text-muted-foreground">V1N3</span>
+              </div>
             </motion.div>
           </div>
 
@@ -628,9 +641,12 @@ export function StakingDashboard({
                     className="p-3 bg-secondary/30 border border-border rounded-[2px]"
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="font-mono text-[12px] text-foreground">
-                        {formatV1N3Balance(position.amount)} V1N3
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <Image src="/images/v1n3-token.jpg" alt="V1N3" width={18} height={18} className="rounded-full" />
+                        <span className="font-mono text-[12px] text-foreground">
+                          {formatV1N3Balance(position.amount)} V1N3
+                        </span>
+                      </div>
                       <span className="mono-xs text-[9px] text-primary bg-primary/10 px-2 py-0.5 rounded-[2px]">
                         ACTIVE
                       </span>
@@ -643,29 +659,35 @@ export function StakingDashboard({
               </div>
             ) : (
               <div className="text-center py-6">
-                <Coins className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                <Image 
+                  src="/images/v1n3-token.jpg" 
+                  alt="V1N3 Token" 
+                  width={48} 
+                  height={48} 
+                  className="rounded-full mx-auto mb-3 opacity-30"
+                />
                 <p className="mono-xs text-[11px] text-muted-foreground">No active positions</p>
                 <p className="mono-xs text-[10px] text-muted-foreground/60">Stake V1N3 to start earning</p>
               </div>
             )}
           </motion.div>
 
-          {/* V1N3 Logo */}
+          {/* V1N3 Token Logo */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.45 }}
             className="flex items-center justify-center py-4"
           >
-            <div className="flex items-center gap-2 opacity-50">
+            <div className="flex items-center gap-3 opacity-70">
               <Image 
-                src="/greenv1n3-logo.png" 
-                alt="V1N3" 
-                width={24} 
-                height={24}
+                src="/images/v1n3-token.jpg" 
+                alt="V1N3 Token" 
+                width={32} 
+                height={32}
                 className="rounded-full"
               />
-              <span className="mono-xs text-[10px] text-muted-foreground">Powered by V1N3</span>
+              <span className="mono-xs text-[10px] text-muted-foreground tracking-[0.1em]">POWERED BY V1N3</span>
             </div>
           </motion.div>
         </div>
