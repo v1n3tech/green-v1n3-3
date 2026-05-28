@@ -3,6 +3,13 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getV1N3Balance } from '@/lib/wallet/v1n3-token'
 
+// Lock period options
+const LOCK_PERIODS = {
+  '3_weeks': { seconds: 21 * 24 * 60 * 60, apy: 25, label: '3 Weeks' },
+  '1_month': { seconds: 30 * 24 * 60 * 60, apy: 40, label: '1 Month' },
+  '3_months': { seconds: 90 * 24 * 60 * 60, apy: 65, label: '3 Months' },
+}
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()
@@ -13,7 +20,7 @@ export async function POST(request: Request) {
     }
     
     const body = await request.json()
-    const { amount } = body
+    const { amount, lockPeriod = '3_months' } = body
     
     // Validate amount
     const numAmount = Number(amount)
@@ -21,32 +28,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid amount' }, { status: 400 })
     }
     
-    // Get staking config
-    const admin = createAdminClient()
-    const { data: configData } = await admin
-      .from('staking_config')
-      .select('key, value')
-    
-    const config: Record<string, string> = {}
-    configData?.forEach((item: { key: string; value: unknown }) => {
-      const val = item.value
-      if (typeof val === 'string') {
-        config[item.key] = val
-      } else if (val !== null && val !== undefined) {
-        config[item.key] = String(val)
-      }
-    })
-    
-    const minStakeAmount = parseFloat(config.min_stake_amount || '100')
-    const isStakingEnabled = config.is_staking_enabled !== 'false'
-    
-    if (!isStakingEnabled) {
-      return NextResponse.json({ error: 'Staking is currently disabled' }, { status: 400 })
+    // Validate lock period
+    const periodConfig = LOCK_PERIODS[lockPeriod as keyof typeof LOCK_PERIODS]
+    if (!periodConfig) {
+      return NextResponse.json({ error: 'Invalid lock period' }, { status: 400 })
     }
     
+    const minStakeAmount = 100
     if (numAmount < minStakeAmount) {
       return NextResponse.json({ error: `Minimum stake amount is ${minStakeAmount} V1N3` }, { status: 400 })
     }
+    
+    const admin = createAdminClient()
     
     // Get user's wallet and balance
     const { data: profile, error: profileError } = await supabase
@@ -80,11 +73,9 @@ export async function POST(request: Request) {
       }, { status: 400 })
     }
     
-    // Calculate lock period if configured
-    const lockPeriodDays = parseInt(config.lock_period_days || '0')
-    const lockedUntil = lockPeriodDays > 0 
-      ? new Date(Date.now() + lockPeriodDays * 24 * 60 * 60 * 1000).toISOString()
-      : null
+    // Calculate lock end time
+    const stakedAt = new Date()
+    const lockedUntil = new Date(stakedAt.getTime() + periodConfig.seconds * 1000)
     
     // Create staking position
     const { data: position, error: insertError } = await admin
@@ -92,8 +83,10 @@ export async function POST(request: Request) {
       .insert({
         user_id: user.id,
         amount: numAmount,
-        locked_until: lockedUntil,
+        staked_at: stakedAt.toISOString(),
+        locked_until: lockedUntil.toISOString(),
         is_active: true,
+        rewards_claimed: 0,
       })
       .select()
       .single()
@@ -112,13 +105,17 @@ export async function POST(request: Request) {
       amount: numAmount,
       from_address: profile.wallet_address,
       to_address: 'staking_pool',
-      confirmed_at: new Date().toISOString(),
+      confirmed_at: stakedAt.toISOString(),
     })
     
     return NextResponse.json({
       success: true,
-      position,
-      message: `Successfully staked ${numAmount} V1N3`,
+      position: {
+        ...position,
+        apy: periodConfig.apy,
+        lockPeriodLabel: periodConfig.label,
+      },
+      message: `Successfully staked ${numAmount} V1N3 for ${periodConfig.label} at ${periodConfig.apy}% APY`,
     })
   } catch (error) {
     console.error('Error staking:', error)
