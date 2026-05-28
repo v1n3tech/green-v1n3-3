@@ -61,6 +61,7 @@
     "@vercel/analytics": "1.6.1",
     "@vercel/blob": "^2.3.3",
     "autoprefixer": "^10.4.20",
+    "bn.js": "^5.2.3",
     "bs58": "^6.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -89,6 +90,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.0",
+    "@types/bn.js": "^5.2.0",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
