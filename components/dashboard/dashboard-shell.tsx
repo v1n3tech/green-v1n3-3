@@ -401,9 +401,12 @@ export function DashboardShell({
                 <span className="status-dot status-dot-pulse" />
                 <span className="mono-xs text-muted-foreground text-[10px]">SOLANA</span>
                 <span className="text-border-strong/50">/</span>
-                <span className="mono-xs text-foreground/80 text-[10px]">
-                  V1N3: {displayBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <Image src="/images/v1n3-token.jpg" alt="V1N3" width={14} height={14} className="rounded-full" />
+                  <span className="mono-xs text-foreground/80 text-[10px]">
+                    V1N3: {displayBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                  </span>
+                </div>
                 <span className="mono-xs text-primary text-[10px]">+2.4%</span>
               </div>
             </div>

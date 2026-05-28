@@ -39,13 +39,13 @@ export function TokenSection() {
             {/* Token Card */}
             <div className="p-4 sm:p-5 border border-border rounded-[3px] bg-card/30 mb-3 sm:mb-4">
               <div className="flex items-center gap-3 sm:gap-4 mb-5 sm:mb-6">
-                <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-[2px] border border-primary/30 bg-primary/10 flex items-center justify-center">
+                <div className="relative w-14 h-14 sm:w-16 sm:h-16">
                   <Image
-                    src="/logo.png"
-                    alt="V1n3 Token"
-                    width={40}
-                    height={40}
-                    className="object-contain w-8 h-8 sm:w-10 sm:h-10"
+                    src="/images/v1n3-token.jpg"
+                    alt="V1N3 Token"
+                    width={64}
+                    height={64}
+                    className="object-contain w-14 h-14 sm:w-16 sm:h-16 rounded-full"
                   />
                 </div>
                 <div>
