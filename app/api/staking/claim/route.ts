@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
+// APY rates by lock period (in seconds)
+function getApyForLockPeriod(lockSeconds: number): number {
+  if (lockSeconds >= 90 * 24 * 60 * 60) return 65  // 3 months
+  if (lockSeconds >= 30 * 24 * 60 * 60) return 40  // 1 month
+  if (lockSeconds >= 21 * 24 * 60 * 60) return 25  // 3 weeks
+  return 35 // default
+}
+
 export async function POST() {
   try {
     const supabase = await createClient()
@@ -12,24 +20,6 @@ export async function POST() {
     }
     
     const admin = createAdminClient()
-    
-    // Get staking config for APY
-    const { data: configData } = await admin
-      .from('staking_config')
-      .select('key, value')
-    
-    const config: Record<string, string> = {}
-    configData?.forEach((item: { key: string; value: unknown }) => {
-      const val = item.value
-      if (typeof val === 'string') {
-        config[item.key] = val
-      } else if (val !== null && val !== undefined) {
-        config[item.key] = String(val)
-      }
-    })
-    
-    const baseApy = parseFloat(config.base_apy || '35')
-    const dailyRate = baseApy / 365 / 100
     
     // Get user's wallet
     const { data: profile } = await supabase
@@ -53,12 +43,19 @@ export async function POST() {
       return NextResponse.json({ error: 'No active staking positions' }, { status: 400 })
     }
     
-    // Calculate total pending rewards
+    // Calculate total pending rewards based on each position's lock period APY
     let totalRewards = 0
     const now = Date.now()
     
     for (const pos of positions) {
       const stakedAt = new Date(pos.staked_at).getTime()
+      const lockedUntil = pos.locked_until ? new Date(pos.locked_until).getTime() : null
+      
+      // Calculate lock period from staked_at to locked_until
+      const lockSeconds = lockedUntil ? Math.floor((lockedUntil - stakedAt) / 1000) : 0
+      const apy = getApyForLockPeriod(lockSeconds)
+      const dailyRate = apy / 365 / 100
+      
       const daysStaked = (now - stakedAt) / (1000 * 60 * 60 * 24)
       const earned = Number(pos.amount) * dailyRate * daysStaked
       const pending = earned - Number(pos.rewards_claimed || 0)
@@ -75,6 +72,11 @@ export async function POST() {
     // Update all positions with claimed rewards
     for (const pos of positions) {
       const stakedAt = new Date(pos.staked_at).getTime()
+      const lockedUntil = pos.locked_until ? new Date(pos.locked_until).getTime() : null
+      const lockSeconds = lockedUntil ? Math.floor((lockedUntil - stakedAt) / 1000) : 0
+      const apy = getApyForLockPeriod(lockSeconds)
+      const dailyRate = apy / 365 / 100
+      
       const daysStaked = (now - stakedAt) / (1000 * 60 * 60 * 24)
       const earned = Number(pos.amount) * dailyRate * daysStaked
       
@@ -108,19 +110,6 @@ export async function POST() {
       status: 'claimed',
       claimed_at: new Date().toISOString(),
     })
-    
-    // Update user's V1N3 balance in profile
-    const { data: currentProfile } = await admin
-      .from('profiles')
-      .select('v1n3_balance')
-      .eq('id', user.id)
-      .single()
-    
-    const newBalance = (currentProfile?.v1n3_balance || 0) + totalRewards
-    await admin
-      .from('profiles')
-      .update({ v1n3_balance: newBalance })
-      .eq('id', user.id)
     
     return NextResponse.json({
       success: true,
