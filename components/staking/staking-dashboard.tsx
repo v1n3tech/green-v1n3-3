@@ -22,13 +22,12 @@ import {
 } from 'lucide-react'
 import Image from 'next/image'
 import { useWallet, useConnection } from '@solana/wallet-adapter-react'
-import { Transaction } from '@solana/web3.js'
+import { Transaction, PublicKey } from '@solana/web3.js'
 import BN from 'bn.js'
 import { useV1N3Balance } from '@/lib/wallet/use-v1n3-balance'
 import { formatV1N3Balance } from '@/lib/wallet/v1n3-token'
 import {
   LOCK_PERIODS,
-  STAKING_PROGRAM_ID,
   getStakeInfoPDA,
   createStakeInstruction,
   createUnstakeInstruction,
@@ -52,13 +51,17 @@ export function StakingDashboard({
   v1n3Balance: dbBalance,
   isCustodial = false,
 }: StakingDashboardProps) {
-  // Wallet adapter
+  // Wallet adapter (for external wallets only)
   const { publicKey, signTransaction, connected } = useWallet()
   const { connection } = useConnection()
   
+  // Determine effective wallet - use props wallet for custodial, adapter for external
+  const effectiveWalletAddress = isCustodial ? walletAddress : (publicKey?.toBase58() ?? walletAddress)
+  const canTransact = isCustodial ? !!walletAddress : (connected && !!signTransaction)
+  
   // State
   const [stakeAmount, setStakeAmount] = useState('')
-  const [selectedLockPeriod, setSelectedLockPeriod] = useState<LockPeriodOption>(LOCK_PERIODS[2]) // Default to 3 months (best APY)
+  const [selectedLockPeriod, setSelectedLockPeriod] = useState<LockPeriodOption>(LOCK_PERIODS[2])
   const [isStaking, setIsStaking] = useState(false)
   const [isUnstaking, setIsUnstaking] = useState(false)
   const [isClaiming, setIsClaiming] = useState(false)
@@ -70,18 +73,52 @@ export function StakingDashboard({
   const [copied, setCopied] = useState(false)
   const [activeTab, setActiveTab] = useState<'stake' | 'unstake'>('stake')
   const [isLoadingStakeInfo, setIsLoadingStakeInfo] = useState(true)
+  const [dbStakingData, setDbStakingData] = useState<{
+    totalStaked: number
+    pendingRewards: number
+    positions: Array<{
+      id: string
+      amount: number
+      staked_at: string
+      locked_until: string | null
+      lock_period_days: number
+      apy: number
+      is_active: boolean
+    }>
+  } | null>(null)
 
   // Get on-chain balance
-  const { balance: onChainBalance, loading: balanceLoading, refetch: refreshBalance } = useV1N3Balance(walletAddress)
+  const { balance: onChainBalance, loading: balanceLoading, refetch: refreshBalance } = useV1N3Balance(effectiveWalletAddress)
   const displayBalance = balanceLoading ? dbBalance : onChainBalance
 
-  // Calculate available balance (total - staked)
-  const stakedAmount = stakeInfo?.stakedAmount?.toNumber() ?? 0
-  const availableBalance = Math.max(0, displayBalance - (stakedAmount / 1e9))
+  // Calculate available balance
+  const stakedAmount = isCustodial 
+    ? (dbStakingData?.totalStaked ?? 0)
+    : (stakeInfo?.stakedAmount?.toNumber() ?? 0) / 1e9
+  const availableBalance = Math.max(0, displayBalance - stakedAmount)
 
-  // Fetch stake info from chain
-  const fetchStakeInfo = useCallback(async () => {
-    if (!publicKey || !connection) {
+  // Fetch staking data from database (for custodial wallets)
+  const fetchDbStakingData = useCallback(async () => {
+    if (!isCustodial) return
+    
+    try {
+      setIsLoadingStakeInfo(true)
+      const response = await fetch('/api/staking/positions')
+      if (response.ok) {
+        const data = await response.json()
+        setDbStakingData(data)
+        setPendingRewards(data.pendingRewards ?? 0)
+      }
+    } catch (err) {
+      console.error('Error fetching staking data:', err)
+    } finally {
+      setIsLoadingStakeInfo(false)
+    }
+  }, [isCustodial])
+
+  // Fetch stake info from chain (for external wallets)
+  const fetchOnChainStakeInfo = useCallback(async () => {
+    if (isCustodial || !publicKey || !connection) {
       setIsLoadingStakeInfo(false)
       return
     }
@@ -98,21 +135,26 @@ export function StakingDashboard({
         setStakeInfo(null)
       }
     } catch (err) {
-      console.error('[v0] Error fetching stake info:', err)
+      console.error('Error fetching stake info:', err)
       setStakeInfo(null)
     } finally {
       setIsLoadingStakeInfo(false)
     }
-  }, [publicKey, connection])
+  }, [isCustodial, publicKey, connection])
 
+  // Fetch data on mount
   useEffect(() => {
-    fetchStakeInfo()
-  }, [fetchStakeInfo])
+    if (isCustodial) {
+      fetchDbStakingData()
+    } else {
+      fetchOnChainStakeInfo()
+    }
+  }, [isCustodial, fetchDbStakingData, fetchOnChainStakeInfo])
 
-  // Calculate pending rewards
+  // Calculate pending rewards for external wallets
   useEffect(() => {
-    if (!stakeInfo || !stakeInfo.isActive) {
-      setPendingRewards(0)
+    if (isCustodial || !stakeInfo || !stakeInfo.isActive) {
+      if (!isCustodial) setPendingRewards(0)
       return
     }
 
@@ -127,26 +169,21 @@ export function StakingDashboard({
     }
 
     updateRewards()
-    const interval = setInterval(updateRewards, 30000) // Update every 30 seconds
+    const interval = setInterval(updateRewards, 30000)
     return () => clearInterval(interval)
-  }, [stakeInfo])
+  }, [isCustodial, stakeInfo])
 
   // Copy wallet address
   const copyAddress = () => {
-    if (walletAddress) {
-      navigator.clipboard.writeText(walletAddress)
+    if (effectiveWalletAddress) {
+      navigator.clipboard.writeText(effectiveWalletAddress)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     }
   }
 
-  // Handle stake
+  // Handle stake - CUSTODIAL: call API, EXTERNAL: use wallet adapter
   const handleStake = async () => {
-    if (!publicKey || !signTransaction || !connection) {
-      setError('Please connect your wallet first')
-      return
-    }
-
     const amount = parseFloat(stakeAmount)
     if (isNaN(amount) || amount <= 0) {
       setError('Please enter a valid amount')
@@ -169,31 +206,54 @@ export function StakingDashboard({
     setSuccessTx(null)
 
     try {
-      // Convert to lamports (9 decimals)
-      const amountBN = new BN(Math.floor(amount * 1e9))
-      const lockPeriodBN = new BN(selectedLockPeriod.seconds)
+      if (isCustodial) {
+        // CUSTODIAL: Call server API
+        const response = await fetch('/api/staking/stake', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            amount,
+            lockPeriodDays: selectedLockPeriod.days,
+            lockPeriodSeconds: selectedLockPeriod.seconds,
+            apy: selectedLockPeriod.apy
+          }),
+        })
 
-      const instruction = createStakeInstruction(publicKey, amountBN, lockPeriodBN)
-      
-      const transaction = new Transaction().add(instruction)
-      const { blockhash } = await connection.getLatestBlockhash()
-      transaction.recentBlockhash = blockhash
-      transaction.feePayer = publicKey
+        const data = await response.json()
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to stake')
+        }
 
-      const signedTx = await signTransaction(transaction)
-      const signature = await connection.sendRawTransaction(signedTx.serialize())
-      
-      // Wait for confirmation
-      await connection.confirmTransaction(signature, 'confirmed')
-      
-      setSuccess(`Successfully staked ${amount.toLocaleString()} V1N3 for ${selectedLockPeriod.label}!`)
-      setSuccessTx(signature)
-      setStakeAmount('')
-      
-      // Refresh data
-      await Promise.all([fetchStakeInfo(), refreshBalance()])
+        setSuccess(`Successfully staked ${amount.toLocaleString()} V1N3 for ${selectedLockPeriod.label}!`)
+        if (data.signature) setSuccessTx(data.signature)
+        setStakeAmount('')
+        await Promise.all([fetchDbStakingData(), refreshBalance()])
+      } else {
+        // EXTERNAL: Use wallet adapter
+        if (!publicKey || !signTransaction || !connection) {
+          throw new Error('Please connect your wallet first')
+        }
+
+        const amountBN = new BN(Math.floor(amount * 1e9))
+        const lockPeriodBN = new BN(selectedLockPeriod.seconds)
+
+        const instruction = createStakeInstruction(publicKey, amountBN, lockPeriodBN)
+        const transaction = new Transaction().add(instruction)
+        const { blockhash } = await connection.getLatestBlockhash()
+        transaction.recentBlockhash = blockhash
+        transaction.feePayer = publicKey
+
+        const signedTx = await signTransaction(transaction)
+        const signature = await connection.sendRawTransaction(signedTx.serialize())
+        await connection.confirmTransaction(signature, 'confirmed')
+        
+        setSuccess(`Successfully staked ${amount.toLocaleString()} V1N3 for ${selectedLockPeriod.label}!`)
+        setSuccessTx(signature)
+        setStakeAmount('')
+        await Promise.all([fetchOnChainStakeInfo(), refreshBalance()])
+      }
     } catch (err) {
-      console.error('[v0] Stake error:', err)
+      console.error('Stake error:', err)
       setError(err instanceof Error ? err.message : 'Failed to stake. Please try again.')
     } finally {
       setIsStaking(false)
@@ -202,50 +262,59 @@ export function StakingDashboard({
 
   // Handle unstake
   const handleUnstake = async () => {
-    if (!publicKey || !signTransaction || !connection) {
-      setError('Please connect your wallet first')
-      return
-    }
-
-    if (!stakeInfo || !stakeInfo.isActive) {
-      setError('No active stake to unstake')
-      return
-    }
-
-    // Check if lock period has passed
-    const unlockTime = stakeInfo.stakeTimestamp.toNumber() + stakeInfo.lockPeriod.toNumber()
-    const now = Math.floor(Date.now() / 1000)
-    
-    if (now < unlockTime) {
-      setError(`Tokens are locked until ${new Date(unlockTime * 1000).toLocaleDateString()}`)
-      return
-    }
-
     setIsUnstaking(true)
     setError(null)
     setSuccess(null)
     setSuccessTx(null)
 
     try {
-      const instruction = createUnstakeInstruction(publicKey)
-      
-      const transaction = new Transaction().add(instruction)
-      const { blockhash } = await connection.getLatestBlockhash()
-      transaction.recentBlockhash = blockhash
-      transaction.feePayer = publicKey
+      if (isCustodial) {
+        // CUSTODIAL: Call server API
+        const response = await fetch('/api/staking/unstake', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        })
 
-      const signedTx = await signTransaction(transaction)
-      const signature = await connection.sendRawTransaction(signedTx.serialize())
-      
-      await connection.confirmTransaction(signature, 'confirmed')
-      
-      const unstakedAmount = stakeInfo.stakedAmount.toNumber() / 1e9
-      setSuccess(`Successfully unstaked ${unstakedAmount.toLocaleString()} V1N3!`)
-      setSuccessTx(signature)
-      
-      await Promise.all([fetchStakeInfo(), refreshBalance()])
+        const data = await response.json()
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to unstake')
+        }
+
+        setSuccess(`Successfully unstaked ${data.amount?.toLocaleString() ?? ''} V1N3!`)
+        if (data.signature) setSuccessTx(data.signature)
+        await Promise.all([fetchDbStakingData(), refreshBalance()])
+      } else {
+        // EXTERNAL: Use wallet adapter
+        if (!publicKey || !signTransaction || !connection) {
+          throw new Error('Please connect your wallet first')
+        }
+
+        // Check lock period
+        if (stakeInfo) {
+          const now = Math.floor(Date.now() / 1000)
+          const unlockTime = stakeInfo.stakeTimestamp.toNumber() + stakeInfo.lockPeriod.toNumber()
+          if (now < unlockTime) {
+            const remaining = formatTimeRemaining(unlockTime - now)
+            throw new Error(`Tokens are locked for ${remaining}`)
+          }
+        }
+
+        const instruction = createUnstakeInstruction(publicKey)
+        const transaction = new Transaction().add(instruction)
+        const { blockhash } = await connection.getLatestBlockhash()
+        transaction.recentBlockhash = blockhash
+        transaction.feePayer = publicKey
+
+        const signedTx = await signTransaction(transaction)
+        const signature = await connection.sendRawTransaction(signedTx.serialize())
+        await connection.confirmTransaction(signature, 'confirmed')
+        
+        setSuccess('Successfully unstaked your V1N3!')
+        setSuccessTx(signature)
+        await Promise.all([fetchOnChainStakeInfo(), refreshBalance()])
+      }
     } catch (err) {
-      console.error('[v0] Unstake error:', err)
+      console.error('Unstake error:', err)
       setError(err instanceof Error ? err.message : 'Failed to unstake. Please try again.')
     } finally {
       setIsUnstaking(false)
@@ -254,11 +323,6 @@ export function StakingDashboard({
 
   // Handle claim rewards
   const handleClaimRewards = async () => {
-    if (!publicKey || !signTransaction || !connection) {
-      setError('Please connect your wallet first')
-      return
-    }
-
     if (pendingRewards <= 0) {
       setError('No rewards to claim')
       return
@@ -270,56 +334,103 @@ export function StakingDashboard({
     setSuccessTx(null)
 
     try {
-      const instruction = createClaimRewardsInstruction(publicKey)
-      
-      const transaction = new Transaction().add(instruction)
-      const { blockhash } = await connection.getLatestBlockhash()
-      transaction.recentBlockhash = blockhash
-      transaction.feePayer = publicKey
+      if (isCustodial) {
+        // CUSTODIAL: Call server API
+        const response = await fetch('/api/staking/claim', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        })
 
-      const signedTx = await signTransaction(transaction)
-      const signature = await connection.sendRawTransaction(signedTx.serialize())
-      
-      await connection.confirmTransaction(signature, 'confirmed')
-      
-      setSuccess(`Successfully claimed ${pendingRewards.toFixed(4)} V1N3 rewards!`)
-      setSuccessTx(signature)
-      
-      await Promise.all([fetchStakeInfo(), refreshBalance()])
+        const data = await response.json()
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to claim rewards')
+        }
+
+        setSuccess(`Successfully claimed ${data.amount?.toFixed(4) ?? pendingRewards.toFixed(4)} V1N3 rewards!`)
+        if (data.signature) setSuccessTx(data.signature)
+        await Promise.all([fetchDbStakingData(), refreshBalance()])
+      } else {
+        // EXTERNAL: Use wallet adapter
+        if (!publicKey || !signTransaction || !connection) {
+          throw new Error('Please connect your wallet first')
+        }
+
+        const instruction = createClaimRewardsInstruction(publicKey)
+        const transaction = new Transaction().add(instruction)
+        const { blockhash } = await connection.getLatestBlockhash()
+        transaction.recentBlockhash = blockhash
+        transaction.feePayer = publicKey
+
+        const signedTx = await signTransaction(transaction)
+        const signature = await connection.sendRawTransaction(signedTx.serialize())
+        await connection.confirmTransaction(signature, 'confirmed')
+        
+        setSuccess(`Successfully claimed ${pendingRewards.toFixed(4)} V1N3 rewards!`)
+        setSuccessTx(signature)
+        await Promise.all([fetchOnChainStakeInfo(), refreshBalance()])
+      }
     } catch (err) {
-      console.error('[v0] Claim error:', err)
+      console.error('Claim error:', err)
       setError(err instanceof Error ? err.message : 'Failed to claim rewards. Please try again.')
     } finally {
       setIsClaiming(false)
     }
   }
 
-  // Handle max button
-  const handleMax = () => {
-    setStakeAmount(availableBalance.toString())
+  // Check if user has active stake
+  const hasActiveStake = isCustodial 
+    ? (dbStakingData?.positions?.some(p => p.is_active) ?? false)
+    : (stakeInfo?.isActive ?? false)
+
+  // Check if tokens are locked
+  const isLocked = (() => {
+    if (isCustodial) {
+      const activePosition = dbStakingData?.positions?.find(p => p.is_active)
+      if (!activePosition?.locked_until) return false
+      return new Date(activePosition.locked_until) > new Date()
+    } else {
+      if (!stakeInfo) return false
+      const now = Math.floor(Date.now() / 1000)
+      const unlockTime = stakeInfo.stakeTimestamp.toNumber() + stakeInfo.lockPeriod.toNumber()
+      return now < unlockTime
+    }
+  })()
+
+  // Get time remaining until unlock
+  const getTimeRemaining = () => {
+    if (isCustodial) {
+      const activePosition = dbStakingData?.positions?.find(p => p.is_active)
+      if (!activePosition?.locked_until) return null
+      const unlockTime = new Date(activePosition.locked_until).getTime()
+      const remaining = Math.max(0, Math.floor((unlockTime - Date.now()) / 1000))
+      return remaining > 0 ? formatTimeRemaining(remaining) : null
+    } else {
+      if (!stakeInfo) return null
+      const now = Math.floor(Date.now() / 1000)
+      const unlockTime = stakeInfo.stakeTimestamp.toNumber() + stakeInfo.lockPeriod.toNumber()
+      const remaining = unlockTime - now
+      return remaining > 0 ? formatTimeRemaining(remaining) : null
+    }
   }
 
-  // Get lock period info for current stake
-  const getCurrentLockPeriodInfo = () => {
-    if (!stakeInfo) return null
-    const lockSeconds = stakeInfo.lockPeriod.toNumber()
-    return LOCK_PERIODS.find(lp => lp.seconds === lockSeconds) || LOCK_PERIODS[0]
+  // Get current APY for active stake
+  const getCurrentApy = () => {
+    if (isCustodial) {
+      const activePosition = dbStakingData?.positions?.find(p => p.is_active)
+      return activePosition?.apy ?? selectedLockPeriod.apy
+    } else {
+      if (!stakeInfo) return selectedLockPeriod.apy
+      const lockSeconds = stakeInfo.lockPeriod.toNumber()
+      const period = LOCK_PERIODS.find(p => p.seconds === lockSeconds)
+      return period?.apy ?? 35
+    }
   }
 
-  // Calculate unlock time
-  const getUnlockTime = () => {
-    if (!stakeInfo) return null
-    return stakeInfo.stakeTimestamp.toNumber() + stakeInfo.lockPeriod.toNumber()
-  }
-
-  const isLocked = () => {
-    const unlockTime = getUnlockTime()
-    if (!unlockTime) return false
-    return Math.floor(Date.now() / 1000) < unlockTime
-  }
+  const timeRemaining = getTimeRemaining()
+  const currentApy = getCurrentApy()
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="space-y-6">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
@@ -333,23 +444,23 @@ export function StakingDashboard({
           <div>
             <h1 className="font-mono text-2xl text-foreground">Stake V1N3</h1>
             <p className="mono-xs text-[10px] text-muted-foreground tracking-[0.2em]">
-              EARN UP TO 65% APY ON YOUR V1N3 TOKENS
+              EARN REWARDS ON YOUR V1N3 TOKENS
             </p>
           </div>
         </div>
       </div>
 
-      {/* Alerts */}
+      {/* Error/Success Messages */}
       <AnimatePresence mode="wait">
         {error && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="mb-4 p-3 bg-destructive/10 border border-destructive/30 rounded-[2px] flex items-start gap-2"
+            className="p-4 bg-red-500/10 border border-red-500/30 rounded-[2px] flex items-center gap-3"
           >
-            <AlertCircle className="w-4 h-4 text-destructive mt-0.5" />
-            <p className="mono-xs text-[11px] text-destructive">{error}</p>
+            <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+            <p className="mono-xs text-[11px] text-red-400">{error}</p>
           </motion.div>
         )}
         {success && (
@@ -357,34 +468,33 @@ export function StakingDashboard({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="mb-4 p-3 bg-primary/10 border border-primary/30 rounded-[2px]"
+            className="p-4 bg-primary/10 border border-primary/30 rounded-[2px]"
           >
-            <div className="flex items-start gap-2">
-              <Check className="w-4 h-4 text-primary mt-0.5" />
-              <div>
-                <p className="mono-xs text-[11px] text-primary">{success}</p>
-                {successTx && (
-                  <a
-                    href={getExplorerUrl(successTx)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mono-xs text-[10px] text-primary/70 hover:text-primary flex items-center gap-1 mt-1"
-                  >
-                    View on Solana Explorer <ExternalLink className="w-3 h-3" />
-                  </a>
-                )}
-              </div>
+            <div className="flex items-center gap-3">
+              <Check className="w-5 h-5 text-primary shrink-0" />
+              <p className="mono-xs text-[11px] text-primary">{success}</p>
             </div>
+            {successTx && (
+              <a
+                href={getExplorerUrl(successTx)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 flex items-center gap-1 text-primary/70 hover:text-primary transition-colors"
+              >
+                <span className="mono-xs text-[10px]">View on Explorer</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content - Left 2 columns */}
+        {/* Main Staking Panel */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Stats Cards */}
+          {/* Stats Row */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {/* Current APY Card */}
+            {/* APY Card */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -394,12 +504,7 @@ export function StakingDashboard({
                 <TrendingUp className="w-4 h-4 text-accent" />
                 <span className="mono-xs text-[9px] text-muted-foreground tracking-[0.18em]">APY</span>
               </div>
-              <p className="font-mono text-2xl text-accent">
-                {stakeInfo ? getCurrentLockPeriodInfo()?.apy : selectedLockPeriod.apy}%
-              </p>
-              <p className="mono-xs text-[10px] text-muted-foreground">
-                {stakeInfo ? getCurrentLockPeriodInfo()?.label : selectedLockPeriod.label}
-              </p>
+              <p className="font-mono text-2xl text-accent">{currentApy}%</p>
             </motion.div>
 
             {/* Total Staked Card */}
@@ -413,9 +518,7 @@ export function StakingDashboard({
                 <Lock className="w-4 h-4 text-primary" />
                 <span className="mono-xs text-[9px] text-muted-foreground tracking-[0.18em]">STAKED</span>
               </div>
-              <p className="font-mono text-2xl text-foreground">
-                {isLoadingStakeInfo ? '...' : formatV1N3Balance(stakedAmount / 1e9)}
-              </p>
+              <p className="font-mono text-2xl text-foreground">{formatV1N3Balance(stakedAmount)}</p>
               <div className="flex items-center gap-1.5">
                 <Image src="/images/v1n3-token.jpg" alt="V1N3" width={14} height={14} className="rounded-full" />
                 <span className="mono-xs text-[10px] text-muted-foreground">V1N3</span>
@@ -430,7 +533,7 @@ export function StakingDashboard({
               className="bg-card border border-border rounded-[2px] p-4"
             >
               <div className="flex items-center gap-2 mb-2">
-                <Zap className="w-4 h-4 text-primary" />
+                <Sparkles className="w-4 h-4 text-primary" />
                 <span className="mono-xs text-[9px] text-muted-foreground tracking-[0.18em]">AVAILABLE</span>
               </div>
               <p className="font-mono text-2xl text-foreground">
@@ -462,99 +565,88 @@ export function StakingDashboard({
           </div>
 
           {/* Lock Period Selection */}
-          {!stakeInfo?.isActive && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-card border border-border rounded-[2px] p-4"
-            >
-              <div className="flex items-center gap-2 mb-4">
-                <Timer className="w-4 h-4 text-primary" />
-                <span className="mono-xs text-[10px] text-muted-foreground tracking-[0.18em]">
-                  / SELECT LOCK PERIOD
-                </span>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                {LOCK_PERIODS.map((period) => (
-                  <button
-                    key={period.seconds}
-                    onClick={() => setSelectedLockPeriod(period)}
-                    className={`relative p-4 rounded-[2px] border transition-all ${
-                      selectedLockPeriod.seconds === period.seconds
-                        ? 'border-primary bg-primary/10'
-                        : 'border-border hover:border-primary/50 bg-card/50'
-                    }`}
-                  >
-                    {period.recommended && (
-                      <div className="absolute -top-2 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-0.5 bg-accent rounded-[2px]">
-                        <Crown className="w-3 h-3 text-background" />
-                        <span className="mono-xs text-[8px] text-background font-bold">BEST</span>
-                      </div>
-                    )}
-                    <div className="text-center">
-                      <p className={`font-mono text-2xl ${
-                        period.recommended ? 'text-accent' : 'text-foreground'
-                      }`}>
-                        {period.apy}%
-                      </p>
-                      <p className="mono-xs text-[9px] text-muted-foreground tracking-[0.1em] mt-1">
-                        APY
-                      </p>
-                      <div className="mt-3 pt-3 border-t border-border/50">
-                        <p className="mono-xs text-[11px] text-foreground">{period.label}</p>
-                        <p className="mono-xs text-[9px] text-muted-foreground">{period.days} days lock</p>
-                      </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-card border border-border rounded-[2px] p-5"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <Timer className="w-4 h-4 text-primary" />
+              <span className="mono-xs text-[10px] text-muted-foreground tracking-[0.18em]">/ SELECT LOCK PERIOD</span>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {LOCK_PERIODS.map((period) => (
+                <button
+                  key={period.days}
+                  onClick={() => setSelectedLockPeriod(period)}
+                  disabled={hasActiveStake}
+                  className={`relative p-4 rounded-[2px] border-2 transition-all text-left ${
+                    selectedLockPeriod.days === period.days
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border bg-card/50 hover:border-primary/50'
+                  } ${hasActiveStake ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                >
+                  {period.recommended && (
+                    <div className="absolute -top-2 right-2 px-2 py-0.5 bg-accent text-background rounded-[2px]">
+                      <span className="mono-xs text-[8px] font-bold tracking-wider">BEST</span>
                     </div>
-                    {selectedLockPeriod.seconds === period.seconds && (
-                      <div className="absolute top-2 right-2">
-                        <Check className="w-4 h-4 text-primary" />
-                      </div>
+                  )}
+                  <div className="flex items-center gap-2 mb-2">
+                    {period.recommended ? (
+                      <Crown className="w-4 h-4 text-accent" />
+                    ) : (
+                      <Clock className="w-4 h-4 text-muted-foreground" />
                     )}
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
+                    <span className="mono-xs text-[11px] text-foreground">{period.label}</span>
+                  </div>
+                  <p className={`font-mono text-2xl ${period.recommended ? 'text-accent' : 'text-primary'}`}>
+                    {period.apy}%
+                  </p>
+                  <p className="mono-xs text-[10px] text-muted-foreground">APY</p>
+                </button>
+              ))}
+            </div>
+          </motion.div>
 
           {/* Stake/Unstake Tabs */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
-            className="bg-card border border-border rounded-[2px] p-4"
+            className="bg-card border border-border rounded-[2px] p-5"
           >
             {/* Tab Buttons */}
-            <div className="flex gap-2 mb-4">
+            <div className="flex gap-2 mb-5">
               <button
                 onClick={() => setActiveTab('stake')}
-                className={`flex-1 py-3 px-4 rounded-[2px] font-mono text-[12px] transition-all flex items-center justify-center gap-2 ${
+                className={`flex-1 py-3 px-4 rounded-[2px] flex items-center justify-center gap-2 transition-all ${
                   activeTab === 'stake'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                    ? 'bg-primary text-background'
+                    : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
                 }`}
               >
                 <Lock className="w-4 h-4" />
-                STAKE
+                <span className="mono-xs text-[11px] tracking-wider">STAKE</span>
               </button>
               <button
                 onClick={() => setActiveTab('unstake')}
-                className={`flex-1 py-3 px-4 rounded-[2px] font-mono text-[12px] transition-all flex items-center justify-center gap-2 ${
+                className={`flex-1 py-3 px-4 rounded-[2px] flex items-center justify-center gap-2 transition-all ${
                   activeTab === 'unstake'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                    ? 'bg-primary text-background'
+                    : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
                 }`}
               >
                 <Unlock className="w-4 h-4" />
-                UNSTAKE
+                <span className="mono-xs text-[11px] tracking-wider">UNSTAKE</span>
               </button>
             </div>
 
             {activeTab === 'stake' ? (
               <div className="space-y-4">
                 <div>
-                  <label className="mono-xs text-[10px] text-muted-foreground tracking-[0.18em] mb-2 block">
+                  <label className="mono-xs text-[9px] text-muted-foreground tracking-[0.18em] mb-2 block">
                     AMOUNT TO STAKE
                   </label>
                   <div className="relative">
@@ -563,13 +655,15 @@ export function StakingDashboard({
                       value={stakeAmount}
                       onChange={(e) => setStakeAmount(e.target.value)}
                       placeholder="0.00"
-                      className="w-full bg-background border border-border rounded-[2px] px-4 py-3 font-mono text-lg text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary"
+                      disabled={hasActiveStake}
+                      className="w-full bg-muted/20 border border-border rounded-[2px] px-4 py-3 font-mono text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary disabled:opacity-50"
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                       <span className="mono-xs text-[10px] text-muted-foreground">V1N3</span>
                       <button
-                        onClick={handleMax}
-                        className="mono-xs text-[10px] text-primary hover:text-primary/80 transition-colors"
+                        onClick={() => setStakeAmount(availableBalance.toString())}
+                        disabled={hasActiveStake}
+                        className="px-2 py-1 bg-primary/20 text-primary rounded-[2px] mono-xs text-[10px] hover:bg-primary/30 transition-colors disabled:opacity-50"
                       >
                         MAX
                       </button>
@@ -582,89 +676,69 @@ export function StakingDashboard({
 
                 <button
                   onClick={handleStake}
-                  disabled={isStaking || !connected || !stakeAmount}
-                  className="w-full py-4 bg-primary text-primary-foreground font-mono text-[12px] rounded-[2px] hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  disabled={isStaking || !canTransact || hasActiveStake || !stakeAmount}
+                  className="w-full py-4 bg-primary text-background rounded-[2px] flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isStaking ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      STAKING...
-                    </>
+                    <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    <>
-                      <Lock className="w-4 h-4" />
-                      STAKE V1N3 ({selectedLockPeriod.apy}% APY)
-                    </>
+                    <Lock className="w-4 h-4" />
                   )}
+                  <span className="mono-xs text-[11px] tracking-wider">
+                    {isStaking ? 'STAKING...' : hasActiveStake ? 'ALREADY STAKING' : 'STAKE V1N3'}
+                  </span>
                 </button>
 
-                <p className="mono-xs text-[9px] text-muted-foreground text-center">
-                  Minimum stake: 100 V1N3 | Lock period: {selectedLockPeriod.label}
+                <p className="mono-xs text-[10px] text-center text-muted-foreground">
+                  Minimum stake: 100 V1N3
                 </p>
               </div>
             ) : (
               <div className="space-y-4">
-                {stakeInfo?.isActive ? (
+                {hasActiveStake ? (
                   <>
-                    <div className="bg-background border border-border rounded-[2px] p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="mono-xs text-[10px] text-muted-foreground">YOUR STAKED AMOUNT</span>
-                        <span className="mono-xs text-[9px] text-primary bg-primary/10 px-2 py-0.5 rounded-[2px]">
-                          {isLocked() ? 'LOCKED' : 'UNLOCKED'}
-                        </span>
+                    <div className="p-4 bg-muted/20 border border-border rounded-[2px]">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="mono-xs text-[10px] text-muted-foreground">Staked Amount</span>
+                        <div className="flex items-center gap-1.5">
+                          <Image src="/images/v1n3-token.jpg" alt="V1N3" width={14} height={14} className="rounded-full" />
+                          <span className="font-mono text-foreground">{formatV1N3Balance(stakedAmount)} V1N3</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Image src="/images/v1n3-token.jpg" alt="V1N3" width={24} height={24} className="rounded-full" />
-                        <span className="font-mono text-xl text-foreground">
-                          {formatV1N3Balance(stakedAmount / 1e9)} V1N3
-                        </span>
-                      </div>
-                      {isLocked() && (
-                        <div className="mt-3 pt-3 border-t border-border/50">
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Clock className="w-4 h-4" />
-                            <span className="mono-xs text-[10px]">
-                              {formatTimeRemaining(getUnlockTime()!)}
-                            </span>
-                          </div>
+                      {isLocked && timeRemaining && (
+                        <div className="flex items-center gap-2 text-amber-500">
+                          <Lock className="w-4 h-4" />
+                          <span className="mono-xs text-[10px]">Locked for {timeRemaining}</span>
                         </div>
                       )}
                     </div>
 
                     <button
                       onClick={handleUnstake}
-                      disabled={isUnstaking || isLocked()}
-                      className="w-full py-4 bg-muted text-foreground font-mono text-[12px] rounded-[2px] hover:bg-muted/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      disabled={isUnstaking || isLocked || !canTransact}
+                      className="w-full py-4 bg-primary text-background rounded-[2px] flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isUnstaking ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          UNSTAKING...
-                        </>
-                      ) : isLocked() ? (
-                        <>
-                          <Lock className="w-4 h-4" />
-                          LOCKED - {formatTimeRemaining(getUnlockTime()!)}
-                        </>
+                        <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        <>
-                          <Unlock className="w-4 h-4" />
-                          UNSTAKE ALL V1N3
-                        </>
+                        <Unlock className="w-4 h-4" />
                       )}
+                      <span className="mono-xs text-[11px] tracking-wider">
+                        {isUnstaking ? 'UNSTAKING...' : isLocked ? 'LOCKED' : 'UNSTAKE V1N3'}
+                      </span>
                     </button>
+
+                    {isLocked && (
+                      <p className="mono-xs text-[10px] text-center text-amber-500">
+                        Your tokens are locked. Wait for the lock period to end.
+                      </p>
+                    )}
                   </>
                 ) : (
                   <div className="text-center py-8">
-                    <Image 
-                      src="/images/v1n3-token.jpg" 
-                      alt="V1N3" 
-                      width={48} 
-                      height={48} 
-                      className="rounded-full mx-auto mb-3 opacity-30"
-                    />
+                    <Lock className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
                     <p className="mono-xs text-[11px] text-muted-foreground">No active stake</p>
-                    <p className="mono-xs text-[10px] text-muted-foreground/60">Stake V1N3 to start earning rewards</p>
+                    <p className="mono-xs text-[10px] text-muted-foreground/60">Stake V1N3 first to unstake</p>
                   </div>
                 )}
               </div>
@@ -676,85 +750,83 @@ export function StakingDashboard({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="bg-gradient-to-r from-accent/10 to-accent/5 border border-accent/30 rounded-[2px] p-4"
+            className="bg-gradient-to-r from-accent/10 to-accent/5 border border-accent/30 rounded-[2px] p-5"
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
                   <Gift className="w-5 h-5 text-accent" />
+                  <span className="mono-xs text-[10px] text-muted-foreground tracking-[0.18em]">PENDING REWARDS</span>
                 </div>
-                <div>
-                  <p className="mono-xs text-[10px] text-muted-foreground tracking-[0.18em]">PENDING REWARDS</p>
-                  <p className="font-mono text-xl text-accent">{pendingRewards.toFixed(4)} <span className="text-sm">V1N3</span></p>
+                <div className="flex items-center gap-2">
+                  <Image src="/images/v1n3-token.jpg" alt="V1N3" width={20} height={20} className="rounded-full" />
+                  <span className="font-mono text-2xl text-accent">{pendingRewards.toFixed(4)}</span>
+                  <span className="mono-xs text-muted-foreground">V1N3</span>
                 </div>
+                <p className="mono-xs text-[10px] text-muted-foreground mt-1">
+                  Rewards are calculated based on your staked amount and current APY. Claim anytime!
+                </p>
               </div>
               <button
                 onClick={handleClaimRewards}
-                disabled={isClaiming || pendingRewards <= 0}
-                className="py-3 px-6 bg-accent text-accent-foreground font-mono text-[11px] rounded-[2px] hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                disabled={isClaiming || pendingRewards <= 0 || !canTransact}
+                className="px-6 py-3 bg-accent text-background rounded-[2px] flex items-center gap-2 hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
               >
                 {isClaiming ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    CLAIMING...
-                  </>
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    CLAIM REWARDS
-                  </>
+                  <Sparkles className="w-4 h-4" />
                 )}
+                <span className="mono-xs text-[11px] tracking-wider">CLAIM REWARDS</span>
               </button>
             </div>
-            <p className="mono-xs text-[9px] text-muted-foreground mt-3">
-              Rewards are calculated based on your staked amount and current APY. Claim anytime!
-            </p>
           </motion.div>
         </div>
 
-        {/* Right Sidebar */}
-        <div className="space-y-6">
-          {/* Connected Wallet Card */}
+        {/* Sidebar */}
+        <div className="space-y-4">
+          {/* Connected Wallet */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.35 }}
             className="bg-card border border-border rounded-[2px] p-4"
           >
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-3">
               <Shield className="w-4 h-4 text-primary" />
-              <span className="mono-xs text-[10px] text-muted-foreground tracking-[0.18em]">
-                / CONNECTED WALLET
-              </span>
+              <span className="mono-xs text-[9px] text-muted-foreground tracking-[0.18em]">/ CONNECTED WALLET</span>
             </div>
-            {walletAddress ? (
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-[12px] text-foreground">
-                  {walletAddress.slice(0, 6)}...{walletAddress.slice(-6)}
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={copyAddress}
-                    className="p-1.5 hover:bg-muted rounded-[2px] transition-colors"
-                  >
-                    {copied ? (
-                      <Check className="w-4 h-4 text-primary" />
-                    ) : (
-                      <Copy className="w-4 h-4 text-muted-foreground" />
-                    )}
-                  </button>
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[12px] text-foreground">
+                {effectiveWalletAddress
+                  ? `${effectiveWalletAddress.slice(0, 6)}...${effectiveWalletAddress.slice(-6)}`
+                  : 'Not connected'}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={copyAddress}
+                  className="p-1.5 hover:bg-muted/30 rounded-[2px] transition-colors"
+                >
+                  {copied ? (
+                    <Check className="w-4 h-4 text-primary" />
+                  ) : (
+                    <Copy className="w-4 h-4 text-muted-foreground" />
+                  )}
+                </button>
+                {effectiveWalletAddress && (
                   <a
-                    href={`https://explorer.solana.com/address/${walletAddress}?cluster=devnet`}
+                    href={`https://explorer.solana.com/address/${effectiveWalletAddress}?cluster=devnet`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-1.5 hover:bg-muted rounded-[2px] transition-colors"
+                    className="p-1.5 hover:bg-muted/30 rounded-[2px] transition-colors"
                   >
                     <ExternalLink className="w-4 h-4 text-muted-foreground" />
                   </a>
-                </div>
+                )}
               </div>
-            ) : (
-              <p className="mono-xs text-[11px] text-muted-foreground">Connect wallet to stake</p>
+            </div>
+            {isCustodial && (
+              <p className="mono-xs text-[9px] text-primary mt-2">Email wallet (custodial)</p>
             )}
           </motion.div>
 
@@ -767,77 +839,62 @@ export function StakingDashboard({
           >
             <div className="flex items-center gap-2 mb-4">
               <Info className="w-4 h-4 text-primary" />
-              <span className="mono-xs text-[10px] text-muted-foreground tracking-[0.18em]">
-                / HOW IT WORKS
-              </span>
+              <span className="mono-xs text-[9px] text-muted-foreground tracking-[0.18em]">/ HOW IT WORKS</span>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {[
-                { step: '1', title: 'Choose Lock Period', desc: 'Longer locks = higher rewards' },
-                { step: '2', title: 'Stake V1N3', desc: 'Lock your tokens on-chain' },
-                { step: '3', title: 'Earn Rewards', desc: 'Up to 65% APY' },
-                { step: '4', title: 'Claim Anytime', desc: 'Rewards available instantly' },
+                { step: '1', title: 'Choose Lock Period', desc: 'Longer locks earn higher APY' },
+                { step: '2', title: 'Stake V1N3', desc: 'Lock your tokens to start earning' },
+                { step: '3', title: 'Earn Rewards', desc: 'Rewards calculated daily' },
+                { step: '4', title: 'Claim Anytime', desc: 'Claim rewards without unstaking' },
               ].map((item) => (
                 <div key={item.step} className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
                     <span className="mono-xs text-[10px] text-primary">{item.step}</span>
                   </div>
                   <div>
                     <p className="mono-xs text-[11px] text-foreground">{item.title}</p>
-                    <p className="mono-xs text-[9px] text-muted-foreground">{item.desc}</p>
+                    <p className="mono-xs text-[10px] text-muted-foreground">{item.desc}</p>
                   </div>
                 </div>
               ))}
             </div>
           </motion.div>
 
-          {/* Current Stake Info */}
-          {stakeInfo?.isActive && (
+          {/* Active Position */}
+          {hasActiveStake && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.45 }}
               className="bg-card border border-primary/30 rounded-[2px] p-4"
             >
-              <div className="flex items-center gap-2 mb-4">
-                <Lock className="w-4 h-4 text-primary" />
-                <span className="mono-xs text-[10px] text-muted-foreground tracking-[0.18em]">
-                  / ACTIVE STAKE
-                </span>
+              <div className="flex items-center gap-2 mb-3">
+                <Zap className="w-4 h-4 text-primary" />
+                <span className="mono-xs text-[9px] text-muted-foreground tracking-[0.18em]">/ ACTIVE POSITION</span>
               </div>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="mono-xs text-[10px] text-muted-foreground">Staked</span>
-                  <span className="mono-xs text-[11px] text-foreground">
-                    {formatV1N3Balance(stakedAmount / 1e9)} V1N3
-                  </span>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="mono-xs text-[10px] text-muted-foreground">Amount</span>
+                  <div className="flex items-center gap-1.5">
+                    <Image src="/images/v1n3-token.jpg" alt="V1N3" width={12} height={12} className="rounded-full" />
+                    <span className="mono-xs text-[11px] text-foreground">{formatV1N3Balance(stakedAmount)}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="mono-xs text-[10px] text-muted-foreground">Lock Period</span>
-                  <span className="mono-xs text-[11px] text-foreground">
-                    {getCurrentLockPeriodInfo()?.label}
-                  </span>
-                </div>
-                <div className="flex justify-between">
+                <div className="flex items-center justify-between">
                   <span className="mono-xs text-[10px] text-muted-foreground">APY</span>
-                  <span className="mono-xs text-[11px] text-accent">
-                    {getCurrentLockPeriodInfo()?.apy}%
-                  </span>
+                  <span className="mono-xs text-[11px] text-accent">{currentApy}%</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex items-center justify-between">
                   <span className="mono-xs text-[10px] text-muted-foreground">Status</span>
-                  <span className={`mono-xs text-[11px] ${isLocked() ? 'text-yellow-500' : 'text-primary'}`}>
-                    {isLocked() ? 'Locked' : 'Unlocked'}
+                  <span className={`mono-xs text-[11px] ${isLocked ? 'text-amber-500' : 'text-primary'}`}>
+                    {isLocked ? 'Locked' : 'Unlocked'}
                   </span>
                 </div>
-                {isLocked() && (
-                  <div className="pt-3 border-t border-border/50">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-muted-foreground" />
-                      <span className="mono-xs text-[10px] text-muted-foreground">
-                        {formatTimeRemaining(getUnlockTime()!)}
-                      </span>
-                    </div>
+                {timeRemaining && (
+                  <div className="flex items-center justify-between">
+                    <span className="mono-xs text-[10px] text-muted-foreground">Unlock in</span>
+                    <span className="mono-xs text-[11px] text-foreground">{timeRemaining}</span>
                   </div>
                 )}
               </div>
