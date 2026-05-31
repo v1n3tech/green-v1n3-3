@@ -7,10 +7,8 @@ import {
   fetchPendingProducts,
   fetchMyFavoriteIds,
   fetchMarketplaceStats,
-  LISTING_ROLES,
-  APPROVER_ROLES,
-  type MarketplaceProduct,
 } from "@/lib/marketplace/actions"
+import { LISTING_ROLES, APPROVER_ROLES, type MarketplaceProduct } from "@/lib/marketplace/types"
 import type { AgroCommunityKey } from "@/components/onboarding/data"
 
 export const metadata = {
