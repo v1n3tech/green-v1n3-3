@@ -67,6 +67,7 @@ interface DashboardMarketplaceProps {
   role: string
   canList: boolean
   canApprove: boolean
+  initialTab?: Tab
   userCommunity: AgroCommunityKey | null
   initialProducts: MarketplaceProduct[]
   myProducts: MarketplaceProduct[]
@@ -79,6 +80,7 @@ export function DashboardMarketplace({
   role,
   canList,
   canApprove,
+  initialTab = 'browse',
   userCommunity,
   initialProducts,
   myProducts,
@@ -86,7 +88,7 @@ export function DashboardMarketplace({
   favoriteIds,
   stats,
 }: DashboardMarketplaceProps) {
-  const [tab, setTab] = useState<Tab>('browse')
+  const [tab, setTab] = useState<Tab>(initialTab)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')

@@ -18,7 +18,12 @@ export const metadata = {
   description: "Browse and trade agricultural products.",
 }
 
-export default async function MarketplacePage() {
+export default async function MarketplacePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>
+}) {
+  const { tab } = await searchParams
   const supabase = await createClient()
 
   const {
@@ -38,6 +43,11 @@ export default async function MarketplacePage() {
   const canList = LISTING_ROLES.includes(role)
   const canApprove = APPROVER_ROLES.includes(role)
 
+  // Resolve the initial tab from the URL, gated by permissions.
+  let initialTab: "browse" | "listings" | "review" = "browse"
+  if (tab === "review" && canApprove) initialTab = "review"
+  else if (tab === "listings" && canList) initialTab = "listings"
+
   // Fetch everything in parallel
   const [approved, mine, pending, favorites, stats] = await Promise.all([
     fetchApprovedProducts({ limit: 48 }),
@@ -52,6 +62,7 @@ export default async function MarketplacePage() {
       role={role}
       canList={canList}
       canApprove={canApprove}
+      initialTab={initialTab}
       userCommunity={(profile.community as AgroCommunityKey) ?? null}
       initialProducts={approved.products}
       myProducts={mine.products}
