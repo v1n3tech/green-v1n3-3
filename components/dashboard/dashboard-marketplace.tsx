@@ -30,10 +30,12 @@ import {
   reviewProduct,
   deleteProduct,
   toggleFavorite,
+} from '@/lib/marketplace/actions'
+import {
   PRODUCT_CATEGORIES,
   type MarketplaceProduct,
   type ProductStatus,
-} from '@/lib/marketplace/actions'
+} from '@/lib/marketplace/types'
 import { COMMUNITIES, type AgroCommunityKey } from '@/components/onboarding/data'
 
 const CATEGORIES = [
