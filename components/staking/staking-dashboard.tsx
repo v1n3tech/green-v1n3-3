@@ -29,6 +29,7 @@ import { formatV1N3Balance } from '@/lib/wallet/v1n3-token'
 import {
   LOCK_PERIODS,
   ADMIN_WALLET,
+  getConfigPDA,
   getStakeInfoPDA,
   createStakeInstruction,
   createUnstakeInstruction,
@@ -74,6 +75,7 @@ export function StakingDashboard({
   const [isClaiming, setIsClaiming] = useState(false)
   const [isInitializingVault, setIsInitializingVault] = useState(false)
   const [vaultInitialized, setVaultInitialized] = useState(false)
+  const [vaultChecked, setVaultChecked] = useState(false)
   const [fundAmount, setFundAmount] = useState('')
   const [isFunding, setIsFunding] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -161,6 +163,27 @@ export function StakingDashboard({
       fetchOnChainStakeInfo()
     }
   }, [isCustodial, fetchDbStakingData, fetchOnChainStakeInfo])
+
+  // Detect real on-chain vault state so the Initialize card hides once the
+  // Config PDA exists (persists across reloads, not just this session).
+  useEffect(() => {
+    if (!isAdmin || !connection) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const [configPDA] = getConfigPDA()
+        const account = await connection.getAccountInfo(configPDA)
+        if (!cancelled && account) setVaultInitialized(true)
+      } catch (err) {
+        console.error('Vault state check failed:', err)
+      } finally {
+        if (!cancelled) setVaultChecked(true)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isAdmin, connection])
 
   // Calculate pending rewards for external wallets
   useEffect(() => {
@@ -570,8 +593,8 @@ export function StakingDashboard({
         </div>
       </div>
 
-      {/* Admin: Initialize Vault (Mantim only) */}
-      {isAdmin && !vaultInitialized && (
+      {/* Admin: Initialize Vault (Mantim only) - hidden once the on-chain vault exists */}
+      {isAdmin && vaultChecked && !vaultInitialized && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
