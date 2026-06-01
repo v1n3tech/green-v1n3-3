@@ -5,19 +5,13 @@ use anchor_spl::token_interface::{
 
 declare_id!("BygtFoZ4xWpCuQteoYAoA1WFcqzF8aVeAQjex3Ym8xgX");
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 const CONFIG_SEED: &[u8] = b"config";
 const STAKE_VAULT_SEED: &[u8] = b"stake_vault";
 const REWARD_VAULT_SEED: &[u8] = b"reward_vault";
 const STAKE_SEED: &[u8] = b"stake";
 
-// u128 keeps all reward math in one unsigned type.
-const SECONDS_PER_YEAR: u128 = 31_536_000; // 365 days
+const SECONDS_PER_YEAR: u128 = 31_536_000;
 
-// Lock periods in seconds; APY in basis points.
 const LOCK_3_WEEKS: i64 = 21 * 24 * 60 * 60;
 const LOCK_1_MONTH: i64 = 30 * 24 * 60 * 60;
 const LOCK_3_MONTHS: i64 = 90 * 24 * 60 * 60;
@@ -28,15 +22,10 @@ const APY_3_MONTHS: u16 = 6500;
 
 const MIN_STAKE: u64 = 1;
 
-// ---------------------------------------------------------------------------
-// Program
-// ---------------------------------------------------------------------------
-
 #[program]
 pub mod v1n3 {
     use super::*;
 
-    // One-time admin setup: creates config + stake/reward vaults.
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
         let config = &mut ctx.accounts.config;
         config.admin = ctx.accounts.admin.key();
@@ -50,7 +39,6 @@ pub mod v1n3 {
         Ok(())
     }
 
-    // Admin deposits V1N3 into the reward vault.
     pub fn fund_rewards(ctx: Context<FundRewards>, amount: u64) -> Result<()> {
         require!(amount > 0, StakingError::InvalidAmount);
 
@@ -73,7 +61,6 @@ pub mod v1n3 {
         Ok(())
     }
 
-    // Stake amount of V1N3 into the stake vault for a lock period.
     pub fn stake(
         ctx: Context<Stake>,
         amount: u64,
@@ -116,7 +103,6 @@ pub mod v1n3 {
         Ok(())
     }
 
-    // Claim accrued rewards from the reward vault without unstaking.
     pub fn claim_rewards(ctx: Context<ClaimRewards>) -> Result<()> {
         let now = Clock::get()?.unix_timestamp;
         let (amount, apy_bps, last_claim) = {
@@ -156,7 +142,6 @@ pub mod v1n3 {
         Ok(())
     }
 
-    // Unstake after lock ends: returns principal + remaining rewards.
     pub fn unstake(ctx: Context<Unstake>) -> Result<()> {
         let now = Clock::get()?.unix_timestamp;
         let (amount, apy_bps, start_ts, last_claim, lock_period) = {
@@ -173,7 +158,6 @@ pub mod v1n3 {
         let signer_seeds: &[&[&[u8]]] = &[&[CONFIG_SEED, &[bump]]];
         let decimals = ctx.accounts.v1n3_mint.decimals;
 
-        // Return principal from the stake vault.
         token_interface::transfer_checked(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
@@ -189,7 +173,6 @@ pub mod v1n3 {
             decimals,
         )?;
 
-        // Pay remaining rewards, capped by the reward vault balance.
         let elapsed = now.saturating_sub(last_claim);
         let pending = calc_rewards(amount, apy_bps, elapsed);
         let payable = pending.min(ctx.accounts.reward_vault.amount);
@@ -218,10 +201,6 @@ pub mod v1n3 {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 fn apy_for_lock_period(lock_period: i64) -> Result<u16> {
     match lock_period {
         LOCK_3_WEEKS => Ok(APY_3_WEEKS),
@@ -231,7 +210,6 @@ fn apy_for_lock_period(lock_period: i64) -> Result<u16> {
     }
 }
 
-// rewards = amount * apy_bps * elapsed / 10_000 / SECONDS_PER_YEAR
 fn calc_rewards(amount: u64, apy_bps: u16, elapsed_secs: i64) -> u64 {
     if elapsed_secs <= 0 || amount == 0 || apy_bps == 0 {
         return 0;
@@ -243,10 +221,6 @@ fn calc_rewards(amount: u64, apy_bps: u16, elapsed_secs: i64) -> u64 {
     let denominator = 10_000u128.saturating_mul(SECONDS_PER_YEAR);
     (numerator / denominator) as u64
 }
-
-// ---------------------------------------------------------------------------
-// State
-// ---------------------------------------------------------------------------
 
 #[account]
 #[derive(InitSpace)]
@@ -271,11 +245,6 @@ pub struct StakeAccount {
     pub apy_bps: u16,
     pub bump: u8,
 }
-
-// ---------------------------------------------------------------------------
-// Account contexts
-// Field order is the on-chain account order; the frontend must match it.
-// ---------------------------------------------------------------------------
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
@@ -471,10 +440,6 @@ pub struct Unstake<'info> {
     pub v1n3_mint: InterfaceAccount<'info, Mint>,
     pub token_program: Interface<'info, TokenInterface>,
 }
-
-// ---------------------------------------------------------------------------
-// Errors
-// ---------------------------------------------------------------------------
 
 #[error_code]
 pub enum StakingError {
