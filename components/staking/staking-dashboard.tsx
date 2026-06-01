@@ -28,10 +28,12 @@ import { useV1N3Balance } from '@/lib/wallet/use-v1n3-balance'
 import { formatV1N3Balance } from '@/lib/wallet/v1n3-token'
 import {
   LOCK_PERIODS,
+  ADMIN_WALLET,
   getStakeInfoPDA,
   createStakeInstruction,
   createUnstakeInstruction,
   createClaimRewardsInstruction,
+  createInitializeVaultInstruction,
   parseStakeInfo,
   calculatePendingRewards,
   getExplorerUrl,
@@ -58,6 +60,10 @@ export function StakingDashboard({
   // Determine effective wallet - use props wallet for custodial, adapter for external
   const effectiveWalletAddress = isCustodial ? walletAddress : (publicKey?.toBase58() ?? walletAddress)
   const canTransact = isCustodial ? !!walletAddress : (connected && !!signTransaction)
+
+  // Admin (Mantim) check - only the connected external admin wallet can initialize the vault.
+  // Requires the wallet adapter since the admin must sign the transaction.
+  const isAdmin = connected && !!publicKey && publicKey.toBase58() === ADMIN_WALLET
   
   // State
   const [stakeAmount, setStakeAmount] = useState('')
@@ -65,6 +71,8 @@ export function StakingDashboard({
   const [isStaking, setIsStaking] = useState(false)
   const [isUnstaking, setIsUnstaking] = useState(false)
   const [isClaiming, setIsClaiming] = useState(false)
+  const [isInitializingVault, setIsInitializingVault] = useState(false)
+  const [vaultInitialized, setVaultInitialized] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [successTx, setSuccessTx] = useState<string | null>(null)
@@ -179,6 +187,42 @@ export function StakingDashboard({
       navigator.clipboard.writeText(effectiveWalletAddress)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  // Handle initialize vault (admin only) - uses the connected admin wallet to sign
+  const handleInitializeVault = async () => {
+    setIsInitializingVault(true)
+    setError(null)
+    setSuccess(null)
+    setSuccessTx(null)
+
+    try {
+      if (!publicKey || !signTransaction || !connection) {
+        throw new Error('Please connect the admin wallet first')
+      }
+      if (publicKey.toBase58() !== ADMIN_WALLET) {
+        throw new Error('Only the admin wallet can initialize the vault')
+      }
+
+      const instruction = createInitializeVaultInstruction(publicKey)
+      const transaction = new Transaction().add(instruction)
+      const { blockhash } = await connection.getLatestBlockhash()
+      transaction.recentBlockhash = blockhash
+      transaction.feePayer = publicKey
+
+      const signedTx = await signTransaction(transaction)
+      const signature = await connection.sendRawTransaction(signedTx.serialize())
+      await connection.confirmTransaction(signature, 'confirmed')
+
+      setSuccess('Reward Vault initialized successfully')
+      setSuccessTx(signature)
+      setVaultInitialized(true)
+    } catch (err) {
+      console.error('Initialize vault error:', err)
+      setError(err instanceof Error ? err.message : 'Failed to initialize vault. Please try again.')
+    } finally {
+      setIsInitializingVault(false)
     }
   }
 
@@ -449,6 +493,44 @@ export function StakingDashboard({
           </div>
         </div>
       </div>
+
+      {/* Admin: Initialize Vault (Mantim only) */}
+      {isAdmin && !vaultInitialized && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-accent/5 border border-accent/30 rounded-[2px]"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-9 h-9 rounded-[2px] bg-accent/15 shrink-0">
+              <Crown className="w-4 h-4 text-accent" />
+            </div>
+            <div>
+              <p className="mono-xs text-[11px] text-foreground tracking-[0.12em]">ADMIN CONTROL</p>
+              <p className="mono-xs text-[10px] text-muted-foreground">
+                Initialize the on-chain reward vault before staking goes live.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleInitializeVault}
+            disabled={isInitializingVault}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-accent text-accent-foreground rounded-[2px] mono-xs text-[11px] tracking-[0.12em] hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+          >
+            {isInitializingVault ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                INITIALIZING...
+              </>
+            ) : (
+              <>
+                <Shield className="w-4 h-4" />
+                INITIALIZE VAULT
+              </>
+            )}
+          </button>
+        </motion.div>
+      )}
 
       {/* Error/Success Messages */}
       <AnimatePresence mode="wait">

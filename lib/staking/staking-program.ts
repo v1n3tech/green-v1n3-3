@@ -1,10 +1,13 @@
-import { PublicKey, Transaction, TransactionInstruction, SystemProgram, SYSVAR_CLOCK_PUBKEY } from '@solana/web3.js'
+import { PublicKey, Transaction, TransactionInstruction, SystemProgram, SYSVAR_CLOCK_PUBKEY, SYSVAR_RENT_PUBKEY } from '@solana/web3.js'
 import { TOKEN_2022_PROGRAM_ID, getAssociatedTokenAddressSync, createAssociatedTokenAccountInstruction } from '@solana/spl-token'
 import BN from 'bn.js'
 
 // Program constants
 export const STAKING_PROGRAM_ID = new PublicKey('BygtFoZ4xWpCuQteoYAoA1WFcqzF8aVeAQjex3Ym8xgX')
 export const V1N3_TOKEN_MINT = new PublicKey('EAtP7GvoVreBt9jFH7NEQkW5bkzDWQ1uuhQ7nnSMx7g1')
+
+// Admin wallet (Mantim) - only this wallet can initialize the reward vault
+export const ADMIN_WALLET = 'DqzGbbGUXBx6wUyNjZf7y6cqcL55i6YBfPpHkXQN4m8X'
 
 // Lock period option type
 export interface LockPeriodOption {
@@ -42,6 +45,7 @@ export const LOCK_PERIODS: LockPeriodOption[] = [
 
 // Instruction discriminators (first 8 bytes of sha256 hash of instruction name)
 // These are Anchor-style discriminators
+const INITIALIZE_VAULT_DISCRIMINATOR = Buffer.from([48, 191, 163, 44, 71, 129, 63, 164]) // sha256("global:initialize_vault")[0..8]
 const STAKE_DISCRIMINATOR = Buffer.from([206, 176, 202, 18, 200, 209, 179, 108]) // sha256("global:stake")[0..8]
 const UNSTAKE_DISCRIMINATOR = Buffer.from([90, 95, 107, 42, 205, 124, 50, 225]) // sha256("global:unstake")[0..8]
 const CLAIM_REWARDS_DISCRIMINATOR = Buffer.from([4, 144, 132, 71, 116, 23, 151, 80]) // sha256("global:claim_rewards")[0..8]
@@ -88,6 +92,35 @@ export function getRewardVaultPDA(): [PublicKey, number] {
     [Buffer.from(REWARD_VAULT_SEED)],
     STAKING_PROGRAM_ID
   )
+}
+
+/**
+ * Create an initialize_vault instruction (admin only).
+ * Initializes the reward vault PDA token account that holds reward tokens.
+ * Must be signed by the program admin authority.
+ */
+export function createInitializeVaultInstruction(
+  adminPubkey: PublicKey
+): TransactionInstruction {
+  const [rewardVaultPDA] = getRewardVaultPDA()
+  const [stakeVaultPDA] = getStakeVaultPDA()
+
+  const data = Buffer.alloc(8)
+  INITIALIZE_VAULT_DISCRIMINATOR.copy(data, 0)
+
+  return new TransactionInstruction({
+    programId: STAKING_PROGRAM_ID,
+    keys: [
+      { pubkey: adminPubkey, isSigner: true, isWritable: true },
+      { pubkey: rewardVaultPDA, isSigner: false, isWritable: true },
+      { pubkey: stakeVaultPDA, isSigner: false, isWritable: true },
+      { pubkey: V1N3_TOKEN_MINT, isSigner: false, isWritable: false },
+      { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+    ],
+    data,
+  })
 }
 
 /**
