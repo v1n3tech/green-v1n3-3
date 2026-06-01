@@ -127,6 +127,134 @@ export async function ensureCustodialWallet(
 }
 
 /**
+ * Parse a user-supplied secret key into a Keypair.
+ * Accepts either:
+ *  - a base58-encoded 64-byte secret key string (Phantom "export private key" format), or
+ *  - a JSON byte array like "[12,34,...]" (solana-keygen / id.json format).
+ * Throws a user-friendly error if the input is not a valid Solana secret key.
+ */
+function parseSecretKey(input: string): Keypair {
+  const trimmed = input.trim()
+  if (!trimmed) {
+    throw new Error("Secret key is required")
+  }
+
+  let secretKeyBytes: Uint8Array
+
+  if (trimmed.startsWith("[")) {
+    // JSON byte array format
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(trimmed)
+    } catch {
+      throw new Error("Invalid secret key: malformed byte array")
+    }
+    if (!Array.isArray(parsed) || parsed.some((n) => typeof n !== "number")) {
+      throw new Error("Invalid secret key: expected an array of numbers")
+    }
+    secretKeyBytes = Uint8Array.from(parsed as number[])
+  } else {
+    // base58 string format
+    try {
+      secretKeyBytes = bs58.decode(trimmed)
+    } catch {
+      throw new Error("Invalid secret key: not valid base58")
+    }
+  }
+
+  if (secretKeyBytes.length !== 64) {
+    throw new Error("Invalid secret key: expected 64 bytes")
+  }
+
+  try {
+    return Keypair.fromSecretKey(secretKeyBytes)
+  } catch {
+    throw new Error("Invalid secret key: could not derive keypair")
+  }
+}
+
+export interface ImportResult {
+  publicKey: string
+  replacedPreviousWallet: boolean
+}
+
+/**
+ * Import an existing Solana wallet for a user from a supplied secret key.
+ *
+ * The secret key is encrypted with AES-256-GCM and stored in `user_wallets`
+ * exactly like a minted custodial wallet, so the platform can sign on the
+ * user's behalf. Because `user_wallets.user_id` is the primary key, importing
+ * REPLACES the user's current custodial wallet (upsert on user_id), and the
+ * profile's `wallet_address` is repointed to the imported public key.
+ *
+ * Server-only. The raw secret key is NEVER returned to the client.
+ */
+export async function importWallet(
+  userId: string,
+  secretKeyInput: string,
+): Promise<ImportResult> {
+  const admin = createAdminClient()
+
+  // Validate + derive keypair before touching the DB.
+  const keypair = parseSecretKey(secretKeyInput)
+  const publicKey = keypair.publicKey.toBase58()
+  const secretKeyBase58 = bs58.encode(keypair.secretKey)
+
+  // Guard: a public_key may only belong to one account (UNIQUE constraint).
+  const { data: ownerOfKey } = await admin
+    .from("user_wallets")
+    .select("user_id")
+    .eq("public_key", publicKey)
+    .maybeSingle()
+
+  if (ownerOfKey && ownerOfKey.user_id !== userId) {
+    throw new Error("This wallet is already linked to another account")
+  }
+
+  // Detect whether the user already has a wallet (so we can report a replace).
+  const { data: existing } = await admin
+    .from("user_wallets")
+    .select("public_key")
+    .eq("user_id", userId)
+    .maybeSingle()
+
+  const replacedPreviousWallet = !!existing?.public_key && existing.public_key !== publicKey
+
+  const encrypted = encrypt(secretKeyBase58)
+
+  // Upsert on the user_id primary key.
+  const { error: upsertErr } = await admin
+    .from("user_wallets")
+    .upsert(
+      {
+        user_id: userId,
+        public_key: publicKey,
+        encrypted_secret_key: encrypted.ciphertext,
+        iv: encrypted.iv,
+        auth_tag: encrypted.authTag,
+        origin: "imported",
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" },
+    )
+
+  if (upsertErr) {
+    throw new Error(`[v0] import: failed to write user_wallets: ${upsertErr.message}`)
+  }
+
+  const { error: profileErr } = await admin
+    .from("profiles")
+    .update({ wallet_address: publicKey })
+    .eq("id", userId)
+
+  if (profileErr) {
+    throw new Error(`[v0] import: wrote keypair but failed to update profile: ${profileErr.message}`)
+  }
+
+  return { publicKey, replacedPreviousWallet }
+}
+
+/**
  * Decrypt a custodial wallet's secretKey for server-side signing.
  * NEVER expose the result to the client.
  */
