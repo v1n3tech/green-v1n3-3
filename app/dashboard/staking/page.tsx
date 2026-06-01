@@ -31,8 +31,10 @@ export default async function StakingPage() {
     redirect("/onboarding")
   }
 
-  // Custodial vs external is tracked in `user_wallets.origin`
-  // (minted = custodial wallet created by the app, otherwise external).
+  // Custodial vs external is tracked in `user_wallets.origin`.
+  // Both `minted` (app-generated) and `imported` (user supplied a key/seed we
+  // encrypted) are CUSTODIAL: the platform holds the encrypted secret key and
+  // signs server-side. `external` = wallet-adapter connect (user signs).
   // user_wallets is RLS-locked (service-role only), so use the admin client.
   let isCustodial = false
   try {
@@ -43,7 +45,7 @@ export default async function StakingPage() {
       .eq("user_id", user.id)
       .maybeSingle()
 
-    isCustodial = walletData?.origin === "minted"
+    isCustodial = walletData?.origin === "minted" || walletData?.origin === "imported"
   } catch (err) {
     console.error("[v0] StakingPage: failed to resolve wallet origin", err)
   }

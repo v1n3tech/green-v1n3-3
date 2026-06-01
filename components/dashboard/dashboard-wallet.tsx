@@ -28,7 +28,12 @@ import {
   ChevronRight,
   AlertCircle,
   X,
+  KeyRound,
+  Eye,
+  EyeOff,
+  ShieldAlert,
 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { V1N3_TOKEN, V1N3_MINT_PUBKEY, getExplorerUrl, formatV1N3Balance, formatNGN, v1n3ToNGN, SOLANA_NETWORK, SOLANA_RPC_ENDPOINT } from '@/lib/wallet/v1n3-token'
 import { useV1N3Balance, useSOLBalance } from '@/lib/wallet/use-v1n3-balance'
 import { createClient } from '@/lib/supabase/client'
@@ -80,8 +85,18 @@ export function DashboardWallet({
   const [hasATA, setHasATA] = useState<boolean | null>(null)
   const [ataAddress, setAtaAddress] = useState<string | null>(null)
   const [creatingATA, setCreatingATA] = useState(false)
-  const [walletOrigin, setWalletOrigin] = useState<'minted' | 'external' | null>(null)
-  
+  const [walletOrigin, setWalletOrigin] = useState<'minted' | 'external' | 'imported' | null>(null)
+
+  // Import wallet state
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [importKey, setImportKey] = useState('')
+  const [showImportKey, setShowImportKey] = useState(false)
+  const [importLoading, setImportLoading] = useState(false)
+  const [importError, setImportError] = useState<string | null>(null)
+  const [importedPublicKey, setImportedPublicKey] = useState<string | null>(null)
+
+  const router = useRouter()
+
   // Solana wallet adapter hooks
   const { publicKey, connected, disconnect, signTransaction } = useWallet()
   const { setVisible } = useWalletModal()
@@ -268,6 +283,49 @@ export function DashboardWallet({
     setVisible(true)
   }
 
+  const handleImport = async () => {
+    if (!importKey.trim()) {
+      setImportError('Please paste your wallet secret key')
+      return
+    }
+
+    setImportLoading(true)
+    setImportError(null)
+
+    try {
+      const response = await fetch('/api/wallet/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secretKey: importKey.trim() }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to import wallet')
+      }
+
+      setImportedPublicKey(result.publicKey)
+      setImportKey('')
+      // Refresh server data so the new wallet address propagates.
+      router.refresh()
+    } catch (err) {
+      console.error('[v0] Import wallet error:', err)
+      setImportError(err instanceof Error ? err.message : 'Failed to import wallet')
+    } finally {
+      setImportLoading(false)
+    }
+  }
+
+  const closeImportModal = () => {
+    if (importLoading) return
+    setShowImportModal(false)
+    setImportKey('')
+    setShowImportKey(false)
+    setImportError(null)
+    setImportedPublicKey(null)
+  }
+
   const handleSend = async () => {
     if (!walletAddress || !sendTo || !sendAmount) return
     
@@ -299,8 +357,9 @@ export function DashboardWallet({
         throw new Error('Invalid Solana address')
       }
       
-      // CUSTODIAL WALLET: Use server-side signing via API
-      if (walletOrigin === 'minted') {
+      // CUSTODIAL WALLET (minted or imported): server-side signing via API.
+      // Both hold an encrypted secret key the platform can sign with.
+      if (walletOrigin === 'minted' || walletOrigin === 'imported') {
         const response = await fetch('/api/wallet/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -639,10 +698,24 @@ export function DashboardWallet({
                     <ExternalLink className="w-4 h-4" />
                   </a>
                 </div>
+                {walletOrigin === 'imported' && (
+                  <div className="flex items-center gap-1.5">
+                    <KeyRound className="w-3 h-3 text-accent" />
+                    <span className="mono-xs text-[9px] text-accent tracking-wider">IMPORTED</span>
+                  </div>
+                )}
               </div>
             ) : (
               <p className="mono-xs text-[11px] text-muted-foreground">No wallet assigned</p>
             )}
+
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="mt-3 w-full flex items-center justify-center gap-2 py-2 px-3 bg-secondary/50 border border-border rounded-[2px] hover:border-accent/40 transition-colors"
+            >
+              <KeyRound className="w-3.5 h-3.5 text-accent" />
+              <span className="mono-xs text-[10px] text-foreground">IMPORT WALLET</span>
+            </button>
           </div>
 
           {/* External Wallet Connection - only show for external wallet users */}
@@ -1087,6 +1160,144 @@ export function DashboardWallet({
                       <>
                         <Send className="w-4 h-4" />
                         SEND {sendToken}
+                      </>
+                    )}
+                  </button>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Import Wallet Modal */}
+      <AnimatePresence>
+        {showImportModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4"
+            onClick={closeImportModal}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-background border border-border rounded-[2px] p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2.5">
+                  <KeyRound className="w-5 h-5 text-accent" />
+                  <h3 className="font-mono text-lg text-foreground">Import Wallet</h3>
+                </div>
+                <button
+                  onClick={closeImportModal}
+                  className="p-1 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                  disabled={importLoading}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {importedPublicKey ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
+                    <Check className="w-8 h-8 text-primary" />
+                  </div>
+                  <p className="font-mono text-lg text-foreground mb-2">Wallet Imported</p>
+                  <p className="mono-xs text-muted-foreground mb-4">
+                    Your wallet is now encrypted and active.
+                  </p>
+                  <div className="bg-secondary/50 border border-border rounded-[2px] p-3 mb-6">
+                    <p className="mono-xs text-[9px] text-muted-foreground mb-1">PUBLIC ADDRESS</p>
+                    <p className="font-mono text-xs text-foreground break-all select-all">
+                      {importedPublicKey}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      closeImportModal()
+                      router.refresh()
+                    }}
+                    className="w-full py-2.5 bg-primary text-background mono-xs text-[11px] rounded-[2px] hover:bg-primary/90 transition-colors"
+                  >
+                    DONE
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Security warning */}
+                  <div className="bg-orange/10 border border-orange/30 rounded-[2px] p-3 mb-4">
+                    <div className="flex gap-2">
+                      <ShieldAlert className="w-4 h-4 text-orange shrink-0 mt-0.5" />
+                      <div>
+                        <p className="mono-xs text-[10px] text-orange font-medium mb-1">
+                          This replaces your active wallet
+                        </p>
+                        <p className="mono-xs text-[10px] text-orange/80">
+                          Your key is encrypted at rest (AES-256-GCM). Importing repoints this
+                          account to the new wallet. Only import a key you own.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="mono-xs text-[9px] text-muted-foreground tracking-[0.18em] block mb-2">
+                      SECRET KEY OR SEED PHRASE
+                    </label>
+                    <div className="relative">
+                      <textarea
+                        value={importKey}
+                        onChange={(e) => setImportKey(e.target.value)}
+                        placeholder="Paste your 12/24-word seed phrase, base58 private key, or [12,34,...] byte array"
+                        rows={4}
+                        spellCheck={false}
+                        autoComplete="off"
+                        disabled={importLoading}
+                        className={`w-full px-3 py-2.5 bg-secondary/50 border border-border rounded-[2px] text-foreground font-mono text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:border-accent/50 resize-none pr-10 ${
+                          showImportKey ? '' : '[-webkit-text-security:disc] [text-security:disc]'
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowImportKey((v) => !v)}
+                        className="absolute right-2 top-2 p-1 text-muted-foreground hover:text-foreground transition-colors"
+                        title={showImportKey ? 'Hide' : 'Show'}
+                      >
+                        {showImportKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <p className="mono-xs text-[10px] text-muted-foreground mt-2">
+                      Accepts a seed phrase (12-24 words), a base58 secret key (Phantom export), or a JSON byte array (id.json).
+                    </p>
+                  </div>
+
+                  {importError && (
+                    <div className="bg-destructive/10 border border-destructive/30 rounded-[2px] p-3 mb-4">
+                      <div className="flex gap-2">
+                        <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                        <p className="mono-xs text-[10px] text-destructive">{importError}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleImport}
+                    disabled={importLoading || !importKey.trim()}
+                    className="w-full py-2.5 bg-accent text-accent-foreground mono-xs text-[11px] rounded-[2px] hover:bg-accent/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {importLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        IMPORTING...
+                      </>
+                    ) : (
+                      <>
+                        <KeyRound className="w-4 h-4" />
+                        IMPORT WALLET
                       </>
                     )}
                   </button>
