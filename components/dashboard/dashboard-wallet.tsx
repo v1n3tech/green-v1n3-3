@@ -357,8 +357,9 @@ export function DashboardWallet({
         throw new Error('Invalid Solana address')
       }
       
-      // CUSTODIAL WALLET: Use server-side signing via API
-      if (walletOrigin === 'minted') {
+      // CUSTODIAL WALLET (minted or imported): server-side signing via API.
+      // Both hold an encrypted secret key the platform can sign with.
+      if (walletOrigin === 'minted' || walletOrigin === 'imported') {
         const response = await fetch('/api/wallet/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
