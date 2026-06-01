@@ -399,7 +399,7 @@ pub struct Unstake<'info> {
     pub user: Signer<'info>,
 
     #[account(mut, seeds = [CONFIG_SEED], bump = config.bump)]
-    pub config: Account<'info, Config>,
+    pub config: Box<Account<'info, Config>>,
 
     #[account(
         mut,
@@ -409,7 +409,7 @@ pub struct Unstake<'info> {
             @ StakingError::Unauthorized,
         close = user,
     )]
-    pub stake_account: Account<'info, StakeAccount>,
+    pub stake_account: Box<Account<'info, StakeAccount>>,
 
     #[account(
         mut,
@@ -418,7 +418,7 @@ pub struct Unstake<'info> {
         token::mint = v1n3_mint,
         token::authority = config,
     )]
-    pub stake_vault: InterfaceAccount<'info, TokenAccount>,
+    pub stake_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,
@@ -427,17 +427,17 @@ pub struct Unstake<'info> {
         token::mint = v1n3_mint,
         token::authority = config,
     )]
-    pub reward_vault: InterfaceAccount<'info, TokenAccount>,
+    pub reward_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,
         token::mint = v1n3_mint,
         token::authority = user,
     )]
-    pub user_ata: InterfaceAccount<'info, TokenAccount>,
+    pub user_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(address = config.v1n3_mint)]
-    pub v1n3_mint: InterfaceAccount<'info, Mint>,
+    pub v1n3_mint: Box<InterfaceAccount<'info, Mint>>,
     pub token_program: Interface<'info, TokenInterface>,
 }
 
