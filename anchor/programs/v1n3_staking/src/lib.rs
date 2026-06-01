@@ -14,7 +14,8 @@ const STAKE_VAULT_SEED: &[u8] = b"stake_vault";
 const REWARD_VAULT_SEED: &[u8] = b"reward_vault";
 const STAKE_SEED: &[u8] = b"stake";
 
-const SECONDS_PER_YEAR: i64 = 31_536_000; // 365 days
+// u128 so all reward math stays in one unsigned type (no i64 -> u128 casts).
+const SECONDS_PER_YEAR: u128 = 31_536_000; // 365 days
 
 // Supported lock periods (in seconds) and their APY in basis points (100 bps = 1%).
 const LOCK_3_WEEKS: i64 = 21 * 24 * 60 * 60; // 1_814_400
@@ -101,6 +102,7 @@ pub mod v1n3_staking {
 
         let stake_account = &mut ctx.accounts.stake_account;
         stake_account.owner = ctx.accounts.user.key();
+        stake_account.mint = ctx.accounts.v1n3_mint.key();
         stake_account.amount = amount;
         stake_account.lock_period = lock_period;
         stake_account.start_ts = now;
@@ -233,14 +235,16 @@ fn apy_for_lock_period(lock_period: i64) -> Result<u16> {
 }
 
 /// rewards = amount * apy_bps * elapsed / (10_000 * SECONDS_PER_YEAR)
-fn calc_rewards(amount: u64, apy_bps: u16, elapsed: i64) -> u64 {
-    if elapsed <= 0 || amount == 0 || apy_bps == 0 {
+/// All intermediate math is done in u128 to avoid overflow and type mixing.
+fn calc_rewards(amount: u64, apy_bps: u16, elapsed_secs: i64) -> u64 {
+    if elapsed_secs <= 0 || amount == 0 || apy_bps == 0 {
         return 0;
     }
+    let elapsed = elapsed_secs as u128; // safe: guarded > 0 above
     let numerator = (amount as u128)
         .saturating_mul(apy_bps as u128)
-        .saturating_mul(elapsed as u128);
-    let denominator = 10_000u128.saturating_mul(SECONDS_PER_YEAR as u128);
+        .saturating_mul(elapsed);
+    let denominator = 10_000u128.saturating_mul(SECONDS_PER_YEAR);
     (numerator / denominator) as u64
 }
 
@@ -263,6 +267,7 @@ pub struct Config {
 #[derive(InitSpace)]
 pub struct StakeAccount {
     pub owner: Pubkey,
+    pub mint: Pubkey,
     pub amount: u64,
     pub lock_period: i64,
     pub start_ts: i64,
@@ -397,13 +402,9 @@ pub struct ClaimRewards<'info> {
         mut,
         seeds = [STAKE_SEED, user.key().as_ref()],
         bump = stake_account.bump,
-        has_one = owner @ StakingError::Unauthorized,
+        constraint = stake_account.owner == user.key() @ StakingError::Unauthorized,
     )]
     pub stake_account: Account<'info, StakeAccount>,
-
-    /// CHECK: validated via `has_one = owner` against `user`.
-    #[account(address = user.key())]
-    pub owner: UncheckedAccount<'info>,
 
     #[account(
         mut,
@@ -438,14 +439,10 @@ pub struct Unstake<'info> {
         mut,
         seeds = [STAKE_SEED, user.key().as_ref()],
         bump = stake_account.bump,
-        has_one = owner @ StakingError::Unauthorized,
+        constraint = stake_account.owner == user.key() @ StakingError::Unauthorized,
         close = user,
     )]
     pub stake_account: Account<'info, StakeAccount>,
-
-    /// CHECK: validated via `has_one = owner` against `user`.
-    #[account(address = user.key())]
-    pub owner: UncheckedAccount<'info>,
 
     #[account(
         mut,

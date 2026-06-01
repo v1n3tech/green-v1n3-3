@@ -196,7 +196,7 @@ export function createStakeInstruction(
 
 /**
  * `claim_rewards`.
- * Accounts: user, config, stake_account, owner, reward_vault, user_ata, mint, token_program.
+ * Accounts: user, config, stake_account, reward_vault, user_ata, mint, token_program.
  */
 export function createClaimRewardsInstruction(userPubkey: PublicKey): TransactionInstruction {
   const [configPDA] = getConfigPDA()
@@ -213,7 +213,6 @@ export function createClaimRewardsInstruction(userPubkey: PublicKey): Transactio
       { pubkey: userPubkey, isSigner: true, isWritable: true },
       { pubkey: configPDA, isSigner: false, isWritable: false },
       { pubkey: stakeAccountPDA, isSigner: false, isWritable: true },
-      { pubkey: userPubkey, isSigner: false, isWritable: false }, // owner (== user)
       { pubkey: rewardVaultPDA, isSigner: false, isWritable: true },
       { pubkey: userAta, isSigner: false, isWritable: true },
       { pubkey: V1N3_TOKEN_MINT, isSigner: false, isWritable: false },
@@ -225,7 +224,7 @@ export function createClaimRewardsInstruction(userPubkey: PublicKey): Transactio
 
 /**
  * `unstake`.
- * Accounts: user, config, stake_account, owner, stake_vault, reward_vault, user_ata, mint, token_program.
+ * Accounts: user, config, stake_account, stake_vault, reward_vault, user_ata, mint, token_program.
  */
 export function createUnstakeInstruction(userPubkey: PublicKey): TransactionInstruction {
   const [configPDA] = getConfigPDA()
@@ -243,7 +242,6 @@ export function createUnstakeInstruction(userPubkey: PublicKey): TransactionInst
       { pubkey: userPubkey, isSigner: true, isWritable: true },
       { pubkey: configPDA, isSigner: false, isWritable: true },
       { pubkey: stakeAccountPDA, isSigner: false, isWritable: true },
-      { pubkey: userPubkey, isSigner: false, isWritable: false }, // owner (== user)
       { pubkey: stakeVaultPDA, isSigner: false, isWritable: true },
       { pubkey: rewardVaultPDA, isSigner: false, isWritable: true },
       { pubkey: userAta, isSigner: false, isWritable: true },
@@ -259,15 +257,18 @@ export function createUnstakeInstruction(userPubkey: PublicKey): TransactionInst
 // ---------------------------------------------------------------------------
 
 /**
- * Parse a StakeAccount: disc(8) owner(32) amount(u64) lock_period(i64)
+ * Parse a StakeAccount: disc(8) owner(32) mint(32) amount(u64) lock_period(i64)
  * start_ts(i64) last_claim_ts(i64) apy_bps(u16) bump(u8).
  */
 export function parseStakeInfo(data: Buffer): StakeInfo | null {
   try {
-    if (data.length < 8 + 32 + 8 + 8 + 8 + 8 + 2 + 1) return null
+    if (data.length < 8 + 32 + 32 + 8 + 8 + 8 + 8 + 2 + 1) return null
     let offset = 8
 
     const owner = new PublicKey(data.subarray(offset, offset + 32))
+    offset += 32
+
+    // mint (recorded on-chain; not currently surfaced in StakeInfo)
     offset += 32
 
     const stakedAmount = new BN(data.subarray(offset, offset + 8), 'le')
