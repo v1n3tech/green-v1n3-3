@@ -1,5 +1,3 @@
-import { MarketplaceProduct } from "@/lib/marketplace/types"
-
 export interface MarketplaceTerminal {
   id: string
   name: string

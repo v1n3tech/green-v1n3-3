@@ -1,5 +1,8 @@
+"use server"
+
 import { createClient } from "@/lib/supabase/server"
-import { createAdminClient } from "@/lib/supabase/admin"
+import { revalidatePath } from "next/cache"
+import { createNotification } from "@/lib/notifications/actions"
 import { DeliveryRequest, CreateDeliveryRequestInput } from "./types"
 
 /**
@@ -47,29 +50,29 @@ export async function createDeliveryRequest(input: CreateDeliveryRequestInput): 
 
   if (error) return { request: null, error: error.message }
 
-  // Notify the logistics GCM.
+  // Notify all logistics GCMs of the new delivery request.
   try {
-    const admin = createAdminClient()
-    const { data: logisticsGcm } = await admin
+    const { data: logisticsGcms } = await supabase
       .from("profiles")
       .select("id")
       .eq("role", "gcm")
       .eq("community", "agro_logistics")
-      .single()
 
-    if (logisticsGcm) {
-      await admin.from("notifications").insert({
-        user_id: logisticsGcm.id,
-        title: "New Delivery Request",
-        message: `Order ${input.order_id.slice(0, 8)} needs delivery`,
-        type: "delivery_request",
-        action_url: `/dashboard/logistics/delivery-requests`,
+    for (const gcm of logisticsGcms ?? []) {
+      await createNotification({
+        userId: gcm.id,
+        type: "system",
+        title: "New delivery request",
+        body: `Order ${input.order_id.slice(0, 8)} needs delivery to ${input.delivery_lga}, ${input.delivery_state}`,
+        actionUrl: "/dashboard/logistics",
       })
     }
   } catch (e) {
     console.error("[v0] Failed to notify logistics GCM:", e)
   }
 
+  revalidatePath("/dashboard/logistics")
+  revalidatePath("/dashboard/orders")
   return { request: data as DeliveryRequest, error: null }
 }
 
@@ -146,6 +149,7 @@ export async function acceptDeliveryRequest(
     .single()
 
   if (error) return { request: null, error: error.message }
+  revalidatePath("/dashboard/logistics")
   return { request: data as DeliveryRequest, error: null }
 }
 
@@ -169,6 +173,8 @@ export async function scheduleDelivery(requestId: string, scheduledAt: string): 
     .single()
 
   if (error) return { request: null, error: error.message }
+  revalidatePath("/dashboard/logistics")
+  revalidatePath("/dashboard/orders")
   return { request: data as DeliveryRequest, error: null }
 }
 
@@ -192,5 +198,7 @@ export async function completeDelivery(requestId: string): Promise<{
     .single()
 
   if (error) return { request: null, error: error.message }
+  revalidatePath("/dashboard/logistics")
+  revalidatePath("/dashboard/orders")
   return { request: data as DeliveryRequest, error: null }
 }

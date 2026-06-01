@@ -1,4 +1,7 @@
+"use server"
+
 import { createClient } from "@/lib/supabase/server"
+import { revalidatePath } from "next/cache"
 import { MarketplaceTerminal, CreateTerminalInput } from "./types"
 
 export async function fetchTerminals(onlyActive = true): Promise<{
@@ -39,6 +42,7 @@ export async function createTerminal(input: CreateTerminalInput): Promise<{
     .single()
 
   if (error) return { terminal: null, error: error.message }
+  revalidatePath("/dashboard/marketing")
   return { terminal: data as MarketplaceTerminal, error: null }
 }
 
@@ -59,6 +63,7 @@ export async function updateTerminal(
     .single()
 
   if (error) return { terminal: null, error: error.message }
+  revalidatePath("/dashboard/marketing")
   return { terminal: data as MarketplaceTerminal, error: null }
 }
 
@@ -71,6 +76,7 @@ export async function deleteTerminal(terminalId: string): Promise<{
   const { error } = await supabase.from("marketplace_terminals").delete().eq("id", terminalId)
 
   if (error) return { success: false, error: error.message }
+  revalidatePath("/dashboard/marketing")
   return { success: true, error: null }
 }
 
