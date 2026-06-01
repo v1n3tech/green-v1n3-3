@@ -45,7 +45,7 @@ pub mod v1n3 {
         let decimals = ctx.accounts.v1n3_mint.decimals;
         token_interface::transfer_checked(
             CpiContext::new(
-                ctx.accounts.token_program.to_account_info(),
+                ctx.accounts.token_program.key(),
                 TransferChecked {
                     from: ctx.accounts.admin_ata.to_account_info(),
                     mint: ctx.accounts.v1n3_mint.to_account_info(),
@@ -74,7 +74,7 @@ pub mod v1n3 {
         let decimals = ctx.accounts.v1n3_mint.decimals;
         token_interface::transfer_checked(
             CpiContext::new(
-                ctx.accounts.token_program.to_account_info(),
+                ctx.accounts.token_program.key(),
                 TransferChecked {
                     from: ctx.accounts.user_ata.to_account_info(),
                     mint: ctx.accounts.v1n3_mint.to_account_info(),
@@ -124,7 +124,7 @@ pub mod v1n3 {
 
         token_interface::transfer_checked(
             CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info(),
+                ctx.accounts.token_program.key(),
                 TransferChecked {
                     from: ctx.accounts.reward_vault.to_account_info(),
                     mint: ctx.accounts.v1n3_mint.to_account_info(),
@@ -160,7 +160,7 @@ pub mod v1n3 {
 
         token_interface::transfer_checked(
             CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info(),
+                ctx.accounts.token_program.key(),
                 TransferChecked {
                     from: ctx.accounts.stake_vault.to_account_info(),
                     mint: ctx.accounts.v1n3_mint.to_account_info(),
@@ -179,7 +179,7 @@ pub mod v1n3 {
         if payable > 0 {
             token_interface::transfer_checked(
                 CpiContext::new_with_signer(
-                    ctx.accounts.token_program.to_account_info(),
+                    ctx.accounts.token_program.key(),
                     TransferChecked {
                         from: ctx.accounts.reward_vault.to_account_info(),
                         mint: ctx.accounts.v1n3_mint.to_account_info(),
