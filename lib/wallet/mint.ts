@@ -1,6 +1,8 @@
 import "server-only"
 import { Keypair, Connection, clusterApiUrl } from "@solana/web3.js"
 import bs58 from "bs58"
+import * as bip39 from "bip39"
+import { derivePath } from "ed25519-hd-key"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { encrypt, decrypt } from "@/lib/wallet/encryption"
 import { getOrCreateAssociatedTokenAccount } from "@solana/spl-token"
@@ -126,17 +128,42 @@ export async function ensureCustodialWallet(
   return { publicKey, alreadyExisted: false, ataAddress, ataCreated }
 }
 
+// Standard Solana BIP44 derivation path (matches Phantom / Solflare default account).
+const SOLANA_DERIVATION_PATH = "m/44'/501'/0'/0'"
+
 /**
- * Parse a user-supplied secret key into a Keypair.
- * Accepts either:
+ * Derive a Solana Keypair from a BIP39 seed phrase (mnemonic).
+ * Uses the standard m/44'/501'/0'/0' derivation path so the resulting
+ * public key matches what Phantom/Solflare show for the first account.
+ */
+function keypairFromMnemonic(mnemonic: string): Keypair {
+  const normalized = mnemonic.trim().toLowerCase().replace(/\s+/g, " ")
+  if (!bip39.validateMnemonic(normalized)) {
+    throw new Error("Invalid seed phrase: please check the words and try again")
+  }
+  const seed = bip39.mnemonicToSeedSync(normalized) // 64-byte seed
+  const { key } = derivePath(SOLANA_DERIVATION_PATH, seed.toString("hex"))
+  return Keypair.fromSeed(key)
+}
+
+/**
+ * Parse a user-supplied secret into a Keypair.
+ * Accepts any of:
+ *  - a BIP39 seed phrase / mnemonic (12, 15, 18, 21, or 24 words), or
  *  - a base58-encoded 64-byte secret key string (Phantom "export private key" format), or
  *  - a JSON byte array like "[12,34,...]" (solana-keygen / id.json format).
- * Throws a user-friendly error if the input is not a valid Solana secret key.
+ * Throws a user-friendly error if the input is not a valid Solana secret.
  */
 function parseSecretKey(input: string): Keypair {
   const trimmed = input.trim()
   if (!trimmed) {
-    throw new Error("Secret key is required")
+    throw new Error("Secret key or seed phrase is required")
+  }
+
+  // Seed phrase: multiple space-separated words (not a byte array or single base58 blob).
+  const words = trimmed.split(/\s+/)
+  if (!trimmed.startsWith("[") && words.length >= 12 && words.every((w) => /^[a-zA-Z]+$/.test(w))) {
+    return keypairFromMnemonic(trimmed)
   }
 
   let secretKeyBytes: Uint8Array

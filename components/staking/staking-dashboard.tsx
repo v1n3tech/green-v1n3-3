@@ -61,9 +61,9 @@ export function StakingDashboard({
   const effectiveWalletAddress = isCustodial ? walletAddress : (publicKey?.toBase58() ?? walletAddress)
   const canTransact = isCustodial ? !!walletAddress : (connected && !!signTransaction)
 
-  // Admin (Mantim) check - only the connected external admin wallet can initialize the vault.
-  // Requires the wallet adapter since the admin must sign the transaction.
-  const isAdmin = connected && !!publicKey && publicKey.toBase58() === ADMIN_WALLET
+  // Admin (Mantim) check - matches whether the admin is on a custodial wallet
+  // (signed server-side) or an external wallet (signed via the adapter).
+  const isAdmin = effectiveWalletAddress === ADMIN_WALLET
   
   // State
   const [stakeAmount, setStakeAmount] = useState('')
@@ -198,26 +198,39 @@ export function StakingDashboard({
     setSuccessTx(null)
 
     try {
-      if (!publicKey || !signTransaction || !connection) {
-        throw new Error('Please connect the admin wallet first')
+      if (isCustodial) {
+        // CUSTODIAL: admin keypair is decrypted and signed server-side.
+        const response = await fetch('/api/staking/initialize-vault', { method: 'POST' })
+        const data = await response.json()
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to initialize vault')
+        }
+        setSuccess('Reward Vault initialized successfully')
+        if (data.signature) setSuccessTx(data.signature)
+        setVaultInitialized(true)
+      } else {
+        // EXTERNAL: admin signs with the connected wallet adapter.
+        if (!publicKey || !signTransaction || !connection) {
+          throw new Error('Please connect the admin wallet first')
+        }
+        if (publicKey.toBase58() !== ADMIN_WALLET) {
+          throw new Error('Only the admin wallet can initialize the vault')
+        }
+
+        const instruction = createInitializeVaultInstruction(publicKey)
+        const transaction = new Transaction().add(instruction)
+        const { blockhash } = await connection.getLatestBlockhash()
+        transaction.recentBlockhash = blockhash
+        transaction.feePayer = publicKey
+
+        const signedTx = await signTransaction(transaction)
+        const signature = await connection.sendRawTransaction(signedTx.serialize())
+        await connection.confirmTransaction(signature, 'confirmed')
+
+        setSuccess('Reward Vault initialized successfully')
+        setSuccessTx(signature)
+        setVaultInitialized(true)
       }
-      if (publicKey.toBase58() !== ADMIN_WALLET) {
-        throw new Error('Only the admin wallet can initialize the vault')
-      }
-
-      const instruction = createInitializeVaultInstruction(publicKey)
-      const transaction = new Transaction().add(instruction)
-      const { blockhash } = await connection.getLatestBlockhash()
-      transaction.recentBlockhash = blockhash
-      transaction.feePayer = publicKey
-
-      const signedTx = await signTransaction(transaction)
-      const signature = await connection.sendRawTransaction(signedTx.serialize())
-      await connection.confirmTransaction(signature, 'confirmed')
-
-      setSuccess('Reward Vault initialized successfully')
-      setSuccessTx(signature)
-      setVaultInitialized(true)
     } catch (err) {
       console.error('Initialize vault error:', err)
       setError(err instanceof Error ? err.message : 'Failed to initialize vault. Please try again.')

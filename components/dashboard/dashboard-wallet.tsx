@@ -1245,13 +1245,13 @@ export function DashboardWallet({
 
                   <div className="mb-4">
                     <label className="mono-xs text-[9px] text-muted-foreground tracking-[0.18em] block mb-2">
-                      SECRET KEY
+                      SECRET KEY OR SEED PHRASE
                     </label>
                     <div className="relative">
                       <textarea
                         value={importKey}
                         onChange={(e) => setImportKey(e.target.value)}
-                        placeholder="Paste your base58 private key or [12,34,...] byte array"
+                        placeholder="Paste your 12/24-word seed phrase, base58 private key, or [12,34,...] byte array"
                         rows={4}
                         spellCheck={false}
                         autoComplete="off"
@@ -1270,7 +1270,7 @@ export function DashboardWallet({
                       </button>
                     </div>
                     <p className="mono-xs text-[10px] text-muted-foreground mt-2">
-                      Accepts a base58 secret key (Phantom export) or a JSON byte array (id.json).
+                      Accepts a seed phrase (12-24 words), a base58 secret key (Phantom export), or a JSON byte array (id.json).
                     </p>
                   </div>
 
