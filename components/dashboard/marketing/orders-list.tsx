@@ -21,23 +21,23 @@ export function OrdersList({ orders }: OrdersListProps) {
                 </p>
               </div>
               <span className="mono-xs text-[8px] text-primary flex-shrink-0">
-                {order.fulfillment_method?.toUpperCase() || 'UNKNOWN'}
+                {order.fulfillment_method?.toUpperCase() || 'PENDING CHOICE'}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <p className="mono-xs text-[9px] text-muted-foreground">
-                {order.v1n3_amount} V1N3
+                {Number(order.v1n3_amount).toLocaleString(undefined, { maximumFractionDigits: 4 })} V1N3
               </p>
               <span
                 className={`mono-xs text-[8px] px-1.5 py-0.5 rounded text-foreground ${
-                  order.fulfillment_status === 'pending'
+                  order.fulfillment_status === 'awaiting_choice'
                     ? 'bg-yellow-500/20'
-                    : order.fulfillment_status === 'pending'
+                    : order.fulfillment_status === 'delivery_paid' || order.fulfillment_status === 'awaiting_pickup'
                     ? 'bg-blue-500/20'
                     : 'bg-green-500/20'
                 }`}
               >
-                {order.fulfillment_status?.toUpperCase()}
+                {order.fulfillment_status?.replace(/_/g, ' ').toUpperCase()}
               </span>
             </div>
           </div>

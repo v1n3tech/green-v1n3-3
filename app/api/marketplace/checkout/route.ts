@@ -41,7 +41,6 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => ({}))
     const buyNow: { productId?: string; quantity?: number } | undefined = body?.buyNow
-    const fulfillmentMethod: string | undefined = body?.fulfillmentMethod // 'pickup' or 'delivery'
     const memo: string | null = body?.memo ?? null
 
     // Buyer profile + wallet
@@ -304,8 +303,8 @@ export async function POST(request: NextRequest) {
             buyer_wallet: buyer.wallet_address,
             seller_wallet: sellerWallet,
             status: "paid",
-            fulfillment_method: fulfillmentMethod ?? "pickup",
-            fulfillment_status: "pending",
+            fulfillment_method: null,
+            fulfillment_status: "awaiting_choice",
             memo,
           })
           .select("id")

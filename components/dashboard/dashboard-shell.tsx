@@ -32,6 +32,8 @@ import {
   Coins,
   Gift,
   PackageOpen,
+  Truck,
+  Megaphone,
 } from 'lucide-react'
 import { signOut } from '@/lib/auth/actions'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -158,6 +160,21 @@ export function DashboardShell({
     profile.displayName ||
     'EXECUTIVE'
 
+  // Role/community-gated operations links.
+  const isAdmin = profile.role === 'admin'
+  const inMarketing =
+    isAdmin || profile.community === 'agro_marketing' || profile.community === 'agro_logistics'
+  const isLogisticsGcm =
+    isAdmin || (profile.role === 'gcm' && profile.community === 'agro_logistics')
+
+  const opsItems = [
+    inMarketing && { href: '/dashboard/marketing', label: 'Marketing', icon: Megaphone, index: 'OP1' },
+    isLogisticsGcm && { href: '/dashboard/logistics', label: 'Logistics', icon: Truck, index: 'OP2' },
+  ].filter(Boolean) as { href: string; label: string; icon: typeof Truck; index: string }[]
+
+  const navItems =
+    opsItems.length > 0 ? [...NAV_ITEMS, { section: 'OPERATIONS', items: opsItems }] : NAV_ITEMS
+
   return (
     <SidebarContext.Provider value={{ collapsed, setCollapsed, mobileOpen, setMobileOpen }}>
       <div className="min-h-screen bg-background flex">
@@ -214,7 +231,7 @@ export function DashboardShell({
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
-            {NAV_ITEMS.map((section) => (
+            {navItems.map((section) => (
               <div key={section.section}>
                 {!collapsed && (
                   <p className="px-3 mb-2 mono-xs text-[9px] text-muted-foreground/60 tracking-[0.2em]">
@@ -331,7 +348,7 @@ export function DashboardShell({
 
                 {/* Mobile Navigation */}
                 <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
-                  {NAV_ITEMS.map((section) => (
+                  {navItems.map((section) => (
                     <div key={section.section}>
                       <p className="px-3 mb-2 mono-xs text-[9px] text-muted-foreground/60 tracking-[0.2em]">
                         / {section.section}
