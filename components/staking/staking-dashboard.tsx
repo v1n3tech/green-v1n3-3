@@ -34,6 +34,7 @@ import {
   createUnstakeInstruction,
   createClaimRewardsInstruction,
   createInitializeVaultInstruction,
+  createFundRewardsInstruction,
   parseStakeInfo,
   calculatePendingRewards,
   getExplorerUrl,
@@ -73,6 +74,8 @@ export function StakingDashboard({
   const [isClaiming, setIsClaiming] = useState(false)
   const [isInitializingVault, setIsInitializingVault] = useState(false)
   const [vaultInitialized, setVaultInitialized] = useState(false)
+  const [fundAmount, setFundAmount] = useState('')
+  const [isFunding, setIsFunding] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [successTx, setSuccessTx] = useState<string | null>(null)
@@ -236,6 +239,66 @@ export function StakingDashboard({
       setError(err instanceof Error ? err.message : 'Failed to initialize vault. Please try again.')
     } finally {
       setIsInitializingVault(false)
+    }
+  }
+
+  // Handle fund rewards (admin only) - deposits V1N3 into the reward vault
+  const handleFundRewards = async () => {
+    const amount = parseFloat(fundAmount)
+    if (isNaN(amount) || amount <= 0) {
+      setError('Please enter a valid amount to fund')
+      return
+    }
+
+    setIsFunding(true)
+    setError(null)
+    setSuccess(null)
+    setSuccessTx(null)
+
+    try {
+      if (isCustodial) {
+        const response = await fetch('/api/staking/fund-rewards', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount }),
+        })
+        const data = await response.json()
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to fund rewards')
+        }
+        setSuccess(`Funded reward vault with ${amount.toLocaleString()} V1N3`)
+        if (data.signature) setSuccessTx(data.signature)
+        setFundAmount('')
+        await refreshBalance()
+      } else {
+        if (!publicKey || !signTransaction || !connection) {
+          throw new Error('Please connect the admin wallet first')
+        }
+        if (publicKey.toBase58() !== ADMIN_WALLET) {
+          throw new Error('Only the admin wallet can fund rewards')
+        }
+
+        const rawAmount = new BN(Math.floor(amount * 1e9))
+        const instruction = createFundRewardsInstruction(publicKey, rawAmount)
+        const transaction = new Transaction().add(instruction)
+        const { blockhash } = await connection.getLatestBlockhash()
+        transaction.recentBlockhash = blockhash
+        transaction.feePayer = publicKey
+
+        const signedTx = await signTransaction(transaction)
+        const signature = await connection.sendRawTransaction(signedTx.serialize())
+        await connection.confirmTransaction(signature, 'confirmed')
+
+        setSuccess(`Funded reward vault with ${amount.toLocaleString()} V1N3`)
+        setSuccessTx(signature)
+        setFundAmount('')
+        await refreshBalance()
+      }
+    } catch (err) {
+      console.error('Fund rewards error:', err)
+      setError(err instanceof Error ? err.message : 'Failed to fund rewards. Please try again.')
+    } finally {
+      setIsFunding(false)
     }
   }
 
@@ -542,6 +605,54 @@ export function StakingDashboard({
               </>
             )}
           </button>
+        </motion.div>
+      )}
+
+      {/* Admin: Fund Reward Vault (Mantim only) */}
+      {isAdmin && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-accent/5 border border-accent/30 rounded-[2px]"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-9 h-9 rounded-[2px] bg-accent/15 shrink-0">
+              <Gift className="w-4 h-4 text-accent" />
+            </div>
+            <div>
+              <p className="mono-xs text-[11px] text-foreground tracking-[0.12em]">FUND REWARDS</p>
+              <p className="mono-xs text-[10px] text-muted-foreground">
+                Deposit V1N3 into the reward vault so payouts stay solvent.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <input
+              type="number"
+              inputMode="decimal"
+              value={fundAmount}
+              onChange={(e) => setFundAmount(e.target.value)}
+              placeholder="0.00"
+              className="w-28 px-3 py-2.5 bg-background border border-border rounded-[2px] mono-xs text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60"
+            />
+            <button
+              onClick={handleFundRewards}
+              disabled={isFunding}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-accent text-accent-foreground rounded-[2px] mono-xs text-[11px] tracking-[0.12em] hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isFunding ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  FUNDING...
+                </>
+              ) : (
+                <>
+                  <Gift className="w-4 h-4" />
+                  FUND
+                </>
+              )}
+            </button>
+          </div>
         </motion.div>
       )}
 
