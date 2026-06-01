@@ -14,7 +14,7 @@ const STAKE_VAULT_SEED: &[u8] = b"stake_vault";
 const REWARD_VAULT_SEED: &[u8] = b"reward_vault";
 const STAKE_SEED: &[u8] = b"stake";
 
-// u128 so all reward math stays in one unsigned type (no i64 -> u128 casts).
+// u128 keeps all reward math in one unsigned type.
 const SECONDS_PER_YEAR: u128 = 31_536_000; // 365 days
 
 // Supported lock periods (in seconds) and their APY in basis points (100 bps = 1%).
