@@ -17,16 +17,16 @@ const STAKE_SEED: &[u8] = b"stake";
 // u128 keeps all reward math in one unsigned type.
 const SECONDS_PER_YEAR: u128 = 31_536_000; // 365 days
 
-// Supported lock periods (in seconds) and their APY in basis points (100 bps = 1%).
-const LOCK_3_WEEKS: i64 = 21 * 24 * 60 * 60; // 1_814_400
-const LOCK_1_MONTH: i64 = 30 * 24 * 60 * 60; // 2_592_000
-const LOCK_3_MONTHS: i64 = 90 * 24 * 60 * 60; // 7_776_000
+// Lock periods in seconds; APY in basis points.
+const LOCK_3_WEEKS: i64 = 21 * 24 * 60 * 60;
+const LOCK_1_MONTH: i64 = 30 * 24 * 60 * 60;
+const LOCK_3_MONTHS: i64 = 90 * 24 * 60 * 60;
 
-const APY_3_WEEKS: u16 = 2500; // 25%
-const APY_1_MONTH: u16 = 4000; // 40%
-const APY_3_MONTHS: u16 = 6500; // 65%
+const APY_3_WEEKS: u16 = 2500;
+const APY_1_MONTH: u16 = 4000;
+const APY_3_MONTHS: u16 = 6500;
 
-const MIN_STAKE: u64 = 1; // raw units; UI enforces a higher human-readable minimum
+const MIN_STAKE: u64 = 1;
 
 // ---------------------------------------------------------------------------
 // Program
@@ -36,9 +36,7 @@ const MIN_STAKE: u64 = 1; // raw units; UI enforces a higher human-readable mini
 pub mod v1n3 {
     use super::*;
 
-    /// One-time admin setup. Creates the global config plus the stake and reward
-    /// vault token accounts (both owned by the config PDA). Must be signed by the
-    /// wallet that will become the admin.
+    // One-time admin setup: creates config + stake/reward vaults.
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
         let config = &mut ctx.accounts.config;
         config.admin = ctx.accounts.admin.key();
@@ -52,8 +50,7 @@ pub mod v1n3 {
         Ok(())
     }
 
-    /// Admin deposits V1N3 into the reward vault so that staking rewards are
-    /// actually backed by real tokens (keeps the pool solvent).
+    // Admin deposits V1N3 into the reward vault.
     pub fn fund_rewards(ctx: Context<FundRewards>, amount: u64) -> Result<()> {
         require!(amount > 0, StakingError::InvalidAmount);
 
@@ -72,14 +69,16 @@ pub mod v1n3 {
             decimals,
         )?;
 
-        msg!("Funded reward vault with {} (raw) V1N3", amount);
+        msg!("Funded reward vault: {}", amount);
         Ok(())
     }
 
-    /// Stake `amount` of V1N3 for a given `lock_period` (seconds). Transfers the
-    /// principal from the user's token account into the stake vault and records
-    /// a one-per-user stake account.
-    pub fn stake(ctx: Context<Stake>, amount: u64, lock_period: i64) -> Result<()> {
+    // Stake amount of V1N3 into the stake vault for a lock period.
+    pub fn stake(
+        ctx: Context<Stake>,
+        amount: u64,
+        lock_period: i64,
+    ) -> Result<()> {
         require!(amount >= MIN_STAKE, StakingError::InvalidAmount);
 
         let apy_bps = apy_for_lock_period(lock_period)?;
@@ -113,12 +112,11 @@ pub mod v1n3 {
         let config = &mut ctx.accounts.config;
         config.total_staked = config.total_staked.saturating_add(amount);
 
-        msg!("Staked {} (raw) for {}s at {} bps", amount, lock_period, apy_bps);
+        msg!("Staked {} at {} bps", amount, apy_bps);
         Ok(())
     }
 
-    /// Claim accrued rewards without unstaking. Pays out from the reward vault and
-    /// resets the reward accrual clock. Can be called any time.
+    // Claim accrued rewards from the reward vault without unstaking.
     pub fn claim_rewards(ctx: Context<ClaimRewards>) -> Result<()> {
         let now = Clock::get()?.unix_timestamp;
         let (amount, apy_bps, last_claim) = {
@@ -126,7 +124,8 @@ pub mod v1n3 {
             (s.amount, s.apy_bps, s.last_claim_ts)
         };
 
-        let pending = calc_rewards(amount, apy_bps, now.saturating_sub(last_claim));
+        let elapsed = now.saturating_sub(last_claim);
+        let pending = calc_rewards(amount, apy_bps, elapsed);
         require!(pending > 0, StakingError::NothingToClaim);
         require!(
             ctx.accounts.reward_vault.amount >= pending,
@@ -153,13 +152,11 @@ pub mod v1n3 {
         )?;
 
         ctx.accounts.stake_account.last_claim_ts = now;
-        msg!("Claimed {} (raw) V1N3 rewards", pending);
+        msg!("Claimed rewards: {}", pending);
         Ok(())
     }
 
-    /// Unstake after the lock period elapses. Returns principal from the stake
-    /// vault plus any remaining accrued rewards from the reward vault, then closes
-    /// the stake account (rent refunded to the user).
+    // Unstake after lock ends: returns principal + remaining rewards.
     pub fn unstake(ctx: Context<Unstake>) -> Result<()> {
         let now = Clock::get()?.unix_timestamp;
         let (amount, apy_bps, start_ts, last_claim, lock_period) = {
@@ -176,7 +173,7 @@ pub mod v1n3 {
         let signer_seeds: &[&[&[u8]]] = &[&[CONFIG_SEED, &[bump]]];
         let decimals = ctx.accounts.v1n3_mint.decimals;
 
-        // 1. Return principal from the stake vault.
+        // Return principal from the stake vault.
         token_interface::transfer_checked(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
@@ -192,9 +189,9 @@ pub mod v1n3 {
             decimals,
         )?;
 
-        // 2. Pay any remaining accrued rewards from the reward vault (best effort:
-        //    capped by what the vault holds so unstaking principal never fails).
-        let pending = calc_rewards(amount, apy_bps, now.saturating_sub(last_claim));
+        // Pay remaining rewards, capped by the reward vault balance.
+        let elapsed = now.saturating_sub(last_claim);
+        let pending = calc_rewards(amount, apy_bps, elapsed);
         let payable = pending.min(ctx.accounts.reward_vault.amount);
         if payable > 0 {
             token_interface::transfer_checked(
@@ -216,7 +213,7 @@ pub mod v1n3 {
         let config = &mut ctx.accounts.config;
         config.total_staked = config.total_staked.saturating_sub(amount);
 
-        msg!("Unstaked {} (raw) principal + {} (raw) rewards", amount, payable);
+        msg!("Unstaked {} + rewards {}", amount, payable);
         Ok(())
     }
 }
@@ -234,13 +231,12 @@ fn apy_for_lock_period(lock_period: i64) -> Result<u16> {
     }
 }
 
-/// rewards = amount * apy_bps * elapsed / (10_000 * SECONDS_PER_YEAR)
-/// All intermediate math is done in u128 to avoid overflow and type mixing.
+// rewards = amount * apy_bps * elapsed / 10_000 / SECONDS_PER_YEAR
 fn calc_rewards(amount: u64, apy_bps: u16, elapsed_secs: i64) -> u64 {
     if elapsed_secs <= 0 || amount == 0 || apy_bps == 0 {
         return 0;
     }
-    let elapsed = elapsed_secs as u128; // safe: guarded > 0 above
+    let elapsed = elapsed_secs as u128;
     let numerator = (amount as u128)
         .saturating_mul(apy_bps as u128)
         .saturating_mul(elapsed);
@@ -277,8 +273,8 @@ pub struct StakeAccount {
 }
 
 // ---------------------------------------------------------------------------
-// Account contexts  (field order == on-chain account order; the frontend must
-// build instruction keys in exactly this order)
+// Account contexts
+// Field order is the on-chain account order; the frontend must match it.
 // ---------------------------------------------------------------------------
 
 #[derive(Accounts)]
@@ -402,7 +398,8 @@ pub struct ClaimRewards<'info> {
         mut,
         seeds = [STAKE_SEED, user.key().as_ref()],
         bump = stake_account.bump,
-        constraint = stake_account.owner == user.key() @ StakingError::Unauthorized,
+        constraint = stake_account.owner == user.key()
+            @ StakingError::Unauthorized,
     )]
     pub stake_account: Account<'info, StakeAccount>,
 
@@ -439,7 +436,8 @@ pub struct Unstake<'info> {
         mut,
         seeds = [STAKE_SEED, user.key().as_ref()],
         bump = stake_account.bump,
-        constraint = stake_account.owner == user.key() @ StakingError::Unauthorized,
+        constraint = stake_account.owner == user.key()
+            @ StakingError::Unauthorized,
         close = user,
     )]
     pub stake_account: Account<'info, StakeAccount>,
