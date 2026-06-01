@@ -33,7 +33,7 @@ const MIN_STAKE: u64 = 1; // raw units; UI enforces a higher human-readable mini
 // ---------------------------------------------------------------------------
 
 #[program]
-pub mod v1n3_staking {
+pub mod v1n3 {
     use super::*;
 
     /// One-time admin setup. Creates the global config plus the stake and reward
