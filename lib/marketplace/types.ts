@@ -57,3 +57,44 @@ export interface MarketplaceProduct {
     verification_status: string | null
   }
 }
+
+// 1 V1N3 = this many NGN (mirrors V1N3_TOKEN.ngnRate in lib/wallet/v1n3-token.ts)
+export const V1N3_NGN_RATE = 3002.4
+
+export function ngnToV1n3(ngn: number): number {
+  return ngn / V1N3_NGN_RATE
+}
+
+export type OrderStatus = "pending" | "paid" | "failed" | "fulfilled" | "cancelled"
+
+export interface CartItem {
+  id: string
+  user_id: string
+  product_id: string
+  quantity: number
+  created_at: string
+  updated_at: string
+  product?: MarketplaceProduct
+}
+
+export interface MarketplaceOrder {
+  id: string
+  buyer_id: string
+  seller_id: string | null
+  product_id: string | null
+  product_title: string
+  product_thumbnail: string | null
+  community: AgroCommunityKey | null
+  quantity: number
+  unit_price: number
+  total_price: number
+  currency: string
+  v1n3_amount: number
+  payment_signature: string | null
+  buyer_wallet: string | null
+  seller_wallet: string | null
+  status: OrderStatus
+  memo: string | null
+  created_at: string
+  updated_at: string
+}
