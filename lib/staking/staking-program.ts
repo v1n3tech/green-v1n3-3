@@ -45,7 +45,9 @@ export const LOCK_PERIODS: LockPeriodOption[] = [
 
 // Instruction discriminators (first 8 bytes of sha256 hash of instruction name)
 // These are Anchor-style discriminators
-const INITIALIZE_VAULT_DISCRIMINATOR = Buffer.from([48, 191, 163, 44, 71, 129, 63, 164]) // sha256("global:initialize_vault")[0..8]
+// The deployed program's init instruction is named `initialize` (verified against the
+// on-chain program binary's Anchor instruction logs), NOT `initialize_vault`.
+const INITIALIZE_DISCRIMINATOR = Buffer.from([175, 175, 109, 31, 13, 152, 155, 237]) // sha256("global:initialize")[0..8]
 const STAKE_DISCRIMINATOR = Buffer.from([206, 176, 202, 18, 200, 209, 179, 108]) // sha256("global:stake")[0..8]
 const UNSTAKE_DISCRIMINATOR = Buffer.from([90, 95, 107, 42, 205, 124, 50, 225]) // sha256("global:unstake")[0..8]
 const CLAIM_REWARDS_DISCRIMINATOR = Buffer.from([4, 144, 132, 71, 116, 23, 151, 80]) // sha256("global:claim_rewards")[0..8]
@@ -106,7 +108,7 @@ export function createInitializeVaultInstruction(
   const [stakeVaultPDA] = getStakeVaultPDA()
 
   const data = Buffer.alloc(8)
-  INITIALIZE_VAULT_DISCRIMINATOR.copy(data, 0)
+  INITIALIZE_DISCRIMINATOR.copy(data, 0)
 
   return new TransactionInstruction({
     programId: STAKING_PROGRAM_ID,
