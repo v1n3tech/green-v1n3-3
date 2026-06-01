@@ -97,30 +97,25 @@ export function getRewardVaultPDA(): [PublicKey, number] {
 }
 
 /**
- * Create an initialize_vault instruction (admin only).
- * Initializes the reward vault PDA token account that holds reward tokens.
- * Must be signed by the program admin authority.
+ * Create an `initialize` instruction (admin only).
+ *
+ * Per the deployed program's on-chain IDL, `initialize` takes NO accounts and
+ * NO args — it is the Anchor boilerplate initializer (8-byte discriminator
+ * only). The admin still pays the fee / signs the transaction (set as the
+ * transaction feePayer), but the instruction itself references no accounts.
+ *
+ * `adminPubkey` is accepted for call-site compatibility but is not part of the
+ * instruction account list.
  */
 export function createInitializeVaultInstruction(
-  adminPubkey: PublicKey
+  _adminPubkey: PublicKey
 ): TransactionInstruction {
-  const [rewardVaultPDA] = getRewardVaultPDA()
-  const [stakeVaultPDA] = getStakeVaultPDA()
-
   const data = Buffer.alloc(8)
   INITIALIZE_DISCRIMINATOR.copy(data, 0)
 
   return new TransactionInstruction({
     programId: STAKING_PROGRAM_ID,
-    keys: [
-      { pubkey: adminPubkey, isSigner: true, isWritable: true },
-      { pubkey: rewardVaultPDA, isSigner: false, isWritable: true },
-      { pubkey: stakeVaultPDA, isSigner: false, isWritable: true },
-      { pubkey: V1N3_TOKEN_MINT, isSigner: false, isWritable: false },
-      { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
-      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-      { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
-    ],
+    keys: [],
     data,
   })
 }
