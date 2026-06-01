@@ -8,6 +8,7 @@ import {
   fetchMyFavoriteIds,
   fetchMarketplaceStats,
 } from "@/lib/marketplace/actions"
+import { fetchCartCount } from "@/lib/marketplace/cart"
 import { LISTING_ROLES, APPROVER_ROLES, type MarketplaceProduct } from "@/lib/marketplace/types"
 import type { AgroCommunityKey } from "@/components/onboarding/data"
 
@@ -47,12 +48,13 @@ export default async function MarketplacePage({
   else if (tab === "listings" && canList) initialTab = "listings"
 
   // Fetch everything in parallel
-  const [approved, mine, pending, favorites, stats] = await Promise.all([
+  const [approved, mine, pending, favorites, stats, cartCount] = await Promise.all([
     fetchApprovedProducts({ limit: 48 }),
     canList ? fetchMyProducts() : Promise.resolve({ products: [] as MarketplaceProduct[], error: null }),
     canApprove ? fetchPendingProducts() : Promise.resolve({ products: [] as MarketplaceProduct[], error: null }),
     fetchMyFavoriteIds(),
     fetchMarketplaceStats(),
+    fetchCartCount(),
   ])
 
   return (
@@ -67,6 +69,7 @@ export default async function MarketplacePage({
       pendingProducts={pending.products}
       favoriteIds={favorites.ids}
       stats={stats.stats}
+      cartCount={cartCount}
     />
   )
 }
