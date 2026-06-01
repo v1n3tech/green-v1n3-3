@@ -5,6 +5,13 @@ import { getCustodialKeypair } from "@/lib/wallet/mint"
 import { transferV1N3, getV1N3Balance, V1N3_TOKEN } from "@/lib/wallet/v1n3-token"
 import { ngnToV1n3 } from "@/lib/marketplace/types"
 import { createNotification } from "@/lib/notifications/actions"
+import { getPlatformConfig } from "@/lib/rewards/config"
+import { ADMIN_WALLET } from "@/lib/staking/staking-program"
+
+// Round a V1N3 amount to the token's display precision to avoid dust.
+function roundV1n3(amount: number): number {
+  return Math.round(amount * 1e6) / 1e6
+}
 
 interface LineItem {
   product_id: string
@@ -152,6 +159,10 @@ export async function POST(request: NextRequest) {
 
     const admin = createAdminClient()
 
+    // ---- Platform fee config (admin-editable) ----
+    const config = await getPlatformConfig(admin)
+    const feePct = Math.max(0, config.feePercent) / 100
+
     // ---- Group by seller (one on-chain transfer per seller) ----
     const sellers = new Map<string, LineItem[]>()
     for (const item of lineItems) {
@@ -170,7 +181,12 @@ export async function POST(request: NextRequest) {
       const sellerNgn = items.reduce((s, it) => s + it.unit_price * it.quantity, 0)
       const sellerV1n3 = ngnToV1n3(sellerNgn)
 
-      // Pending send record for the buyer.
+      // Platform fee taken from the seller's proceeds (buyer still pays full price).
+      const feeV1n3 = roundV1n3(sellerV1n3 * feePct)
+      const netV1n3 = roundV1n3(sellerV1n3 - feeV1n3)
+      const feeNgn = sellerNgn * feePct
+
+      // Pending send record for the buyer (records the NET sent to the seller).
       const { data: pendingTx } = await admin
         .from("wallet_transactions")
         .insert({
@@ -179,17 +195,22 @@ export async function POST(request: NextRequest) {
           status: "pending",
           token_symbol: "V1N3",
           token_mint: V1N3_TOKEN.mintAddress,
-          amount: sellerV1n3,
+          amount: netV1n3,
           fee: 0.000005,
           from_address: buyer.wallet_address,
           to_address: sellerWallet,
           memo: memo ?? `Marketplace order — ${items.map((i) => i.title).join(", ")}`,
-          metadata: { kind: "marketplace_checkout", seller_id: sellerId },
+          metadata: {
+            kind: "marketplace_checkout",
+            seller_id: sellerId,
+            platform_fee_v1n3: feeV1n3,
+            fee_percent: config.feePercent,
+          },
         })
         .select()
         .single()
 
-      const result = await transferV1N3(keypair, sellerWallet, sellerV1n3)
+      const result = await transferV1N3(keypair, sellerWallet, netV1n3)
 
       if (!result.success) {
         if (pendingTx) {
@@ -214,6 +235,20 @@ export async function POST(request: NextRequest) {
           .eq("id", pendingTx.id)
       }
 
+      // Route the platform fee to the treasury (dev wallet). Best-effort: a
+      // failed fee transfer must NOT void a paid order — we just record fee 0.
+      let feeSignature: string | null = null
+      let collectedFeeV1n3 = 0
+      if (feeV1n3 > 0 && sellerWallet !== ADMIN_WALLET) {
+        const feeResult = await transferV1N3(keypair, ADMIN_WALLET, feeV1n3)
+        if (feeResult.success) {
+          feeSignature = feeResult.signature
+          collectedFeeV1n3 = feeV1n3
+        } else {
+          console.error("[v0] checkout fee transfer failed:", feeResult.error)
+        }
+      }
+
       // Mirror receive record for the seller.
       await admin.from("wallet_transactions").insert({
         user_id: sellerId,
@@ -221,18 +256,24 @@ export async function POST(request: NextRequest) {
         status: "confirmed",
         token_symbol: "V1N3",
         token_mint: V1N3_TOKEN.mintAddress,
-        amount: sellerV1n3,
+        amount: netV1n3,
         fee: 0,
         from_address: buyer.wallet_address,
         to_address: sellerWallet,
         signature: result.signature,
         confirmed_at: new Date().toISOString(),
-        metadata: { kind: "marketplace_sale", buyer_id: user.id },
+        metadata: {
+          kind: "marketplace_sale",
+          buyer_id: user.id,
+          platform_fee_v1n3: collectedFeeV1n3,
+        },
       })
 
       // One order row per line item.
       for (const item of items) {
         const lineNgn = item.unit_price * item.quantity
+        const lineV1n3 = ngnToV1n3(lineNgn)
+        const lineFeeV1n3 = roundV1n3(lineV1n3 * feePct)
         const { data: order } = await admin
           .from("marketplace_orders")
           .insert({
@@ -246,7 +287,11 @@ export async function POST(request: NextRequest) {
             unit_price: item.unit_price,
             total_price: lineNgn,
             currency: "NGN",
-            v1n3_amount: ngnToV1n3(lineNgn),
+            v1n3_amount: lineV1n3,
+            platform_fee_v1n3: lineFeeV1n3,
+            platform_fee_ngn: lineNgn * feePct,
+            seller_net_v1n3: roundV1n3(lineV1n3 - lineFeeV1n3),
+            fee_signature: feeSignature,
             payment_signature: result.signature,
             buyer_wallet: buyer.wallet_address,
             seller_wallet: sellerWallet,
@@ -314,6 +359,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Award loyalty points for the completed checkout (once per transaction).
+    let earnedPoints = 0
+    if (config.pointsPerTransaction > 0) {
+      try {
+        await admin.rpc("award_points", {
+          p_user_id: user.id,
+          p_delta: config.pointsPerTransaction,
+          p_reason: "marketplace_purchase",
+          p_reference_type: "marketplace_order",
+          p_reference_id: createdOrders[0]?.id ?? null,
+        })
+        earnedPoints = config.pointsPerTransaction
+      } catch (e) {
+        console.error("[v0] checkout award points error:", e)
+      }
+    }
+
     // Notify the buyer of the completed purchase.
     try {
       await createNotification({
@@ -336,6 +398,7 @@ export async function POST(request: NextRequest) {
       orders: createdOrders,
       totalNgn,
       totalV1n3,
+      earnedPoints,
       partial: failures.length > 0,
       failures,
     })

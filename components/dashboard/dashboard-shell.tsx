@@ -30,6 +30,7 @@ import {
   FileText,
   Briefcase,
   Coins,
+  Gift,
 } from 'lucide-react'
 import { signOut } from '@/lib/auth/actions'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -78,26 +79,27 @@ const NAV_ITEMS = [
       { href: '/dashboard/marketplace', label: 'Marketplace', icon: ShoppingBag, index: '03' },
       { href: '/dashboard/wallet', label: 'Wallet', icon: Wallet, index: '04' },
       { href: '/dashboard/staking', label: 'Staking', icon: Coins, index: '05' },
-      { href: '/dashboard/investments', label: 'Investments', icon: TrendingUp, index: '06' },
+      { href: '/dashboard/rewards', label: 'Rewards', icon: Gift, index: '06' },
+      { href: '/dashboard/investments', label: 'Investments', icon: TrendingUp, index: '07' },
     ]
   },
   {
     section: 'ENGAGE',
     items: [
-      { href: '/dashboard/feed', label: 'Feed', icon: Radio, index: '07' },
-      { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare, index: '08' },
-      { href: '/dashboard/requests', label: 'Requests', icon: FileText, index: '09' },
-      { href: '/dashboard/assignments', label: 'Assignments', icon: Briefcase, index: '10' },
-      { href: '/dashboard/news', label: 'News', icon: Newspaper, index: '11' },
-      { href: '/dashboard/training', label: 'Training', icon: GraduationCap, index: '12' },
+      { href: '/dashboard/feed', label: 'Feed', icon: Radio, index: '08' },
+      { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare, index: '09' },
+      { href: '/dashboard/requests', label: 'Requests', icon: FileText, index: '10' },
+      { href: '/dashboard/assignments', label: 'Assignments', icon: Briefcase, index: '11' },
+      { href: '/dashboard/news', label: 'News', icon: Newspaper, index: '12' },
+      { href: '/dashboard/training', label: 'Training', icon: GraduationCap, index: '13' },
     ]
   },
   {
     section: 'ADMIN',
     items: [
-      { href: '/dashboard/organization', label: 'Organization', icon: Building2, index: '13' },
-      { href: '/dashboard/security', label: 'Security', icon: Shield, index: '14' },
-      { href: '/dashboard/settings', label: 'Settings', icon: Settings, index: '15' },
+      { href: '/dashboard/organization', label: 'Organization', icon: Building2, index: '14' },
+      { href: '/dashboard/security', label: 'Security', icon: Shield, index: '15' },
+      { href: '/dashboard/settings', label: 'Settings', icon: Settings, index: '16' },
     ]
   },
 ]
