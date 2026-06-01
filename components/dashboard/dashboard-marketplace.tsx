@@ -23,8 +23,10 @@ import {
   Trash2,
   ShieldCheck,
   Tag,
+  ShoppingCart,
 } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
 import {
   createProduct,
   reviewProduct,
@@ -76,7 +78,8 @@ interface DashboardMarketplaceProps {
   pendingProducts: MarketplaceProduct[]
   favoriteIds: string[]
   stats: { products: number; verified: number }
-}
+  cartCount?: number
+  }
 
 export function DashboardMarketplace({
   role,
@@ -89,7 +92,8 @@ export function DashboardMarketplace({
   pendingProducts,
   favoriteIds,
   stats,
-}: DashboardMarketplaceProps) {
+  cartCount = 0,
+  }: DashboardMarketplaceProps) {
   const [tab, setTab] = useState<Tab>(initialTab)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [selectedCategory, setSelectedCategory] = useState('all')
@@ -135,15 +139,29 @@ export function DashboardMarketplace({
           <div className="w-1 h-5 bg-primary" />
           <span className="mono-xs text-primary text-[10px] tracking-wider">/ 03 — MARKETPLACE</span>
         </div>
-        {canList && (
-          <button
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-background mono-xs text-[10px] rounded-[2px] hover:bg-primary/90 transition-colors"
+        <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/marketplace/cart"
+            className="relative flex items-center gap-2 px-4 py-2 border border-border text-foreground mono-xs text-[10px] rounded-[2px] hover:border-primary/40 hover:text-primary transition-colors"
           >
-            <Plus className="w-3.5 h-3.5" />
-            NEW LISTING
-          </button>
-        )}
+            <ShoppingCart className="w-3.5 h-3.5" />
+            CART
+            {cartCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-primary text-background mono-xs text-[8px] rounded-full">
+                {cartCount}
+              </span>
+            )}
+          </Link>
+          {canList && (
+            <button
+              onClick={() => setShowCreate(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-background mono-xs text-[10px] rounded-[2px] hover:bg-primary/90 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              NEW LISTING
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Stats Bar */}
@@ -363,12 +381,14 @@ function ProductCard({
   return (
     <div className="bg-background border border-border rounded-[2px] overflow-hidden group hover:border-primary/40 transition-all">
       <div className="relative aspect-[4/3] bg-secondary overflow-hidden">
-        <Image
-          src={productImage(product)}
-          alt={product.title}
-          fill
-          className="object-cover group-hover:scale-105 transition-transform duration-500"
-        />
+        <Link href={`/dashboard/marketplace/${product.id}`} aria-label={`View ${product.title}`}>
+          <Image
+            src={productImage(product)}
+            alt={product.title}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        </Link>
         <button
           onClick={() => onToggleFavorite(product.id)}
           className="absolute top-2 right-2 w-8 h-8 bg-background/80 backdrop-blur-sm rounded-[2px] flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
@@ -390,7 +410,11 @@ function ProductCard({
 
       <div className="p-4">
         <div className="flex items-start justify-between gap-2 mb-2">
-          <h3 className="mono-sm text-xs text-foreground leading-tight">{product.title}</h3>
+          <Link href={`/dashboard/marketplace/${product.id}`} className="min-w-0">
+            <h3 className="mono-sm text-xs text-foreground leading-tight hover:text-primary transition-colors">
+              {product.title}
+            </h3>
+          </Link>
           {product.seller?.verification_status === 'verified' && (
             <Verified className="w-3.5 h-3.5 text-primary flex-shrink-0" />
           )}
@@ -417,12 +441,18 @@ function ProductCard({
             <span className="font-mono text-lg text-primary">N{Number(product.price).toLocaleString()}</span>
             <span className="mono-xs text-[9px] text-muted-foreground">/{product.price_unit ?? 'each'}</span>
           </div>
-          <button
-            disabled={!inStock}
-            className="px-3 py-1.5 bg-primary text-background mono-xs text-[10px] rounded-[2px] hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            BUY
-          </button>
+          {inStock ? (
+            <Link
+              href={`/dashboard/marketplace/${product.id}`}
+              className="px-3 py-1.5 bg-primary text-background mono-xs text-[10px] rounded-[2px] hover:bg-primary/90 transition-colors"
+            >
+              BUY
+            </Link>
+          ) : (
+            <span className="px-3 py-1.5 bg-secondary text-muted-foreground mono-xs text-[10px] rounded-[2px] cursor-not-allowed">
+              BUY
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -441,19 +471,27 @@ function ProductRow({
   const inStock = product.quantity_available == null || product.quantity_available > 0
   return (
     <div className="bg-background border border-border rounded-[2px] p-4 flex gap-4 hover:border-primary/40 transition-all">
-      <div className="relative w-24 h-24 sm:w-32 sm:h-32 bg-secondary rounded-[2px] overflow-hidden flex-shrink-0">
+      <Link
+        href={`/dashboard/marketplace/${product.id}`}
+        className="relative w-24 h-24 sm:w-32 sm:h-32 bg-secondary rounded-[2px] overflow-hidden flex-shrink-0"
+        aria-label={`View ${product.title}`}
+      >
         <Image src={productImage(product)} alt={product.title} fill className="object-cover" />
         {!inStock && (
           <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
             <span className="mono-xs text-[8px] text-destructive">OUT</span>
           </div>
         )}
-      </div>
+      </Link>
       <div className="flex-1 min-w-0 flex flex-col">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="mono-sm text-xs text-foreground truncate">{product.title}</h3>
+              <Link href={`/dashboard/marketplace/${product.id}`} className="min-w-0">
+                <h3 className="mono-sm text-xs text-foreground truncate hover:text-primary transition-colors">
+                  {product.title}
+                </h3>
+              </Link>
               {product.seller?.verification_status === 'verified' && (
                 <Verified className="w-3.5 h-3.5 text-primary flex-shrink-0" />
               )}
@@ -488,12 +526,18 @@ function ProductRow({
             <span className="font-mono text-xl text-primary">N{Number(product.price).toLocaleString()}</span>
             <span className="mono-xs text-[10px] text-muted-foreground ml-1">/{product.price_unit ?? 'each'}</span>
           </div>
-          <button
-            disabled={!inStock}
-            className="px-4 py-2 bg-primary text-background mono-xs text-[10px] rounded-[2px] hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            BUY NOW
-          </button>
+          {inStock ? (
+            <Link
+              href={`/dashboard/marketplace/${product.id}`}
+              className="px-4 py-2 bg-primary text-background mono-xs text-[10px] rounded-[2px] hover:bg-primary/90 transition-colors"
+            >
+              BUY NOW
+            </Link>
+          ) : (
+            <span className="px-4 py-2 bg-secondary text-muted-foreground mono-xs text-[10px] rounded-[2px] cursor-not-allowed">
+              BUY NOW
+            </span>
+          )}
         </div>
       </div>
     </div>
