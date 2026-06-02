@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { Receipt } from "lucide-react"
 import { PageHeading } from "@/components/dashboard/fulfillment/chrome"
 import { OrdersView } from "@/components/dashboard/orders/orders-view"
+import { getDefaultDeliveryFeeNgn } from "@/lib/marketplace/platform-config"
 
 export default async function OrdersPage() {
   const supabase = await createClient()
@@ -47,6 +48,24 @@ export default async function OrdersPage() {
     .eq("is_active", true)
     .order("name")
 
+  // Map each purchased product to the terminals the seller made it available at.
+  const productIds = Array.from(
+    new Set((asBuyer ?? []).map((o: any) => o.product_id).filter(Boolean)),
+  ) as string[]
+
+  const productTerminals: Record<string, string[]> = {}
+  if (productIds.length > 0) {
+    const { data: links } = await supabase
+      .from("product_terminals")
+      .select("product_id, terminal_id")
+      .in("product_id", productIds)
+    for (const link of links ?? []) {
+      ;(productTerminals[link.product_id] ??= []).push(link.terminal_id)
+    }
+  }
+
+  const defaultDeliveryFeeNgn = await getDefaultDeliveryFeeNgn()
+
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
       <PageHeading
@@ -54,7 +73,13 @@ export default async function OrdersPage() {
         title="Orders"
         subtitle="Track your purchases and manage fulfillment for your sales."
       />
-      <OrdersView purchases={asBuyer ?? []} sales={asSeller ?? []} terminals={terminals ?? []} />
+      <OrdersView
+        purchases={asBuyer ?? []}
+        sales={asSeller ?? []}
+        terminals={terminals ?? []}
+        productTerminals={productTerminals}
+        defaultDeliveryFeeNgn={defaultDeliveryFeeNgn}
+      />
     </div>
   )
 }

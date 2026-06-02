@@ -48,13 +48,20 @@ export default async function MarketplacePage({
   else if (tab === "listings" && canList) initialTab = "listings"
 
   // Fetch everything in parallel
-  const [approved, mine, pending, favorites, stats, cartCount] = await Promise.all([
+  const [approved, mine, pending, favorites, stats, cartCount, terminalsRes] = await Promise.all([
     fetchApprovedProducts({ limit: 48 }),
     canList ? fetchMyProducts() : Promise.resolve({ products: [] as MarketplaceProduct[], error: null }),
     canApprove ? fetchPendingProducts() : Promise.resolve({ products: [] as MarketplaceProduct[], error: null }),
     fetchMyFavoriteIds(),
     fetchMarketplaceStats(),
     fetchCartCount(),
+    canList
+      ? supabase
+          .from("marketplace_terminals")
+          .select("id, name, state, lga")
+          .eq("is_active", true)
+          .order("name")
+      : Promise.resolve({ data: [] as { id: string; name: string; state: string; lga: string }[] }),
   ])
 
   return (
@@ -70,6 +77,7 @@ export default async function MarketplacePage({
       favoriteIds={favorites.ids}
       stats={stats.stats}
       cartCount={cartCount}
+      terminals={terminalsRes.data ?? []}
     />
   )
 }

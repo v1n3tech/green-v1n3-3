@@ -56,6 +56,7 @@ export interface DashboardProfile {
   operationalRating: number | null
   totalEarnings: number | null
   v1n3Balance: number | null
+  isTerminalManager?: boolean
 }
 
 interface SidebarContextValue {
@@ -167,9 +168,12 @@ export function DashboardShell({
   const isLogisticsGcm =
     isAdmin || (profile.role === 'gcm' && profile.community === 'agro_logistics')
 
+  const canAccessTerminals = isAdmin || profile.isTerminalManager
+
   const opsItems = [
     inMarketing && { href: '/dashboard/marketing', label: 'Marketing', icon: Megaphone, index: 'OP1' },
     isLogisticsGcm && { href: '/dashboard/logistics', label: 'Logistics', icon: Truck, index: 'OP2' },
+    canAccessTerminals && { href: '/dashboard/terminals', label: 'Terminals', icon: Building2, index: 'OP3' },
   ].filter(Boolean) as { href: string; label: string; icon: typeof Truck; index: string }[]
 
   const navItems =

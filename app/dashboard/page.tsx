@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { COMMUNITIES } from "@/components/onboarding/data"
 import { DashboardOverview } from "@/components/dashboard/dashboard-overview"
+import { getTerminalAccess } from "@/lib/fulfillment/terminal-managers"
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -23,6 +24,7 @@ export default async function DashboardPage() {
 
   const community = COMMUNITIES.find((c) => c.key === profile.community)
   const isExecutive = profile.role === "agro_executive"
+  const { isManager: isTerminalManager } = await getTerminalAccess()
 
   const fullName =
     [profile.first_name, profile.last_name].filter(Boolean).join(" ") ||
@@ -43,6 +45,7 @@ export default async function DashboardPage() {
         operationalRating: profile.operational_rating ?? 0,
         totalEarnings: profile.total_earnings ?? 0,
         v1n3Balance: profile.v1n3_balance ?? 0,
+        isTerminalManager,
       }}
     />
   )

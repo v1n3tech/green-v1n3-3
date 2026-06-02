@@ -14,6 +14,9 @@ import {
   BarChart3,
   Clock,
   Zap,
+  Building2,
+  PackageCheck,
+  ArrowRight,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useV1N3Balance } from '@/lib/wallet/use-v1n3-balance'
@@ -31,6 +34,7 @@ interface DashboardOverviewProps {
     operationalRating: number
     totalEarnings: number
     v1n3Balance: number
+    isTerminalManager?: boolean
   }
 }
 
@@ -68,6 +72,38 @@ export function DashboardOverview({ profile }: DashboardOverviewProps) {
           network across the agriculture value chain.
         </p>
       </motion.div>
+
+      {/* Terminal Manager Access */}
+      {profile.isTerminalManager && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.08 }}
+        >
+          <Link
+            href="/dashboard/terminals"
+            className="group flex items-center justify-between gap-4 rounded-[2px] border border-primary/30 bg-primary/5 p-4 transition-all hover:border-primary/50 hover:bg-primary/10"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[2px] border border-primary/30 bg-background text-primary">
+                <Building2 className="h-4 w-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="mono-xs text-[9px] tracking-[0.18em] text-primary">/ TERMINAL MANAGER</span>
+                  <span className="status-dot status-dot-pulse" />
+                </div>
+                <p className="mt-0.5 text-[13px] text-foreground">Terminal Dashboard</p>
+                <p className="mono-xs mt-0.5 flex items-center gap-1 text-[9px] text-muted-foreground">
+                  <PackageCheck className="h-2.5 w-2.5" />
+                  Confirm orders collected at your pickup terminals
+                </p>
+              </div>
+            </div>
+            <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+          </Link>
+        </motion.div>
+      )}
 
       {/* Quick Stats */}
       <motion.div

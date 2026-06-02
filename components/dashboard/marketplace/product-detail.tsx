@@ -23,6 +23,9 @@ import {
   Store,
   ExternalLink,
   AlertCircle,
+  Wallet,
+  X,
+  ArrowRight,
 } from "lucide-react"
 import { addToCart } from "@/lib/marketplace/cart"
 import { toggleFavorite } from "@/lib/marketplace/actions"
@@ -54,12 +57,14 @@ export function ProductDetail({
   inCart,
   favorited: initialFavorited,
   isOwn,
+  walletBalance,
   related,
 }: {
   product: MarketplaceProduct
   inCart: boolean
   favorited: boolean
   isOwn: boolean
+  walletBalance: number
   related: MarketplaceProduct[]
 }) {
   const router = useRouter()
@@ -73,6 +78,7 @@ export function ProductDetail({
   const [isPending, startTransition] = useTransition()
   const [buying, setBuying] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const [success, setSuccess] = useState<{ signature: string } | null>(null)
 
   const community = COMMUNITIES.find((c) => c.key === product.community)
@@ -109,12 +115,18 @@ export function ProductDetail({
     const res = await runCheckout({ buyNow: { productId: product.id, quantity } })
     setBuying(false)
     if (res.success && res.orders?.[0]) {
+      setConfirmOpen(false)
       setSuccess({ signature: res.orders[0].signature })
       router.refresh()
+      // Take the buyer to their orders after the success state is shown.
+      setTimeout(() => router.push("/dashboard/orders"), 2600)
     } else {
       setError(res.error ?? "Checkout failed")
     }
   }
+
+  const lineV1n3 = ngnToV1n3(lineNgn)
+  const insufficient = walletBalance < lineV1n3
 
   return (
     <div className="space-y-6">
@@ -288,7 +300,10 @@ export function ProductDetail({
                   </button>
                 )}
                 <button
-                  onClick={handleBuyNow}
+                  onClick={() => {
+                    setError(null)
+                    setConfirmOpen(true)
+                  }}
                   disabled={buying}
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-background rounded-[2px] mono-xs text-[10px] hover:bg-primary/90 transition-colors disabled:opacity-50"
                 >
@@ -375,6 +390,126 @@ export function ProductDetail({
         </div>
       )}
 
+      {/* ---------- Buy Now confirmation ---------- */}
+      <AnimatePresence>
+        {confirmOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
+            onClick={() => !buying && setConfirmOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.96, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.96, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm bg-card border border-border rounded-[3px] overflow-hidden"
+            >
+              {/* header */}
+              <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
+                <span className="mono-xs text-[10px] text-primary tracking-wider">CONFIRM PURCHASE</span>
+                <button
+                  onClick={() => !buying && setConfirmOpen(false)}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* product line */}
+              <div className="flex items-center gap-3 px-5 pt-4">
+                <div className="relative w-12 h-12 flex-shrink-0 rounded-[2px] overflow-hidden border border-border bg-secondary">
+                  <Image src={productImage(product, activeImage)} alt={product.title} fill className="object-cover" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[12px] text-foreground truncate">{product.title}</p>
+                  <p className="mono-xs text-[10px] text-muted-foreground mt-0.5">
+                    {quantity} × N{Number(product.price).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              {/* breakdown */}
+              <div className="px-5 py-4 space-y-2.5">
+                <div className="flex items-center justify-between mono-xs text-[10px]">
+                  <span className="text-muted-foreground">Item total</span>
+                  <span className="text-foreground font-mono">N{lineNgn.toLocaleString()}</span>
+                </div>
+                <div className="flex items-center justify-between mono-xs text-[10px]">
+                  <span className="text-muted-foreground">In V1N3</span>
+                  <span className="text-foreground font-mono">
+                    {lineV1n3.toLocaleString(undefined, { maximumFractionDigits: 4 })} V1N3
+                  </span>
+                </div>
+                <div className="flex items-center justify-between mono-xs text-[10px]">
+                  <span className="text-muted-foreground">Fulfillment</span>
+                  <span className="text-foreground">Chosen after payment</span>
+                </div>
+                <div className="h-px bg-border" />
+                <div className="flex items-center justify-between">
+                  <span className="mono-xs text-[10px] text-muted-foreground">You pay now</span>
+                  <span className="font-mono text-lg text-primary">
+                    {lineV1n3.toLocaleString(undefined, { maximumFractionDigits: 4 })} V1N3
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2 rounded-[2px] bg-secondary/50 border border-border px-2.5 py-2">
+                  <span className="flex items-center gap-1.5 mono-xs text-[9px] text-muted-foreground">
+                    <Wallet className="w-3 h-3" />
+                    Wallet balance
+                  </span>
+                  <span className={`font-mono text-[11px] ${insufficient ? "text-destructive" : "text-foreground"}`}>
+                    {walletBalance.toLocaleString(undefined, { maximumFractionDigits: 4 })} V1N3
+                  </span>
+                </div>
+
+                {insufficient && (
+                  <div className="flex items-start gap-2 rounded-[2px] bg-destructive/10 border border-destructive/20 px-2.5 py-2">
+                    <AlertCircle className="w-3.5 h-3.5 text-destructive mt-0.5 flex-shrink-0" />
+                    <p className="mono-xs text-[9px] text-destructive leading-relaxed">
+                      Insufficient V1N3 balance. Top up your wallet to complete this purchase.
+                    </p>
+                  </div>
+                )}
+
+                {error && (
+                  <div className="flex items-start gap-2 rounded-[2px] bg-destructive/10 border border-destructive/20 px-2.5 py-2">
+                    <AlertCircle className="w-3.5 h-3.5 text-destructive mt-0.5 flex-shrink-0" />
+                    <p className="mono-xs text-[9px] text-destructive leading-relaxed">{error}</p>
+                  </div>
+                )}
+
+                <p className="mono-xs text-[8px] text-muted-foreground/70 leading-relaxed">
+                  This is a real V1N3 transfer from your wallet to the seller on the Solana network. Delivery or pickup
+                  is arranged from your Orders after payment.
+                </p>
+              </div>
+
+              {/* actions */}
+              <div className="flex gap-2 px-5 pb-5">
+                <button
+                  onClick={() => setConfirmOpen(false)}
+                  disabled={buying}
+                  className="flex-1 px-4 py-2.5 border border-border text-muted-foreground rounded-[2px] mono-xs text-[10px] hover:text-foreground hover:border-primary/40 transition-colors disabled:opacity-50"
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={handleBuyNow}
+                  disabled={buying || insufficient}
+                  className="flex-[1.4] flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-background rounded-[2px] mono-xs text-[10px] hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  {buying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                  {buying ? "SETTLING…" : "CONFIRM & PAY"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ---------- Success overlay ---------- */}
       <AnimatePresence>
         {success && (
@@ -397,7 +532,8 @@ export function ProductDetail({
               </div>
               <h3 className="text-lg text-foreground">Order confirmed</h3>
               <p className="mono-xs text-[10px] text-muted-foreground mt-2 leading-relaxed">
-                Your V1N3 payment settled on-chain. The seller has been notified.
+                Your V1N3 payment settled on-chain. The seller has been notified. Choose delivery or pickup from your
+                orders.
               </p>
               <a
                 href={`https://explorer.solana.com/tx/${success.signature}?cluster=devnet`}
@@ -409,11 +545,13 @@ export function ProductDetail({
                 <ExternalLink className="w-3 h-3" />
               </a>
               <button
-                onClick={() => setSuccess(null)}
-                className="w-full mt-5 px-4 py-2.5 bg-primary text-background rounded-[2px] mono-xs text-[10px] hover:bg-primary/90 transition-colors"
+                onClick={() => router.push("/dashboard/orders")}
+                className="w-full mt-5 flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-background rounded-[2px] mono-xs text-[10px] hover:bg-primary/90 transition-colors"
               >
-                DONE
+                GO TO ORDERS
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
+              <p className="mono-xs text-[8px] text-muted-foreground/70 mt-2">Redirecting to your orders…</p>
             </motion.div>
           </motion.div>
         )}

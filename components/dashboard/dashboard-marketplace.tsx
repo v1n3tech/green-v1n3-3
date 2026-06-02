@@ -39,6 +39,7 @@ import {
   type ProductStatus,
 } from '@/lib/marketplace/types'
 import { COMMUNITIES, type AgroCommunityKey } from '@/components/onboarding/data'
+import { SelectMenu, TerminalMultiSelect, type TerminalOption } from '@/components/dashboard/marketplace/select-menu'
 
 const CATEGORIES = [
   { key: 'all', label: 'ALL' },
@@ -79,6 +80,7 @@ interface DashboardMarketplaceProps {
   favoriteIds: string[]
   stats: { products: number; verified: number }
   cartCount?: number
+  terminals?: TerminalOption[]
   }
 
 export function DashboardMarketplace({
@@ -93,6 +95,7 @@ export function DashboardMarketplace({
   favoriteIds,
   stats,
   cartCount = 0,
+  terminals = [],
   }: DashboardMarketplaceProps) {
   const [tab, setTab] = useState<Tab>(initialTab)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
@@ -244,6 +247,7 @@ export function DashboardMarketplace({
             role={role}
             canApprove={canApprove}
             userCommunity={userCommunity}
+            terminals={terminals}
             onClose={() => setShowCreate(false)}
           />
         )}
@@ -773,11 +777,13 @@ function CreateListingModal({
   role,
   canApprove,
   userCommunity,
+  terminals,
   onClose,
 }: {
   role: string
   canApprove: boolean
   userCommunity: AgroCommunityKey | null
+  terminals: TerminalOption[]
   onClose: () => void
 }) {
   const [isPending, startTransition] = useTransition()
@@ -799,6 +805,7 @@ function CreateListingModal({
     offers_delivery: false,
     delivery_fee: '',
     pickup_available: true,
+    terminal_ids: [] as string[],
   })
 
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
@@ -844,6 +851,7 @@ function CreateListingModal({
         offers_delivery: form.offers_delivery,
         delivery_fee: form.offers_delivery && form.delivery_fee ? Number(form.delivery_fee) : 0,
         pickup_available: form.pickup_available,
+        terminal_ids: form.pickup_available ? form.terminal_ids : [],
       })
       if (res.error) {
         setError(res.error)
@@ -950,17 +958,11 @@ function CreateListingModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <span className={labelCls}>CATEGORY</span>
-              <select
-                className={inputCls}
+              <SelectMenu
                 value={form.category}
-                onChange={(e) => update('category', e.target.value)}
-              >
-                {PRODUCT_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c.toUpperCase()}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => update('category', v)}
+                options={PRODUCT_CATEGORIES.map((c) => ({ value: c, label: c.toUpperCase() }))}
+              />
             </div>
             <div>
               <span className={labelCls}>PRICE (N) *</span>
@@ -1031,6 +1033,19 @@ function CreateListingModal({
               />
               <span className="mono-xs text-[10px] text-foreground">Allow pickup at a terminal</span>
             </label>
+            {form.pickup_available && (
+              <div>
+                <span className={labelCls}>PICKUP TERMINALS</span>
+                <TerminalMultiSelect
+                  terminals={terminals}
+                  selected={form.terminal_ids}
+                  onChange={(ids) => update('terminal_ids', ids)}
+                />
+                <p className="mono-xs text-[8px] text-muted-foreground/70 mt-1.5 leading-relaxed">
+                  Buyers can collect this item at the terminals you select. Leave empty to allow any active terminal.
+                </p>
+              </div>
+            )}
             <label className="flex items-center gap-2.5 cursor-pointer">
               <input
                 type="checkbox"
@@ -1060,17 +1075,11 @@ function CreateListingModal({
             <>
               <div>
                 <span className={labelCls}>COMMUNITY</span>
-                <select
-                  className={inputCls}
+                <SelectMenu
                   value={form.community}
-                  onChange={(e) => update('community', e.target.value as AgroCommunityKey)}
-                >
-                  {COMMUNITIES.map((c) => (
-                    <option key={c.key} value={c.key}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => update('community', v as AgroCommunityKey)}
+                  options={COMMUNITIES.map((c) => ({ value: c.key, label: c.label }))}
+                />
               </div>
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input
