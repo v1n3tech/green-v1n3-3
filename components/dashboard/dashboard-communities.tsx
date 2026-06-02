@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useRouter } from 'next/navigation'
 import {
   Users,
   MessageSquare,
@@ -25,11 +26,16 @@ import {
   Clock,
   Zap,
   Loader2,
+  X,
+  Check,
+  Sprout,
+  AlertCircle,
 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import type { AgroCommunityKey } from '@/components/onboarding/data'
 import { fetchServices, type CommunityService } from '@/lib/services/actions'
+import { joinCommunity } from '@/lib/communities/actions'
 
 interface Community {
   key: AgroCommunityKey
@@ -124,9 +130,11 @@ export function DashboardCommunities({
   displayName,
   agroId,
 }: DashboardCommunitiesProps) {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState<TabKey>('feed')
   const [services, setServices] = useState<CommunityService[]>([])
   const [servicesLoading, setServicesLoading] = useState(false)
+  const [joinOpen, setJoinOpen] = useState(false)
 
   // Fetch services when switching to services tab
   useEffect(() => {
@@ -236,7 +244,10 @@ export function DashboardCommunities({
           <p className="mono-xs text-[11px] text-muted-foreground mb-4">
             Join a community to access exclusive features and connect with other Agro Executives.
           </p>
-          <button className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-background mono-sm text-xs rounded-[2px]">
+          <button
+            onClick={() => setJoinOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-background mono-sm text-xs rounded-[2px] hover:bg-primary/90 transition-colors"
+          >
             <PlusCircle className="w-4 h-4" />
             JOIN COMMUNITY
           </button>
@@ -491,6 +502,133 @@ export function DashboardCommunities({
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {joinOpen && (
+          <JoinCommunityModal
+            communities={allCommunities}
+            currentKey={userCommunity?.key ?? null}
+            onClose={() => setJoinOpen(false)}
+            onJoined={() => {
+              setJoinOpen(false)
+              router.refresh()
+            }}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+function JoinCommunityModal({
+  communities,
+  currentKey,
+  onClose,
+  onJoined,
+}: {
+  communities: Community[]
+  currentKey: AgroCommunityKey | null
+  onClose: () => void
+  onJoined: () => void
+}) {
+  const [selected, setSelected] = useState<AgroCommunityKey | null>(currentKey)
+  const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+
+  function handleJoin() {
+    if (!selected) {
+      setError('Select a community to continue')
+      return
+    }
+    setError(null)
+    startTransition(async () => {
+      const result = await joinCommunity(selected)
+      if (result.error) {
+        setError(result.error)
+      } else {
+        onJoined()
+      }
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        className="relative w-full max-w-lg bg-background border border-border rounded-[2px] overflow-hidden"
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <span className="flex items-center gap-2 mono-sm text-sm text-foreground">
+            <PlusCircle className="w-4 h-4 text-primary" />
+            Join a Community
+          </span>
+          <button onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {error && (
+            <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-[2px]">
+              <AlertCircle className="w-4 h-4 text-destructive" />
+              <span className="mono-xs text-xs text-destructive">{error}</span>
+            </div>
+          )}
+
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Pick the value chain you operate in. This becomes your primary community and unlocks its
+            feed, services, and marketplace.
+          </p>
+
+          <div className="grid grid-cols-2 gap-1.5 max-h-[42vh] overflow-y-auto pr-0.5">
+            {communities.map((c) => {
+              const active = selected === c.key
+              return (
+                <button
+                  key={c.key}
+                  type="button"
+                  onClick={() => setSelected(c.key)}
+                  className={`flex items-center justify-between gap-2 px-2.5 py-2.5 rounded-[2px] border transition-colors text-left ${
+                    active
+                      ? 'bg-primary/10 border-primary/60'
+                      : 'bg-secondary/50 border-border hover:border-primary/40 hover:bg-primary/5'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Sprout
+                      className={`w-3.5 h-3.5 shrink-0 ${active ? 'text-primary' : 'text-muted-foreground/60'}`}
+                    />
+                    <span className="mono-xs text-[10px] tracking-wider truncate text-foreground/85">
+                      {c.label}
+                    </span>
+                  </div>
+                  {active && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 px-4 py-3 border-t border-border">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-border text-muted-foreground mono-xs text-[10px] rounded-[2px] hover:bg-secondary transition-colors"
+          >
+            CANCEL
+          </button>
+          <button
+            onClick={handleJoin}
+            disabled={isPending || !selected}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-background mono-xs text-[10px] rounded-[2px] hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            JOIN COMMUNITY
+          </button>
+        </div>
+      </motion.div>
     </div>
   )
 }
