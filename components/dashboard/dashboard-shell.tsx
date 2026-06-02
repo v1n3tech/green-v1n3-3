@@ -31,6 +31,9 @@ import {
   Briefcase,
   Coins,
   Gift,
+  PackageOpen,
+  Truck,
+  Megaphone,
 } from 'lucide-react'
 import { signOut } from '@/lib/auth/actions'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -77,29 +80,30 @@ const NAV_ITEMS = [
       { href: '/dashboard', label: 'Overview', icon: LayoutDashboard, index: '01' },
       { href: '/dashboard/communities', label: 'Communities', icon: Users, index: '02' },
       { href: '/dashboard/marketplace', label: 'Marketplace', icon: ShoppingBag, index: '03' },
-      { href: '/dashboard/wallet', label: 'Wallet', icon: Wallet, index: '04' },
-      { href: '/dashboard/staking', label: 'Staking', icon: Coins, index: '05' },
-      { href: '/dashboard/rewards', label: 'Rewards', icon: Gift, index: '06' },
-      { href: '/dashboard/investments', label: 'Investments', icon: TrendingUp, index: '07' },
+      { href: '/dashboard/orders', label: 'Orders', icon: PackageOpen, index: '04' },
+      { href: '/dashboard/wallet', label: 'Wallet', icon: Wallet, index: '05' },
+      { href: '/dashboard/staking', label: 'Staking', icon: Coins, index: '06' },
+      { href: '/dashboard/rewards', label: 'Rewards', icon: Gift, index: '07' },
+      { href: '/dashboard/investments', label: 'Investments', icon: TrendingUp, index: '08' },
     ]
   },
   {
     section: 'ENGAGE',
     items: [
-      { href: '/dashboard/feed', label: 'Feed', icon: Radio, index: '08' },
-      { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare, index: '09' },
-      { href: '/dashboard/requests', label: 'Requests', icon: FileText, index: '10' },
-      { href: '/dashboard/assignments', label: 'Assignments', icon: Briefcase, index: '11' },
-      { href: '/dashboard/news', label: 'News', icon: Newspaper, index: '12' },
-      { href: '/dashboard/training', label: 'Training', icon: GraduationCap, index: '13' },
+      { href: '/dashboard/feed', label: 'Feed', icon: Radio, index: '09' },
+      { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare, index: '10' },
+      { href: '/dashboard/requests', label: 'Requests', icon: FileText, index: '11' },
+      { href: '/dashboard/assignments', label: 'Assignments', icon: Briefcase, index: '12' },
+      { href: '/dashboard/news', label: 'News', icon: Newspaper, index: '13' },
+      { href: '/dashboard/training', label: 'Training', icon: GraduationCap, index: '14' },
     ]
   },
   {
     section: 'ADMIN',
     items: [
-      { href: '/dashboard/organization', label: 'Organization', icon: Building2, index: '14' },
-      { href: '/dashboard/security', label: 'Security', icon: Shield, index: '15' },
-      { href: '/dashboard/settings', label: 'Settings', icon: Settings, index: '16' },
+      { href: '/dashboard/organization', label: 'Organization', icon: Building2, index: '15' },
+      { href: '/dashboard/security', label: 'Security', icon: Shield, index: '16' },
+      { href: '/dashboard/settings', label: 'Settings', icon: Settings, index: '17' },
     ]
   },
 ]
@@ -155,6 +159,21 @@ export function DashboardShell({
     [profile.firstName, profile.lastName].filter(Boolean).join(' ') ||
     profile.displayName ||
     'EXECUTIVE'
+
+  // Role/community-gated operations links.
+  const isAdmin = profile.role === 'admin'
+  const inMarketing =
+    isAdmin || profile.community === 'agro_marketing' || profile.community === 'agro_logistics'
+  const isLogisticsGcm =
+    isAdmin || (profile.role === 'gcm' && profile.community === 'agro_logistics')
+
+  const opsItems = [
+    inMarketing && { href: '/dashboard/marketing', label: 'Marketing', icon: Megaphone, index: 'OP1' },
+    isLogisticsGcm && { href: '/dashboard/logistics', label: 'Logistics', icon: Truck, index: 'OP2' },
+  ].filter(Boolean) as { href: string; label: string; icon: typeof Truck; index: string }[]
+
+  const navItems =
+    opsItems.length > 0 ? [...NAV_ITEMS, { section: 'OPERATIONS', items: opsItems }] : NAV_ITEMS
 
   return (
     <SidebarContext.Provider value={{ collapsed, setCollapsed, mobileOpen, setMobileOpen }}>
@@ -212,7 +231,7 @@ export function DashboardShell({
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
-            {NAV_ITEMS.map((section) => (
+            {navItems.map((section) => (
               <div key={section.section}>
                 {!collapsed && (
                   <p className="px-3 mb-2 mono-xs text-[9px] text-muted-foreground/60 tracking-[0.2em]">
@@ -329,7 +348,7 @@ export function DashboardShell({
 
                 {/* Mobile Navigation */}
                 <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
-                  {NAV_ITEMS.map((section) => (
+                  {navItems.map((section) => (
                     <div key={section.section}>
                       <p className="px-3 mb-2 mono-xs text-[9px] text-muted-foreground/60 tracking-[0.2em]">
                         / {section.section}

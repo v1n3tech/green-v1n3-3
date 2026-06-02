@@ -153,6 +153,9 @@ export async function createProduct(data: {
   thumbnail?: string
   gallery?: string[]
   tags?: string[]
+  offers_delivery?: boolean
+  delivery_fee?: number
+  pickup_available?: boolean
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -190,6 +193,9 @@ export async function createProduct(data: {
     gallery: data.gallery ?? null,
     tags: data.tags ?? null,
     status,
+    offers_delivery: data.offers_delivery ?? false,
+    delivery_fee: data.delivery_fee ?? 0,
+    pickup_available: data.pickup_available ?? true,
   }
 
   if (isApprover) {

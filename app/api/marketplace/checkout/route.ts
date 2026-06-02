@@ -23,6 +23,8 @@ interface LineItem {
   seller_id: string
   seller_wallet: string | null
   seller_name: string | null
+  offers_delivery: boolean
+  delivery_fee: number
 }
 
 export async function POST(request: NextRequest) {
@@ -55,6 +57,7 @@ export async function POST(request: NextRequest) {
     // ---- Resolve line items ----
     const productSelect = `
       id, title, thumbnail, community, price, seller_id, status, is_active, quantity_available,
+      offers_delivery, delivery_fee, pickup_available,
       seller:profiles!seller_id ( id, display_name, wallet_address )
     `
 
@@ -83,6 +86,8 @@ export async function POST(request: NextRequest) {
         seller_id: p.seller_id,
         seller_wallet: seller?.wallet_address ?? null,
         seller_name: seller?.display_name ?? null,
+        offers_delivery: Boolean(p.offers_delivery),
+        delivery_fee: Number(p.delivery_fee ?? 0),
       })
     } else {
       const { data: cart } = await supabase
@@ -109,6 +114,8 @@ export async function POST(request: NextRequest) {
           seller_id: p.seller_id,
           seller_wallet: seller?.wallet_address ?? null,
           seller_name: seller?.display_name ?? null,
+          offers_delivery: Boolean(p.offers_delivery),
+          delivery_fee: Number(p.delivery_fee ?? 0),
         })
         cartProductIds.push(p.id)
       }
@@ -296,6 +303,8 @@ export async function POST(request: NextRequest) {
             buyer_wallet: buyer.wallet_address,
             seller_wallet: sellerWallet,
             status: "paid",
+            fulfillment_method: null,
+            fulfillment_status: "awaiting_choice",
             memo,
           })
           .select("id")

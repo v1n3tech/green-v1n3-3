@@ -796,6 +796,9 @@ function CreateListingModal({
     on_behalf_of_community: false,
     thumbnail: '',
     tags: '',
+    offers_delivery: false,
+    delivery_fee: '',
+    pickup_available: true,
   })
 
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
@@ -838,6 +841,9 @@ function CreateListingModal({
         on_behalf_of_community: canApprove ? form.on_behalf_of_community : false,
         thumbnail: form.thumbnail || undefined,
         tags: form.tags ? form.tags.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
+        offers_delivery: form.offers_delivery,
+        delivery_fee: form.offers_delivery && form.delivery_fee ? Number(form.delivery_fee) : 0,
+        pickup_available: form.pickup_available,
       })
       if (res.error) {
         setError(res.error)
@@ -1011,6 +1017,42 @@ function CreateListingModal({
               onChange={(e) => update('tags', e.target.value)}
               placeholder="organic, fresh, bulk"
             />
+          </div>
+
+          {/* Fulfillment options */}
+          <div className="space-y-3 p-3 border border-border rounded-[2px] bg-secondary/30">
+            <span className="mono-xs text-[9px] text-muted-foreground tracking-wider block">FULFILLMENT</span>
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.pickup_available}
+                onChange={(e) => update('pickup_available', e.target.checked)}
+                className="w-4 h-4 accent-primary"
+              />
+              <span className="mono-xs text-[10px] text-foreground">Allow pickup at a terminal</span>
+            </label>
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.offers_delivery}
+                onChange={(e) => update('offers_delivery', e.target.checked)}
+                className="w-4 h-4 accent-primary"
+              />
+              <span className="mono-xs text-[10px] text-foreground">Offer delivery (buyer pays a fee)</span>
+            </label>
+            {form.offers_delivery && (
+              <div>
+                <span className={labelCls}>DELIVERY FEE (N)</span>
+                <input
+                  type="number"
+                  min="0"
+                  className={inputCls}
+                  value={form.delivery_fee}
+                  onChange={(e) => update('delivery_fee', e.target.value)}
+                  placeholder="e.g. 1500"
+                />
+              </div>
+            )}
           </div>
 
           {/* GCM-only: community + on behalf */}
