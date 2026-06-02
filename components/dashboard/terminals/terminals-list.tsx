@@ -100,15 +100,28 @@ export function TerminalsList({ terminals, canManage }: TerminalsListProps) {
           {terminals.map((t) => (
             <div
               key={t.id}
-              className={`p-2 border rounded-[2px] text-[10px] ${
-                t.is_active ? "bg-secondary/30 border-border" : "bg-secondary/10 border-border/50 opacity-60"
+              className={`p-2.5 border rounded-[2px] text-[10px] transition-colors ${
+                t.is_active ? "bg-secondary/30 border-border hover:border-primary/30" : "bg-secondary/10 border-border/50 opacity-60"
               }`}
             >
               <div className="flex items-start gap-2 mb-1">
-                <MapPin className="w-3 h-3 text-muted-foreground flex-shrink-0 mt-0.5" />
+                <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-[2px] border border-border bg-background text-primary">
+                  <MapPin className="w-3 h-3" />
+                </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground truncate">{t.name}</p>
-                  <p className="text-muted-foreground">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium text-foreground truncate">{t.name}</p>
+                    <span
+                      className={`mono-xs shrink-0 rounded-[2px] border px-1.5 py-0.5 text-[8px] ${
+                        t.is_active
+                          ? "border-primary/30 bg-primary/10 text-primary"
+                          : "border-border bg-secondary/50 text-muted-foreground"
+                      }`}
+                    >
+                      {t.is_active ? "ACTIVE" : "OFF"}
+                    </span>
+                  </div>
+                  <p className="mono-xs text-[9px] text-muted-foreground mt-0.5">
                     {t.lga}, {t.state}
                   </p>
                 </div>
