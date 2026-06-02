@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { COMMUNITIES } from "@/components/onboarding/data"
+import { getTerminalAccess } from "@/lib/fulfillment/terminal-managers"
 
 export const metadata = {
   title: "Dashboard — GreenV1n3",
@@ -32,7 +33,8 @@ export default async function DashboardLayout({
   if (!profile) redirect("/onboarding")
 
   const community = COMMUNITIES.find((c) => c.key === profile.community)
-  
+  const { isManager: isTerminalManager } = await getTerminalAccess()
+
   const userProfile = {
     id: profile.id,
     email: user.email ?? null,
@@ -49,6 +51,7 @@ export default async function DashboardLayout({
     operationalRating: profile.operational_rating,
     totalEarnings: profile.total_earnings,
     v1n3Balance: profile.v1n3_balance,
+    isTerminalManager,
   }
 
   return <DashboardShell profile={userProfile}>{children}</DashboardShell>

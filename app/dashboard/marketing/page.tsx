@@ -1,8 +1,14 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { Megaphone, Receipt, Clock, Truck, Building2 } from "lucide-react"
+import { Megaphone, Receipt, Clock, Truck, Building2, ShieldCheck } from "lucide-react"
 import { fetchTerminals } from "@/lib/fulfillment/terminals"
+import {
+  getTerminalAccess,
+  fetchMarketingExecutives,
+  fetchTerminalManagers,
+} from "@/lib/fulfillment/terminal-managers"
 import { TerminalsList } from "@/components/dashboard/terminals/terminals-list"
+import { TerminalManagersPanel } from "@/components/dashboard/terminals/terminal-managers-panel"
 import { OrdersList } from "@/components/dashboard/marketing/orders-list"
 import { PageHeading, StatsBar, type StatDef } from "@/components/dashboard/fulfillment/chrome"
 
@@ -51,6 +57,10 @@ export default async function AgroMarketingPage() {
 
   const { terminals } = await fetchTerminals(false) // Include inactive
 
+  const { canAppoint } = await getTerminalAccess()
+  const executives = canAppoint ? (await fetchMarketingExecutives()).executives : []
+  const managers = canAppoint ? (await fetchTerminalManagers()).managers : []
+
   const orderList = orders ?? []
   const awaitingChoice = orderList.filter((o: any) => o.fulfillment_status === "awaiting_choice").length
   const inDelivery = orderList.filter((o: any) => o.fulfillment_method === "delivery").length
@@ -82,12 +92,24 @@ export default async function AgroMarketingPage() {
           <OrdersList orders={orderList} />
         </div>
 
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-3.5 w-3.5 text-primary" />
-            <h2 className="mono-sm text-xs text-muted-foreground">Terminals</h2>
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-3.5 w-3.5 text-primary" />
+              <h2 className="mono-sm text-xs text-muted-foreground">Terminals</h2>
+            </div>
+            <TerminalsList terminals={terminals} canManage={canManageTerminals} />
           </div>
-          <TerminalsList terminals={terminals} canManage={canManageTerminals} />
+
+          {canAppoint && (
+            <div className="space-y-4 border-t border-border pt-6">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+                <h2 className="mono-sm text-xs text-muted-foreground">Terminal Managers</h2>
+              </div>
+              <TerminalManagersPanel executives={executives} managers={managers} />
+            </div>
+          )}
         </div>
       </div>
     </div>
