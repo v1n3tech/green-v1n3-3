@@ -10,6 +10,7 @@ import {
   MapPin, Upload, UserPlus, PenLine, CreditCard, Eye, Sparkles
 } from 'lucide-react'
 import { COMMUNITIES, type AgroCommunityKey } from '@/components/onboarding/data'
+import { AppSelect } from '@/components/ui/app-select'
 import {
   fetchServices,
   fetchMyRequests,
@@ -248,31 +249,35 @@ export function DashboardRequests({
           />
         </div>
         {activeTab === 'browse' && (
-          <select
+          <AppSelect
             value={selectedCommunity}
-            onChange={(e) => setSelectedCommunity(e.target.value as AgroCommunityKey | 'all')}
-            className="px-4 py-2.5 bg-secondary/50 border border-border rounded-[2px] mono-xs text-xs text-foreground outline-none focus:border-primary/50"
-          >
-            <option value="all">All Communities</option>
-            {COMMUNITIES.map((c) => (
-              <option key={c.key} value={c.key}>{c.label}</option>
-            ))}
-          </select>
+            onChange={(v) => setSelectedCommunity(v as AgroCommunityKey | 'all')}
+            ariaLabel="Filter by community"
+            align="right"
+            className="w-44 sm:w-52"
+            options={[
+              { value: 'all', label: 'All Communities' },
+              ...COMMUNITIES.map((c) => ({ value: c.key, label: c.label })),
+            ]}
+          />
         )}
         {(activeTab === 'my-requests' || activeTab === 'incoming') && (
-          <select
+          <AppSelect
             value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value as ServiceRequestStatus | 'all')}
-            className="px-4 py-2.5 bg-secondary/50 border border-border rounded-[2px] mono-xs text-xs text-foreground outline-none focus:border-primary/50"
-          >
-            <option value="all">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="negotiating">Negotiating</option>
-            <option value="accepted">Accepted</option>
-            <option value="completed">Completed</option>
-            <option value="rejected">Rejected</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+            onChange={(v) => setSelectedStatus(v as ServiceRequestStatus | 'all')}
+            ariaLabel="Filter by status"
+            align="right"
+            className="w-40 sm:w-44"
+            options={[
+              { value: 'all', label: 'All Status' },
+              { value: 'pending', label: 'Pending' },
+              { value: 'negotiating', label: 'Negotiating' },
+              { value: 'accepted', label: 'Accepted' },
+              { value: 'completed', label: 'Completed' },
+              { value: 'rejected', label: 'Rejected' },
+              { value: 'cancelled', label: 'Cancelled' },
+            ]}
+          />
         )}
         <button
           onClick={() => loadData()}
@@ -973,17 +978,18 @@ function CreateServiceModal({ open, onClose, community, onCreated }: { open: boo
             </div>
             <div>
               <label className="block mono-xs text-[10px] text-muted-foreground mb-1.5">PRICE UNIT</label>
-              <select
+              <AppSelect
                 value={priceUnit}
-                onChange={(e) => setPriceUnit(e.target.value)}
-                className="w-full px-3 py-2.5 bg-secondary/50 border border-border rounded-[2px] mono-xs text-xs text-foreground outline-none focus:border-primary/50"
-              >
-                <option value="per service">Per Service</option>
-                <option value="per hour">Per Hour</option>
-                <option value="per day">Per Day</option>
-                <option value="per kg">Per Kg</option>
-                <option value="per hectare">Per Hectare</option>
-              </select>
+                onChange={setPriceUnit}
+                ariaLabel="Price unit"
+                options={[
+                  { value: 'per service', label: 'Per Service' },
+                  { value: 'per hour', label: 'Per Hour' },
+                  { value: 'per day', label: 'Per Day' },
+                  { value: 'per kg', label: 'Per Kg' },
+                  { value: 'per hectare', label: 'Per Hectare' },
+                ]}
+              />
             </div>
           </div>
           
@@ -1217,16 +1223,13 @@ function CustomRequestModal({
 
           <div>
             <label className="block mono-xs text-[10px] text-muted-foreground mb-1.5">COMMUNITY</label>
-            <select
+            <AppSelect
               value={communityKey}
-              onChange={(e) => setCommunityKey(e.target.value as AgroCommunityKey | '')}
-              className="w-full px-3 py-2.5 bg-secondary/50 border border-border rounded-[2px] mono-xs text-xs text-foreground outline-none focus:border-primary/50"
-            >
-              <option value="">Select a community...</option>
-              {COMMUNITIES.map((c) => (
-                <option key={c.key} value={c.key}>{c.label}</option>
-              ))}
-            </select>
+              onChange={(v) => setCommunityKey(v as AgroCommunityKey | '')}
+              placeholder="Select a community..."
+              ariaLabel="Community"
+              options={COMMUNITIES.map((c) => ({ value: c.key, label: c.label }))}
+            />
           </div>
 
           <div>
@@ -1470,13 +1473,12 @@ function LocationDetailsModal({
           
           <div>
             <label className="block mono-xs text-[10px] text-muted-foreground mb-1.5">STATE *</label>
-            <select
+            <AppSelect
               value={state}
-              onChange={(e) => setState(e.target.value)}
-              className="w-full px-3 py-2.5 bg-secondary/50 border border-border rounded-[2px] mono-xs text-xs text-foreground outline-none focus:border-primary/50"
-            >
-              <option value="Plateau">Plateau</option>
-            </select>
+              onChange={setState}
+              ariaLabel="State"
+              options={[{ value: 'Plateau', label: 'Plateau' }]}
+            />
           </div>
           
           <div>

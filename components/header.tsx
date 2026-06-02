@@ -85,7 +85,7 @@ export function Header() {
       if (!authUser) return null
       
       const channel = supabase
-        .channel(`profile-${authUser.id}`)
+        .channel(`profile-${authUser.id}-${Math.random().toString(36).slice(2)}`)
         .on(
           'postgres_changes',
           {
@@ -112,9 +112,20 @@ export function Header() {
     }
     
     let channel: ReturnType<typeof supabase.channel> | null = null
-    setupProfileSubscription().then(ch => { channel = ch })
-    
+    let cancelled = false
+
+    setupProfileSubscription().then(ch => {
+      // If the effect was cleaned up before the async setup resolved,
+      // remove the channel immediately to avoid leaking a subscribed channel.
+      if (cancelled && ch) {
+        supabase.removeChannel(ch)
+        return
+      }
+      channel = ch
+    })
+
     return () => {
+      cancelled = true
       if (channel) supabase.removeChannel(channel)
     }
   }, [])
