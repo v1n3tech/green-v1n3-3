@@ -36,7 +36,9 @@ export default async function AgroLogisticsPage() {
 
   // Fetch delivery requests
   const { requests } = await fetchDeliveryRequests()
-  const pendingRequests = requests.filter((r) => r.status === "pending" || r.status === "accepted")
+  // Active = still needs logistics attention (everything except finished/closed).
+  const activeStatuses = ["pending", "accepted", "scheduled", "in_transit"]
+  const activeRequests = requests.filter((r) => activeStatuses.includes(r.status))
 
   const countBy = (s: string) => requests.filter((r) => r.status === s).length
   const stats: StatDef[] = [
@@ -62,10 +64,25 @@ export default async function AgroLogisticsPage() {
             <Truck className="h-3.5 w-3.5 text-primary" />
             <h2 className="mono-sm text-xs text-muted-foreground">Delivery Requests</h2>
           </div>
-          <p className="mono-xs text-[10px] text-muted-foreground">{pendingRequests.length} open</p>
+          <p className="mono-xs text-[10px] text-muted-foreground">{activeRequests.length} active</p>
         </div>
-        <DeliveryRequestsList requests={pendingRequests} isGcm={true} />
+        <DeliveryRequestsList requests={activeRequests} isGcm={true} />
       </div>
+
+      {requests.some((r) => r.status === "delivered" || r.status === "cancelled" || r.status === "rejected") && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <PackageCheck className="h-3.5 w-3.5 text-muted-foreground" />
+            <h2 className="mono-sm text-xs text-muted-foreground">History</h2>
+          </div>
+          <DeliveryRequestsList
+            requests={requests.filter(
+              (r) => r.status === "delivered" || r.status === "cancelled" || r.status === "rejected",
+            )}
+            isGcm={true}
+          />
+        </div>
+      )}
     </div>
   )
 }

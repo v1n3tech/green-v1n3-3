@@ -3,9 +3,9 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { Truck, Calendar, MapPin, Phone, Loader2, CheckCircle2, PackageX } from "lucide-react"
+import { Truck, Calendar, MapPin, Phone, Loader2, CheckCircle2, PackageX, PackageCheck } from "lucide-react"
 import { DeliveryRequest } from "@/lib/fulfillment/types"
-import { acceptDeliveryRequest, scheduleDelivery } from "@/lib/fulfillment/delivery"
+import { acceptDeliveryRequest, scheduleDelivery, completeDelivery } from "@/lib/fulfillment/delivery"
 import { StatusPill } from "@/components/dashboard/fulfillment/chrome"
 
 interface DeliveryRequestsListProps {
@@ -17,6 +17,7 @@ export function DeliveryRequestsList({ requests, isGcm }: DeliveryRequestsListPr
   const router = useRouter()
   const [accepting, setAccepting] = useState<string | null>(null)
   const [scheduling, setScheduling] = useState<string | null>(null)
+  const [completing, setCompleting] = useState<string | null>(null)
   const [scheduledDate, setScheduledDate] = useState<string>("")
   const [error, setError] = useState<string | null>(null)
 
@@ -53,6 +54,22 @@ export function DeliveryRequestsList({ requests, isGcm }: DeliveryRequestsListPr
       setError("Failed to schedule delivery")
     } finally {
       setScheduling(null)
+    }
+  }
+
+  const handleComplete = async (requestId: string) => {
+    if (!isGcm) return
+    setCompleting(requestId)
+    setError(null)
+    try {
+      const { error } = await completeDelivery(requestId)
+      if (error) setError(error)
+      else router.refresh()
+    } catch (e) {
+      console.error("[v0] complete error:", e)
+      setError("Failed to mark delivered")
+    } finally {
+      setCompleting(null)
     }
   }
 
@@ -127,14 +144,32 @@ export function DeliveryRequestsList({ requests, isGcm }: DeliveryRequestsListPr
             </div>
           )}
 
-          {req.scheduled_delivery_at && (
+          {req.scheduled_delivery_at && req.status !== "delivered" && (
             <p className="mono-xs flex items-center gap-1.5 border-t border-border/60 pt-3 text-[10px] text-primary">
               <Calendar className="h-3 w-3" />
               Scheduled: {new Date(req.scheduled_delivery_at).toLocaleString()}
             </p>
           )}
 
-          {error && accepting === null && scheduling === null && (
+          {isGcm && (req.status === "accepted" || req.status === "scheduled" || req.status === "in_transit") && (
+            <button
+              onClick={() => handleComplete(req.id)}
+              disabled={completing === req.id}
+              className="mono-xs flex w-full items-center justify-center gap-1.5 rounded-[2px] border border-primary/40 bg-primary/10 py-2 text-[10px] text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
+            >
+              {completing === req.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <PackageCheck className="h-3 w-3" />}
+              {completing === req.id ? "UPDATING" : "MARK DELIVERED"}
+            </button>
+          )}
+
+          {req.status === "delivered" && (
+            <p className="mono-xs flex items-center gap-1.5 border-t border-border/60 pt-3 text-[10px] text-primary">
+              <PackageCheck className="h-3 w-3" />
+              Delivered{req.delivered_at ? ` ${new Date(req.delivered_at).toLocaleString()}` : ""}
+            </p>
+          )}
+
+          {error && accepting === null && scheduling === null && completing === null && (
             <p className="mono-xs text-[10px] text-destructive">{error}</p>
           )}
         </motion.div>
