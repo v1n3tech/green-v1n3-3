@@ -3,21 +3,31 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { Truck, Calendar, MapPin, Phone, Loader2, CheckCircle2, PackageX, PackageCheck } from "lucide-react"
+import { Truck, Calendar, MapPin, Phone, Loader2, CheckCircle2, PackageX, PackageCheck, UserCheck } from "lucide-react"
 import { DeliveryRequest } from "@/lib/fulfillment/types"
-import { acceptDeliveryRequest, scheduleDelivery, completeDelivery } from "@/lib/fulfillment/delivery"
+import { acceptDeliveryRequest, scheduleDelivery, completeDelivery, assignDeliveryExecutive } from "@/lib/fulfillment/delivery"
 import { StatusPill } from "@/components/dashboard/fulfillment/chrome"
+import { AppSelect } from "@/components/ui/app-select"
+
+export interface LogisticsExecutive {
+  id: string
+  display_name: string | null
+  agro_id: string | null
+  lga: string | null
+}
 
 interface DeliveryRequestsListProps {
   requests: DeliveryRequest[]
   isGcm: boolean
+  executives?: LogisticsExecutive[]
 }
 
-export function DeliveryRequestsList({ requests, isGcm }: DeliveryRequestsListProps) {
+export function DeliveryRequestsList({ requests, isGcm, executives = [] }: DeliveryRequestsListProps) {
   const router = useRouter()
   const [accepting, setAccepting] = useState<string | null>(null)
   const [scheduling, setScheduling] = useState<string | null>(null)
   const [completing, setCompleting] = useState<string | null>(null)
+  const [assigning, setAssigning] = useState<string | null>(null)
   const [scheduledDate, setScheduledDate] = useState<string>("")
   const [error, setError] = useState<string | null>(null)
 
@@ -70,6 +80,22 @@ export function DeliveryRequestsList({ requests, isGcm }: DeliveryRequestsListPr
       setError("Failed to mark delivered")
     } finally {
       setCompleting(null)
+    }
+  }
+
+  const handleAssign = async (requestId: string, executiveId: string) => {
+    if (!isGcm || !executiveId) return
+    setAssigning(requestId)
+    setError(null)
+    try {
+      const { error } = await assignDeliveryExecutive(requestId, executiveId)
+      if (error) setError(error)
+      else router.refresh()
+    } catch (e) {
+      console.error("[v0] assign executive error:", e)
+      setError("Failed to assign executive")
+    } finally {
+      setAssigning(null)
     }
   }
 
@@ -152,6 +178,31 @@ export function DeliveryRequestsList({ requests, isGcm }: DeliveryRequestsListPr
           )}
 
           {isGcm && (req.status === "accepted" || req.status === "scheduled" || req.status === "in_transit") && (
+            <div className="space-y-1.5 border-t border-border/60 pt-3">
+              <p className="mono-xs flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                <UserCheck className="h-3 w-3 text-primary" />
+                {req.assigned_executive?.display_name
+                  ? `Assigned: ${req.assigned_executive.display_name}`
+                  : "Assign field executive"}
+              </p>
+              {executives.length > 0 ? (
+                <AppSelect
+                  value={req.assigned_executive_id ?? ""}
+                  onChange={(v) => handleAssign(req.id, v)}
+                  ariaLabel="Assign delivery executive"
+                  placeholder={assigning === req.id ? "Assigning…" : "Select executive…"}
+                  options={executives.map((e) => ({
+                    value: e.id,
+                    label: e.lga ? `${e.display_name ?? e.agro_id} · ${e.lga}` : e.display_name ?? e.agro_id ?? "Executive",
+                  }))}
+                />
+              ) : (
+                <p className="mono-xs text-[10px] text-muted-foreground/60">No logistics executives available yet.</p>
+              )}
+            </div>
+          )}
+
+          {isGcm && (req.status === "accepted" || req.status === "scheduled" || req.status === "in_transit") && (
             <button
               onClick={() => handleComplete(req.id)}
               disabled={completing === req.id}
@@ -169,7 +220,7 @@ export function DeliveryRequestsList({ requests, isGcm }: DeliveryRequestsListPr
             </p>
           )}
 
-          {error && accepting === null && scheduling === null && completing === null && (
+          {error && accepting === null && scheduling === null && completing === null && assigning === null && (
             <p className="mono-xs text-[10px] text-destructive">{error}</p>
           )}
         </motion.div>

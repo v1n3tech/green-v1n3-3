@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { Truck, Clock, CheckCircle2, CalendarClock, PackageCheck } from "lucide-react"
-import { fetchDeliveryRequests } from "@/lib/fulfillment/delivery"
+import { fetchDeliveryRequests, fetchLogisticsExecutives } from "@/lib/fulfillment/delivery"
 import { DeliveryRequestsList } from "@/components/dashboard/logistics/delivery-requests-list"
 import { PageHeading, StatsBar, type StatDef } from "@/components/dashboard/fulfillment/chrome"
 
@@ -34,8 +34,11 @@ export default async function AgroLogisticsPage() {
     )
   }
 
-  // Fetch delivery requests
-  const { requests } = await fetchDeliveryRequests()
+  // Fetch delivery requests + the executives available for delegation.
+  const [{ requests }, { executives }] = await Promise.all([
+    fetchDeliveryRequests(),
+    fetchLogisticsExecutives(),
+  ])
   // Active = still needs logistics attention (everything except finished/closed).
   const activeStatuses = ["pending", "accepted", "scheduled", "in_transit"]
   const activeRequests = requests.filter((r) => activeStatuses.includes(r.status))
@@ -66,7 +69,7 @@ export default async function AgroLogisticsPage() {
           </div>
           <p className="mono-xs text-[10px] text-muted-foreground">{activeRequests.length} active</p>
         </div>
-        <DeliveryRequestsList requests={activeRequests} isGcm={true} />
+        <DeliveryRequestsList requests={activeRequests} isGcm={true} executives={executives} />
       </div>
 
       {requests.some((r) => r.status === "delivered" || r.status === "cancelled" || r.status === "rejected") && (
