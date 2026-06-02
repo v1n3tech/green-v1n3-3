@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { 
   ArrowRight, Star, Clock, Users, CheckCircle, 
-  Zap, Shield, Award, ExternalLink, Lock, Loader2
+  Zap, Shield, Award, ExternalLink, Lock, Loader2, Sparkles
 } from 'lucide-react'
 import type { CommunityData } from './communities-hub'
 import { fetchServices, type CommunityService } from '@/lib/services/actions'
@@ -83,14 +83,25 @@ export function CommunityServices({ community, isAuthenticated, isUserInCommunit
   return (
     <div className="space-y-6">
       {/* Services Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="mono text-lg text-foreground">{community.name} Services</h2>
           <p className="text-sm text-muted-foreground mt-1">Access verified service providers in this community.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Shield className={`w-4 h-4 ${accentColor}`} />
-          <span className="mono-xs text-[10px] text-muted-foreground">V1N3 VERIFIED</span>
+        <div className="flex items-center gap-3">
+          {isAuthenticated && (
+            <Link
+              href={`/dashboard/requests?custom=${community.key}`}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-[2px] border ${accentBorder}/40 ${accentColor} mono-xs text-[10px] hover:${accentBgSoft} transition-colors`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              CUSTOM REQUEST
+            </Link>
+          )}
+          <div className="flex items-center gap-2">
+            <Shield className={`w-4 h-4 ${accentColor}`} />
+            <span className="mono-xs text-[10px] text-muted-foreground">V1N3 VERIFIED</span>
+          </div>
         </div>
       </div>
 

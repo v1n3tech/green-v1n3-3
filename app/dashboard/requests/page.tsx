@@ -8,7 +8,11 @@ export const metadata = {
   description: "Manage service requests and offerings.",
 }
 
-export default async function RequestsPage() {
+export default async function RequestsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ custom?: string }>
+}) {
   const supabase = await createClient()
   
   const { data: { user } } = await supabase.auth.getUser()
@@ -23,6 +27,9 @@ export default async function RequestsPage() {
   if (!profile) redirect("/onboarding")
   
   const community = COMMUNITIES.find((c) => c.key === profile.community)
+
+  const { custom } = await searchParams
+  const initialCustomCommunity = COMMUNITIES.find((c) => c.key === custom)?.key ?? null
   
   return (
     <DashboardRequests
@@ -32,6 +39,7 @@ export default async function RequestsPage() {
       communityLabel={community?.label ?? null}
       displayName={profile.display_name}
       agroId={profile.agro_id}
+      initialCustomCommunity={initialCustomCommunity}
     />
   )
 }
