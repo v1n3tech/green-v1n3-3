@@ -7,7 +7,7 @@ import {
   CheckCircle, XCircle, MessageSquare, ArrowRight, Send,
   Package, Users, TrendingUp, Zap, Star, RefreshCw,
   ChevronDown, X, Loader2, AlertCircle, DollarSign,
-  MapPin, Upload, UserPlus, PenLine, CreditCard, Eye
+  MapPin, Upload, UserPlus, PenLine, CreditCard, Eye, Sparkles
 } from 'lucide-react'
 import { COMMUNITIES, type AgroCommunityKey } from '@/components/onboarding/data'
 import {
@@ -15,6 +15,7 @@ import {
   fetchMyRequests,
   createService,
   createServiceRequest,
+  createCustomServiceRequest,
   respondToRequest,
   cancelRequest,
   completeRequest,
@@ -41,6 +42,7 @@ interface DashboardRequestsProps {
   communityLabel: string | null
   displayName: string | null
   agroId: string | null
+  initialCustomCommunity?: AgroCommunityKey | null
 }
 
 type TabKey = 'browse' | 'my-requests' | 'incoming' | 'my-services'
@@ -64,9 +66,20 @@ export function DashboardRequests({
   communityLabel,
   displayName,
   agroId,
+  initialCustomCommunity = null,
 }: DashboardRequestsProps) {
   const isGcm = role === 'gcm'
   const [activeTab, setActiveTab] = useState<TabKey>(isGcm ? 'incoming' : 'browse')
+  const [showCustomModal, setShowCustomModal] = useState(false)
+  const [customPreset, setCustomPreset] = useState<AgroCommunityKey | null>(initialCustomCommunity)
+
+  // Open the custom request modal automatically when deep-linked (?custom=<community>)
+  useEffect(() => {
+    if (initialCustomCommunity) {
+      setCustomPreset(initialCustomCommunity)
+      setShowCustomModal(true)
+    }
+  }, [initialCustomCommunity])
   const [services, setServices] = useState<CommunityService[]>([])
   const [myRequests, setMyRequests] = useState<ServiceRequest[]>([])
   const [incomingRequests, setIncomingRequests] = useState<ServiceRequest[]>([])
@@ -161,15 +174,27 @@ export function DashboardRequests({
           <div className="w-1 h-5 bg-primary" />
           <span className="mono-xs text-primary text-[10px] tracking-wider">/ 08 — REQUESTS</span>
         </div>
-        {isGcm && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowCreateService(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-background mono-xs text-[10px] rounded-[2px] hover:bg-primary/90 transition-colors"
+            onClick={() => {
+              setCustomPreset(null)
+              setShowCustomModal(true)
+            }}
+            className="flex items-center gap-2 px-4 py-2 border border-primary/40 text-primary mono-xs text-[10px] rounded-[2px] hover:bg-primary/10 transition-colors"
           >
-            <Plus className="w-3.5 h-3.5" />
-            CREATE SERVICE
+            <Sparkles className="w-3.5 h-3.5" />
+            CUSTOM REQUEST
           </button>
-        )}
+          {isGcm && (
+            <button
+              onClick={() => setShowCreateService(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-background mono-xs text-[10px] rounded-[2px] hover:bg-primary/90 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              CREATE SERVICE
+            </button>
+          )}
+        </div>
       </div>
       
       {/* GCM Stats */}
@@ -402,6 +427,19 @@ export function DashboardRequests({
         }}
       />
       
+      {/* Custom Request Modal */}
+      <CustomRequestModal
+        open={showCustomModal}
+        onClose={() => setShowCustomModal(false)}
+        presetCommunity={customPreset}
+        onRequested={() => {
+          setShowCustomModal(false)
+          setCustomPreset(null)
+          if (!isGcm) setActiveTab('my-requests')
+          loadData()
+        }}
+      />
+
       {/* Response Modal */}
       <ResponseModal
         open={showResponseModal}
@@ -617,20 +655,32 @@ function ServiceCard({ service, onRequest, isOwner, onEdit, userCommunity }: { s
 function RequestCard({ request, isGcm, onAction }: { request: ServiceRequest; isGcm: boolean; onAction: (action: string) => void }) {
   const status = STATUS_CONFIG[request.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.pending
   const StatusIcon = status.icon
-  const currentPrice = request.final_price ?? request.gcm_quote ?? request.requester_quote ?? request.original_price
+  const isCustom = request.is_custom
+  const cardTitle = isCustom ? (request.title ?? 'Custom Request') : (request.service?.title ?? 'Service')
+  const customCommunityLabel = isCustom
+    ? (COMMUNITIES.find(c => c.key === request.target_community)?.label ?? request.target_community)
+    : null
   
   return (
     <div className="border border-border rounded-[2px] bg-card/50 p-4">
       <div className="flex items-start gap-4">
         <div className="w-12 h-12 rounded-[2px] bg-primary/10 border border-primary/30 flex items-center justify-center flex-shrink-0">
-          <Package className="w-5 h-5 text-primary" />
+          {isCustom ? <Sparkles className="w-5 h-5 text-primary" /> : <Package className="w-5 h-5 text-primary" />}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <h3 className="mono-sm text-sm text-foreground">{request.service?.title ?? 'Service'}</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="mono-sm text-sm text-foreground">{cardTitle}</h3>
+                {isCustom && (
+                  <span className="px-1.5 py-0.5 bg-primary/10 text-primary border border-primary/30 mono-xs text-[8px] rounded-[2px]">
+                    CUSTOM
+                  </span>
+                )}
+              </div>
               <p className="mono-xs text-[10px] text-muted-foreground mt-0.5">
                 {isGcm ? `From: ${request.requester?.display_name ?? 'User'}` : `To: ${request.gcm?.display_name ?? 'GCM'}`}
+                {customCommunityLabel ? ` • ${customCommunityLabel}` : ''}
                 {' • '}
                 {new Date(request.created_at).toLocaleDateString()}
               </p>
@@ -646,11 +696,20 @@ function RequestCard({ request, isGcm, onAction }: { request: ServiceRequest; is
           )}
           
           <div className="flex items-center gap-4 mt-3">
-            <div>
-              <p className="mono-xs text-[9px] text-muted-foreground">ORIGINAL</p>
-              <p className="mono-sm text-xs text-foreground">{request.original_price.toLocaleString()} V1N3</p>
-            </div>
-            {request.requester_quote && (
+            {isCustom ? (
+              <div>
+                <p className="mono-xs text-[9px] text-muted-foreground">BUDGET</p>
+                <p className="mono-sm text-xs text-foreground">
+                  {request.requester_budget != null ? `${request.requester_budget.toLocaleString()} V1N3` : 'Open'}
+                </p>
+              </div>
+            ) : (
+              <div>
+                <p className="mono-xs text-[9px] text-muted-foreground">ORIGINAL</p>
+                <p className="mono-sm text-xs text-foreground">{(request.original_price ?? 0).toLocaleString()} V1N3</p>
+              </div>
+            )}
+            {!isCustom && request.requester_quote != null && (
               <div>
                 <p className="mono-xs text-[9px] text-muted-foreground">YOUR QUOTE</p>
                 <p className="mono-sm text-xs text-orange">{request.requester_quote.toLocaleString()} V1N3</p>
@@ -1065,6 +1124,169 @@ function RequestServiceModal({ open, onClose, service, onRequested }: { open: bo
   )
 }
 
+function CustomRequestModal({
+  open,
+  onClose,
+  presetCommunity,
+  onRequested,
+}: {
+  open: boolean
+  onClose: () => void
+  presetCommunity: AgroCommunityKey | null
+  onRequested: () => void
+}) {
+  const [isPending, startTransition] = useTransition()
+  const [communityKey, setCommunityKey] = useState<AgroCommunityKey | ''>(presetCommunity ?? '')
+  const [title, setTitle] = useState('')
+  const [message, setMessage] = useState('')
+  const [budget, setBudget] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (open) {
+      setCommunityKey(presetCommunity ?? '')
+      setError(null)
+    }
+  }, [open, presetCommunity])
+
+  if (!open) return null
+
+  function handleSubmit() {
+    if (!communityKey) {
+      setError('Please select a community')
+      return
+    }
+    if (!title.trim()) {
+      setError('Please add a short title')
+      return
+    }
+    if (!message.trim()) {
+      setError('Please describe what you need')
+      return
+    }
+
+    startTransition(async () => {
+      const result = await createCustomServiceRequest({
+        community: communityKey as AgroCommunityKey,
+        title: title.trim(),
+        message: message.trim(),
+        budget: budget ? parseFloat(budget) : undefined,
+      })
+
+      if (result.error) {
+        setError(result.error)
+      } else {
+        onRequested()
+        setTitle('')
+        setMessage('')
+        setBudget('')
+        setError(null)
+      }
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="relative w-full max-w-lg bg-background border border-border rounded-[2px] overflow-hidden"
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <span className="flex items-center gap-2 mono-sm text-sm text-foreground">
+            <Sparkles className="w-4 h-4 text-primary" />
+            Custom Request
+          </span>
+          <button onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="p-4 space-y-4">
+          {error && (
+            <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-[2px]">
+              <AlertCircle className="w-4 h-4 text-destructive" />
+              <span className="mono-xs text-xs text-destructive">{error}</span>
+            </div>
+          )}
+
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Describe a service you need from a community. Your request goes to the community manager, who will quote a
+            price and assign their executives to deliver it.
+          </p>
+
+          <div>
+            <label className="block mono-xs text-[10px] text-muted-foreground mb-1.5">COMMUNITY</label>
+            <select
+              value={communityKey}
+              onChange={(e) => setCommunityKey(e.target.value as AgroCommunityKey | '')}
+              className="w-full px-3 py-2.5 bg-secondary/50 border border-border rounded-[2px] mono-xs text-xs text-foreground outline-none focus:border-primary/50"
+            >
+              <option value="">Select a community...</option>
+              {COMMUNITIES.map((c) => (
+                <option key={c.key} value={c.key}>{c.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block mono-xs text-[10px] text-muted-foreground mb-1.5">TITLE</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Bulk maize supply for my farm"
+              className="w-full px-3 py-2.5 bg-secondary/50 border border-border rounded-[2px] mono-xs text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50"
+            />
+          </div>
+
+          <div>
+            <label className="block mono-xs text-[10px] text-muted-foreground mb-1.5">DESCRIPTION</label>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Describe exactly what you need, quantities, timing, location, etc."
+              rows={4}
+              className="w-full px-3 py-2.5 bg-secondary/50 border border-border rounded-[2px] mono-xs text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50 resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="block mono-xs text-[10px] text-muted-foreground mb-1.5">BUDGET (OPTIONAL)</label>
+            <div className="relative">
+              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="number"
+                value={budget}
+                onChange={(e) => setBudget(e.target.value)}
+                placeholder="Your budget in V1N3"
+                className="w-full pl-10 pr-4 py-2.5 bg-secondary/50 border border-border rounded-[2px] mono-xs text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50"
+              />
+            </div>
+            <p className="mono-xs text-[9px] text-muted-foreground mt-1">Leave empty to let the manager propose a price</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-3 px-4 py-3 border-t border-border">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-border text-muted-foreground mono-xs text-[10px] rounded-[2px] hover:bg-secondary transition-colors"
+          >
+            CANCEL
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isPending}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-background mono-xs text-[10px] rounded-[2px] hover:bg-primary/90 transition-colors disabled:opacity-50"
+          >
+            {isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            SEND REQUEST
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
 function ResponseModal({ open, onClose, request, onResponded }: { open: boolean; onClose: () => void; request: ServiceRequest | null; onResponded: () => void }) {
   const [isPending, startTransition] = useTransition()
   const [response, setResponse] = useState('')
@@ -1120,8 +1342,8 @@ function ResponseModal({ open, onClose, request, onResponded }: { open: boolean;
           
           <div className="p-3 bg-secondary/50 border border-border rounded-[2px]">
             <div className="flex items-center justify-between">
-              <span className="mono-xs text-[10px] text-muted-foreground">ORIGINAL PRICE</span>
-              <span className="mono-sm text-xs text-foreground">{request.original_price.toLocaleString()} V1N3</span>
+              <span className="mono-xs text-[10px] text-muted-foreground">{request.is_custom ? 'BUDGET' : 'ORIGINAL PRICE'}</span>
+              <span className="mono-sm text-xs text-foreground">{(request.is_custom ? request.requester_budget : request.original_price)?.toLocaleString() ?? '—'} V1N3</span>
             </div>
             {request.requester_quote && (
               <div className="flex items-center justify-between mt-2">

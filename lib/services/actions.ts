@@ -48,12 +48,17 @@ export interface CommunityService {
 
 export interface ServiceRequest {
   id: string
-  service_id: string
+  service_id: string | null
   requester_id: string
   gcm_id: string
   message: string | null
-  original_price: number
+  original_price: number | null
   requester_quote: number | null
+  // Custom request fields
+  is_custom: boolean
+  target_community: AgroCommunityKey | null
+  title: string | null
+  requester_budget: number | null
   gcm_quote: number | null
   final_price: number | null
   status: ServiceRequestStatus
@@ -469,10 +474,10 @@ export async function createServiceRequest(data: {
   // Notify the GCM about the new request
   try {
     await createNotification({
-      userId: data.gcmId,
+      userId: service.gcm_id,
       type: 'request_received',
       title: 'New service request received',
-      body: `You have a new ${data.serviceType} request${data.notes ? `: ${data.notes.substring(0, 60)}...` : ''}`,
+      body: `You have a new service request${data.message ? `: ${data.message.substring(0, 60)}` : ''}`,
       referenceType: 'request',
       referenceId: request.id,
       actionUrl: `/dashboard/requests?id=${request.id}`,
@@ -483,6 +488,97 @@ export async function createServiceRequest(data: {
   
   revalidatePath("/dashboard/requests")
   
+  return { request, error: null }
+}
+
+/**
+ * Create a free-form custom service request addressed to an entire community.
+ * The request is routed to that community's GCM, who quotes a final price and
+ * then allocates the work to executives via the assignment pipeline.
+ */
+export async function createCustomServiceRequest(data: {
+  community: AgroCommunityKey
+  title: string
+  message: string
+  budget?: number
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { request: null, error: "Not authenticated" }
+  }
+
+  if (!data.title?.trim() || !data.message?.trim()) {
+    return { request: null, error: "Title and description are required" }
+  }
+
+  // Resolve the GCM that owns the target community (primary, then secondary)
+  let gcmId: string | null = null
+
+  const { data: primaryGcm } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("role", "gcm")
+    .eq("community", data.community)
+    .limit(1)
+    .maybeSingle()
+
+  if (primaryGcm) {
+    gcmId = primaryGcm.id
+  } else {
+    const { data: secondaryGcm } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("role", "gcm")
+      .contains("secondary_communities", [data.community])
+      .limit(1)
+      .maybeSingle()
+    gcmId = secondaryGcm?.id ?? null
+  }
+
+  if (!gcmId) {
+    return { request: null, error: "No community manager is available for this community yet" }
+  }
+
+  const { data: request, error } = await supabase
+    .from("service_requests")
+    .insert({
+      is_custom: true,
+      service_id: null,
+      target_community: data.community,
+      title: data.title.trim(),
+      requester_id: user.id,
+      gcm_id: gcmId,
+      message: data.message.trim(),
+      requester_budget: data.budget ?? null,
+      requester_quote: data.budget ?? null,
+      status: "pending",
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error("[v0] createCustomServiceRequest error:", error)
+    return { request: null, error: error.message }
+  }
+
+  try {
+    await createNotification({
+      userId: gcmId,
+      type: 'request_received',
+      title: 'New custom request received',
+      body: `Custom request "${data.title.trim()}"${data.budget ? ` · budget ${data.budget.toLocaleString()} V1N3` : ''}`,
+      referenceType: 'request',
+      referenceId: request.id,
+      actionUrl: `/dashboard/requests?id=${request.id}`,
+    })
+  } catch (notifError) {
+    console.error('[Services] Notification error:', notifError)
+  }
+
+  revalidatePath("/dashboard/requests")
+
   return { request, error: null }
 }
 
@@ -504,7 +600,7 @@ export async function respondToRequest(
   // Get request to verify ownership
   const { data: request } = await supabase
     .from("service_requests")
-    .select("gcm_id, requester_id, original_price, requester_quote")
+    .select("gcm_id, requester_id, original_price, requester_quote, gcm_quote")
     .eq("id", requestId)
     .single()
   
@@ -528,7 +624,7 @@ export async function respondToRequest(
     updateData = {
       status: "accepted",
       gcm_response: data?.response,
-      final_price: request.requester_quote ?? request.original_price,
+      final_price: request.gcm_quote ?? request.requester_quote ?? request.original_price,
       accepted_at: new Date().toISOString(),
     }
   } else if (action === "reject") {
