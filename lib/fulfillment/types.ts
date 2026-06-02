@@ -19,7 +19,7 @@ export interface DeliveryRequest {
   seller_id: string | null
   logistics_gcm_id: string | null
   assigned_executive_id: string | null
-  status: "pending" | "accepted" | "scheduled" | "in_transit" | "delivered" | "failed"
+  status: "pending" | "accepted" | "scheduled" | "in_transit" | "delivered" | "failed" | "rejected" | "cancelled"
   pickup_terminal_id: string | null
   delivery_address: string | null
   delivery_state: string | null

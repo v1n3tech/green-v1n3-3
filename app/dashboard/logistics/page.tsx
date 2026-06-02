@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { Truck, Clock, CheckCircle2, CalendarClock, PackageCheck } from "lucide-react"
-import { fetchDeliveryRequests } from "@/lib/fulfillment/delivery"
+import { fetchDeliveryRequests, fetchLogisticsExecutives } from "@/lib/fulfillment/delivery"
 import { DeliveryRequestsList } from "@/components/dashboard/logistics/delivery-requests-list"
 import { PageHeading, StatsBar, type StatDef } from "@/components/dashboard/fulfillment/chrome"
 
@@ -34,9 +34,14 @@ export default async function AgroLogisticsPage() {
     )
   }
 
-  // Fetch delivery requests
-  const { requests } = await fetchDeliveryRequests()
-  const pendingRequests = requests.filter((r) => r.status === "pending" || r.status === "accepted")
+  // Fetch delivery requests + the executives available for delegation.
+  const [{ requests }, { executives }] = await Promise.all([
+    fetchDeliveryRequests(),
+    fetchLogisticsExecutives(),
+  ])
+  // Active = still needs logistics attention (everything except finished/closed).
+  const activeStatuses = ["pending", "accepted", "scheduled", "in_transit"]
+  const activeRequests = requests.filter((r) => activeStatuses.includes(r.status))
 
   const countBy = (s: string) => requests.filter((r) => r.status === s).length
   const stats: StatDef[] = [
@@ -62,10 +67,25 @@ export default async function AgroLogisticsPage() {
             <Truck className="h-3.5 w-3.5 text-primary" />
             <h2 className="mono-sm text-xs text-muted-foreground">Delivery Requests</h2>
           </div>
-          <p className="mono-xs text-[10px] text-muted-foreground">{pendingRequests.length} open</p>
+          <p className="mono-xs text-[10px] text-muted-foreground">{activeRequests.length} active</p>
         </div>
-        <DeliveryRequestsList requests={pendingRequests} isGcm={true} />
+        <DeliveryRequestsList requests={activeRequests} isGcm={true} executives={executives} />
       </div>
+
+      {requests.some((r) => r.status === "delivered" || r.status === "cancelled" || r.status === "rejected") && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <PackageCheck className="h-3.5 w-3.5 text-muted-foreground" />
+            <h2 className="mono-sm text-xs text-muted-foreground">History</h2>
+          </div>
+          <DeliveryRequestsList
+            requests={requests.filter(
+              (r) => r.status === "delivered" || r.status === "cancelled" || r.status === "rejected",
+            )}
+            isGcm={true}
+          />
+        </div>
+      )}
     </div>
   )
 }

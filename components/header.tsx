@@ -81,7 +81,10 @@ export function Header() {
     
     // Get current user ID for subscription filter
     const setupProfileSubscription = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
+      // Use the locally cached session (no network/lock contention) instead of
+      // getUser(), which races with checkUser()'s getUser() for the auth lock.
+      const { data: { session } } = await supabase.auth.getSession()
+      const authUser = session?.user
       if (!authUser) return null
       
       const channel = supabase

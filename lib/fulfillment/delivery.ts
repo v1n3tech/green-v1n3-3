@@ -93,13 +93,126 @@ export async function fetchDeliveryRequests(): Promise<{
       `
       *,
       order:marketplace_orders(*),
-      pickup_terminal:marketplace_terminals(*)
+      pickup_terminal:marketplace_terminals(*),
+      assigned_executive:profiles!assigned_executive_id(id, display_name, avatar_url, agro_id, phone)
     `
     )
     .order("updated_at", { ascending: false })
 
   if (error) return { requests: [], error: error.message }
   return { requests: (data || []) as DeliveryRequest[], error: null }
+}
+
+/**
+ * Fetch logistics executives the GCM can delegate a delivery to:
+ * verified, active profiles whose primary or secondary community is agro_logistics.
+ */
+export async function fetchLogisticsExecutives(): Promise<{
+  executives: Array<{ id: string; display_name: string | null; agro_id: string | null; lga: string | null }>
+  error: string | null
+}> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, display_name, agro_id, lga, community, secondary_communities, role, verification_status, is_active")
+    .eq("role", "agro_executive")
+    .eq("verification_status", "verified")
+    .eq("is_active", true)
+    .or("community.eq.agro_logistics,secondary_communities.cs.{agro_logistics}")
+    .order("display_name", { ascending: true })
+
+  if (error) {
+    console.error("[v0] fetchLogisticsExecutives error:", error)
+    return { executives: [], error: error.message }
+  }
+
+  return {
+    executives: (data ?? []).map((p) => ({
+      id: p.id,
+      display_name: p.display_name,
+      agro_id: p.agro_id,
+      lga: p.lga,
+    })),
+    error: null,
+  }
+}
+
+/**
+ * Logistics GCM delegates (or re-delegates) a delivery to a field executive.
+ * Can be called at any active stage, including after the delivery is scheduled.
+ */
+export async function assignDeliveryExecutive(
+  requestId: string,
+  executiveId: string,
+): Promise<{ request: DeliveryRequest | null; error: string | null }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return { request: null, error: "Unauthorized" }
+
+  // Only the logistics GCM (or admin) may delegate deliveries.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, community, secondary_communities")
+    .eq("id", user.id)
+    .single()
+
+  const isLogisticsGcm =
+    profile?.role === "admin" ||
+    (profile?.role === "gcm" &&
+      (profile?.community === "agro_logistics" ||
+        (profile?.secondary_communities ?? []).includes("agro_logistics")))
+
+  if (!isLogisticsGcm) {
+    return { request: null, error: "Only the logistics GCM can assign deliveries" }
+  }
+
+  // Validate the executive is an eligible logistics executive.
+  const { data: exec } = await supabase
+    .from("profiles")
+    .select("id, display_name, community, secondary_communities, role, verification_status, is_active")
+    .eq("id", executiveId)
+    .single()
+
+  const eligible =
+    exec &&
+    exec.role === "agro_executive" &&
+    exec.verification_status === "verified" &&
+    exec.is_active &&
+    (exec.community === "agro_logistics" || (exec.secondary_communities ?? []).includes("agro_logistics"))
+
+  if (!eligible) {
+    return { request: null, error: "Selected executive is not an eligible logistics executive" }
+  }
+
+  const { data, error } = await supabase
+    .from("delivery_requests")
+    .update({ assigned_executive_id: executiveId })
+    .eq("id", requestId)
+    .select("*, order:marketplace_orders(product_title)")
+    .single()
+
+  if (error) return { request: null, error: error.message }
+
+  // Notify the executive of their new (or reassigned) delivery.
+  try {
+    const productTitle = (data as any)?.order?.product_title ?? "an order"
+    await createNotification({
+      userId: executiveId,
+      type: "system",
+      title: "Delivery assigned to you",
+      body: `You have been assigned the delivery for "${productTitle}".`,
+      actionUrl: "/dashboard/logistics",
+    })
+  } catch (e) {
+    console.error("[v0] assign delivery notify error:", e)
+  }
+
+  revalidatePath("/dashboard/logistics")
+  return { request: data as DeliveryRequest, error: null }
 }
 
 /**
