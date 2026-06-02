@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { getCustodialKeypair } from "@/lib/wallet/mint"
 import { transferV1N3, getV1N3Balance, V1N3_TOKEN } from "@/lib/wallet/v1n3-token"
 import { ngnToV1n3 } from "@/lib/marketplace/types"
+import { getDefaultDeliveryFeeNgn } from "@/lib/marketplace/platform-config"
 import { createNotification } from "@/lib/notifications/actions"
 
 function roundV1n3(amount: number): number {
@@ -112,10 +113,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     // ---------------- DELIVERY ----------------
-    if (!product?.offers_delivery) {
-      return NextResponse.json({ error: "This product does not offer delivery" }, { status: 400 })
-    }
-
+    // Delivery is always available via logistics. If the seller did not set a
+    // per-listing fee, fall back to the admin-editable platform default.
     const deliveryAddress: string | undefined = body?.deliveryAddress
     const deliveryState: string | undefined = body?.deliveryState
     const deliveryLga: string | undefined = body?.deliveryLga
@@ -125,10 +124,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: "Please provide your full delivery details" }, { status: 400 })
     }
 
-    const feeNgn = Number(product.delivery_fee ?? 0)
-    if (feeNgn <= 0) {
-      return NextResponse.json({ error: "The seller has not set a delivery fee" }, { status: 400 })
-    }
+    const sellerFee = Number(product?.delivery_fee ?? 0)
+    const feeNgn = sellerFee > 0 ? sellerFee : await getDefaultDeliveryFeeNgn()
     const feeV1n3 = roundV1n3(ngnToV1n3(feeNgn))
 
     // Buyer wallet + balance check

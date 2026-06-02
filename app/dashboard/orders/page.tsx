@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { Receipt } from "lucide-react"
 import { PageHeading } from "@/components/dashboard/fulfillment/chrome"
 import { OrdersView } from "@/components/dashboard/orders/orders-view"
+import { getDefaultDeliveryFeeNgn } from "@/lib/marketplace/platform-config"
 
 export default async function OrdersPage() {
   const supabase = await createClient()
@@ -47,6 +48,8 @@ export default async function OrdersPage() {
     .eq("is_active", true)
     .order("name")
 
+  const defaultDeliveryFeeNgn = await getDefaultDeliveryFeeNgn()
+
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
       <PageHeading
@@ -54,7 +57,12 @@ export default async function OrdersPage() {
         title="Orders"
         subtitle="Track your purchases and manage fulfillment for your sales."
       />
-      <OrdersView purchases={asBuyer ?? []} sales={asSeller ?? []} terminals={terminals ?? []} />
+      <OrdersView
+        purchases={asBuyer ?? []}
+        sales={asSeller ?? []}
+        terminals={terminals ?? []}
+        defaultDeliveryFeeNgn={defaultDeliveryFeeNgn}
+      />
     </div>
   )
 }

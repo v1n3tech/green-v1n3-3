@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   ArrowLeft,
+  ArrowRight,
   Minus,
   Plus,
   Trash2,
@@ -111,6 +112,8 @@ export function CartView({ initialItems }: { initialItems: CartItem[] }) {
       })
       setItems([])
       router.refresh()
+      // Take the buyer to their orders after the success state is shown.
+      setTimeout(() => router.push("/dashboard/orders"), 2600)
     } else {
       if (typeof res.balance === "number" && typeof res.required === "number") {
         setError(
@@ -346,11 +349,19 @@ export function CartView({ initialItems }: { initialItems: CartItem[] }) {
                 </a>
               )}
               <Link
-                href="/dashboard/marketplace"
-                className="block w-full mt-5 px-4 py-2.5 bg-primary text-background rounded-[2px] mono-xs text-[10px] hover:bg-primary/90 transition-colors"
+                href="/dashboard/orders"
+                className="flex items-center justify-center gap-2 w-full mt-5 px-4 py-2.5 bg-primary text-background rounded-[2px] mono-xs text-[10px] hover:bg-primary/90 transition-colors"
               >
-                CONTINUE SHOPPING
+                GO TO ORDERS
+                <ArrowRight className="w-3.5 h-3.5" />
               </Link>
+              <Link
+                href="/dashboard/marketplace"
+                className="block w-full mt-2 mono-xs text-[9px] text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Continue shopping
+              </Link>
+              <p className="mono-xs text-[8px] text-muted-foreground/70 mt-2">Redirecting to your orders…</p>
             </motion.div>
           </motion.div>
         )}

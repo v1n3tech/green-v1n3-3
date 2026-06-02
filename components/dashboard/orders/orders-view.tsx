@@ -22,6 +22,7 @@ interface OrdersViewProps {
   purchases: any[]
   sales: any[]
   terminals: TerminalLite[]
+  defaultDeliveryFeeNgn: number
 }
 
 function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
@@ -33,7 +34,7 @@ function formatV1n3(v: number) {
   return Number(v).toLocaleString(undefined, { maximumFractionDigits: 4 })
 }
 
-export function OrdersView({ purchases, sales, terminals }: OrdersViewProps) {
+export function OrdersView({ purchases, sales, terminals, defaultDeliveryFeeNgn }: OrdersViewProps) {
   const [tab, setTab] = useState<Tab>("purchases")
 
   const awaitingChoice = purchases.filter((o) => !o.fulfillment_method).length
@@ -87,7 +88,8 @@ export function OrdersView({ purchases, sales, terminals }: OrdersViewProps) {
               const product = firstOf<any>(order.product)
               const terminal = firstOf<any>(order.terminal)
               const dr = firstOf<any>(order.delivery_request)
-              const feeNgn = Number(product?.delivery_fee ?? 0)
+              const sellerFee = Number(product?.delivery_fee ?? 0)
+              const feeNgn = sellerFee > 0 ? sellerFee : defaultDeliveryFeeNgn
               return (
                 <OrderCard key={order.id} index={i}>
                   <CardHeader
@@ -117,7 +119,7 @@ export function OrdersView({ purchases, sales, terminals }: OrdersViewProps) {
                   {!order.fulfillment_method && (
                     <BuyerFulfillment
                       orderId={order.id}
-                      offersDelivery={Boolean(product?.offers_delivery)}
+                      offersDelivery
                       pickupAvailable={product?.pickup_available !== false}
                       deliveryFeeNgn={feeNgn}
                       deliveryFeeV1n3={ngnToV1n3(feeNgn)}

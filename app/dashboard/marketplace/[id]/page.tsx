@@ -35,6 +35,13 @@ export default async function ProductDetailPage({
   const { product, inCart, favorited, isOwn } = await fetchProductById(id)
   if (!product) notFound()
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("v1n3_balance")
+    .eq("id", user.id)
+    .single()
+  const walletBalance = Number(profile?.v1n3_balance ?? 0)
+
   // A few more products from the same category to keep browsing.
   const { products: related } = await fetchApprovedProducts({
     category: product.category,
@@ -47,6 +54,7 @@ export default async function ProductDetailPage({
       inCart={inCart}
       favorited={favorited}
       isOwn={isOwn}
+      walletBalance={walletBalance}
       related={related.filter((p) => p.id !== product.id).slice(0, 4)}
     />
   )
