@@ -170,6 +170,7 @@ export function DashboardShell({
   const opsItems = [
     inMarketing && { href: '/dashboard/marketing', label: 'Marketing', icon: Megaphone, index: 'OP1' },
     isLogisticsGcm && { href: '/dashboard/logistics', label: 'Logistics', icon: Truck, index: 'OP2' },
+    isAdmin && { href: '/dashboard/terminals', label: 'Terminals', icon: Building2, index: 'OP3' },
   ].filter(Boolean) as { href: string; label: string; icon: typeof Truck; index: string }[]
 
   const navItems =

@@ -156,6 +156,7 @@ export async function createProduct(data: {
   offers_delivery?: boolean
   delivery_fee?: number
   pickup_available?: boolean
+  terminal_ids?: string[]
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -212,6 +213,13 @@ export async function createProduct(data: {
   if (error) {
     console.error("[v0] createProduct error:", error)
     return { product: null, error: error.message }
+  }
+
+  // Associate the product with the terminals the seller chose for pickup.
+  if (data.pickup_available !== false && data.terminal_ids && data.terminal_ids.length > 0) {
+    const rows = data.terminal_ids.map((terminal_id) => ({ product_id: product.id, terminal_id }))
+    const { error: linkErr } = await supabase.from("product_terminals").insert(rows)
+    if (linkErr) console.error("[v0] createProduct terminal link error:", linkErr)
   }
 
   // If this needs review, notify the GCM(s) of the product's community.

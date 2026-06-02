@@ -22,6 +22,7 @@ interface OrdersViewProps {
   purchases: any[]
   sales: any[]
   terminals: TerminalLite[]
+  productTerminals?: Record<string, string[]>
   defaultDeliveryFeeNgn: number
 }
 
@@ -34,7 +35,13 @@ function formatV1n3(v: number) {
   return Number(v).toLocaleString(undefined, { maximumFractionDigits: 4 })
 }
 
-export function OrdersView({ purchases, sales, terminals, defaultDeliveryFeeNgn }: OrdersViewProps) {
+export function OrdersView({
+  purchases,
+  sales,
+  terminals,
+  productTerminals = {},
+  defaultDeliveryFeeNgn,
+}: OrdersViewProps) {
   const [tab, setTab] = useState<Tab>("purchases")
 
   const awaitingChoice = purchases.filter((o) => !o.fulfillment_method).length
@@ -90,6 +97,10 @@ export function OrdersView({ purchases, sales, terminals, defaultDeliveryFeeNgn 
               const dr = firstOf<any>(order.delivery_request)
               const sellerFee = Number(product?.delivery_fee ?? 0)
               const feeNgn = sellerFee > 0 ? sellerFee : defaultDeliveryFeeNgn
+              // Restrict pickup to the terminals the seller chose; fall back to all active terminals.
+              const allowed = productTerminals[order.product_id] ?? []
+              const pickupTerminals =
+                allowed.length > 0 ? terminals.filter((t) => allowed.includes(t.id)) : terminals
               return (
                 <OrderCard key={order.id} index={i}>
                   <CardHeader
@@ -123,7 +134,7 @@ export function OrdersView({ purchases, sales, terminals, defaultDeliveryFeeNgn 
                       pickupAvailable={product?.pickup_available !== false}
                       deliveryFeeNgn={feeNgn}
                       deliveryFeeV1n3={ngnToV1n3(feeNgn)}
-                      terminals={terminals}
+                      terminals={pickupTerminals}
                     />
                   )}
                 </OrderCard>

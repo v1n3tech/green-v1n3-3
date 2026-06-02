@@ -43,6 +43,7 @@ export async function createTerminal(input: CreateTerminalInput): Promise<{
 
   if (error) return { terminal: null, error: error.message }
   revalidatePath("/dashboard/marketing")
+  revalidatePath("/dashboard/terminals")
   return { terminal: data as MarketplaceTerminal, error: null }
 }
 
@@ -64,6 +65,7 @@ export async function updateTerminal(
 
   if (error) return { terminal: null, error: error.message }
   revalidatePath("/dashboard/marketing")
+  revalidatePath("/dashboard/terminals")
   return { terminal: data as MarketplaceTerminal, error: null }
 }
 
@@ -77,6 +79,7 @@ export async function deleteTerminal(terminalId: string): Promise<{
 
   if (error) return { success: false, error: error.message }
   revalidatePath("/dashboard/marketing")
+  revalidatePath("/dashboard/terminals")
   return { success: true, error: null }
 }
 

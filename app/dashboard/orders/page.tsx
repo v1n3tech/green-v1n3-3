@@ -48,6 +48,22 @@ export default async function OrdersPage() {
     .eq("is_active", true)
     .order("name")
 
+  // Map each purchased product to the terminals the seller made it available at.
+  const productIds = Array.from(
+    new Set((asBuyer ?? []).map((o: any) => o.product_id).filter(Boolean)),
+  ) as string[]
+
+  const productTerminals: Record<string, string[]> = {}
+  if (productIds.length > 0) {
+    const { data: links } = await supabase
+      .from("product_terminals")
+      .select("product_id, terminal_id")
+      .in("product_id", productIds)
+    for (const link of links ?? []) {
+      ;(productTerminals[link.product_id] ??= []).push(link.terminal_id)
+    }
+  }
+
   const defaultDeliveryFeeNgn = await getDefaultDeliveryFeeNgn()
 
   return (
@@ -61,6 +77,7 @@ export default async function OrdersPage() {
         purchases={asBuyer ?? []}
         sales={asSeller ?? []}
         terminals={terminals ?? []}
+        productTerminals={productTerminals}
         defaultDeliveryFeeNgn={defaultDeliveryFeeNgn}
       />
     </div>
