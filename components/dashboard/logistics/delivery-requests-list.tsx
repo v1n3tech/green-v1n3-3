@@ -213,11 +213,53 @@ export function DeliveryRequestsList({ requests, isGcm, executives = [] }: Deliv
             </button>
           )}
 
+          {isGcm && req.status === "awaiting_confirmation" && (
+            <div className="space-y-2 border-t border-border/60 pt-3">
+              <p className="mono-xs flex items-center gap-1.5 text-[10px] text-orange">
+                <PackageCheck className="h-3 w-3" />
+                Executive reported delivered — review proof
+              </p>
+              {req.proof_of_delivery_url && (
+                <a href={req.proof_of_delivery_url} target="_blank" rel="noopener noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={req.proof_of_delivery_url || "/placeholder.svg"}
+                    alt="Proof of delivery"
+                    className="h-24 w-full rounded-[2px] border border-border object-cover transition-opacity hover:opacity-90"
+                  />
+                </a>
+              )}
+              {req.completion_notes && (
+                <p className="mono-xs text-[10px] text-muted-foreground">&ldquo;{req.completion_notes}&rdquo;</p>
+              )}
+              <button
+                onClick={() => handleComplete(req.id)}
+                disabled={completing === req.id}
+                className="mono-xs flex w-full items-center justify-center gap-1.5 rounded-[2px] bg-primary py-2 text-[10px] text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {completing === req.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <PackageCheck className="h-3 w-3" />}
+                {completing === req.id ? "CONFIRMING" : "CONFIRM DELIVERED"}
+              </button>
+            </div>
+          )}
+
           {req.status === "delivered" && (
-            <p className="mono-xs flex items-center gap-1.5 border-t border-border/60 pt-3 text-[10px] text-primary">
-              <PackageCheck className="h-3 w-3" />
-              Delivered{req.delivered_at ? ` ${new Date(req.delivered_at).toLocaleString()}` : ""}
-            </p>
+            <div className="space-y-2 border-t border-border/60 pt-3">
+              <p className="mono-xs flex items-center gap-1.5 text-[10px] text-primary">
+                <PackageCheck className="h-3 w-3" />
+                Delivered{req.delivered_at ? ` ${new Date(req.delivered_at).toLocaleString()}` : ""}
+              </p>
+              {req.proof_of_delivery_url && (
+                <a href={req.proof_of_delivery_url} target="_blank" rel="noopener noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={req.proof_of_delivery_url || "/placeholder.svg"}
+                    alt="Proof of delivery"
+                    className="h-16 w-16 rounded-[2px] border border-border object-cover transition-opacity hover:opacity-90"
+                  />
+                </a>
+              )}
+            </div>
           )}
 
           {error && accepting === null && scheduling === null && completing === null && assigning === null && (

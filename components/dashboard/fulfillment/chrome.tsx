@@ -103,6 +103,7 @@ const STATUS_TONE: Record<string, Tone> = {
   accepted: "info",
   scheduled: "info",
   in_transit: "info",
+  awaiting_confirmation: "warning",
   fulfilled: "success",
   completed: "success",
   delivered: "success",
