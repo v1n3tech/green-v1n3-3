@@ -19,7 +19,16 @@ export interface DeliveryRequest {
   seller_id: string | null
   logistics_gcm_id: string | null
   assigned_executive_id: string | null
-  status: "pending" | "accepted" | "scheduled" | "in_transit" | "delivered" | "failed" | "rejected" | "cancelled"
+  status:
+    | "pending"
+    | "accepted"
+    | "scheduled"
+    | "in_transit"
+    | "awaiting_confirmation"
+    | "delivered"
+    | "failed"
+    | "rejected"
+    | "cancelled"
   pickup_terminal_id: string | null
   delivery_address: string | null
   delivery_state: string | null
@@ -31,6 +40,11 @@ export interface DeliveryRequest {
   requested_at: string
   accepted_at: string | null
   delivered_at: string | null
+  // Executive-reported proof of delivery (awaiting GCM confirmation)
+  proof_of_delivery_url: string | null
+  completion_notes: string | null
+  completion_reported_at: string | null
+  completion_reported_by: string | null
   created_at: string
   updated_at: string
   // Joined
@@ -40,6 +54,8 @@ export interface DeliveryRequest {
     id: string
     display_name: string | null
     avatar_url: string | null
+    agro_id?: string | null
+    phone?: string | null
   }
 }
 

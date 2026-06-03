@@ -337,6 +337,105 @@ export async function scheduleDelivery(requestId: string, scheduledAt: string): 
 }
 
 /**
+ * Fetch deliveries assigned to the current executive (active + recent history).
+ * RLS already scopes rows to assigned_executive_id.
+ */
+export async function fetchMyDeliveryAssignments(): Promise<{
+  requests: DeliveryRequest[]
+  error: string | null
+}> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return { requests: [], error: "Unauthorized" }
+
+  const { data, error } = await supabase
+    .from("delivery_requests")
+    .select(
+      `
+      *,
+      order:marketplace_orders(*),
+      pickup_terminal:marketplace_terminals(*)
+    `
+    )
+    .eq("assigned_executive_id", user.id)
+    .order("updated_at", { ascending: false })
+
+  if (error) {
+    console.error("[v0] fetchMyDeliveryAssignments error:", error)
+    return { requests: [], error: error.message }
+  }
+  return { requests: (data || []) as DeliveryRequest[], error: null }
+}
+
+/**
+ * Assigned executive reports a delivery as completed, attaching proof of delivery.
+ * This sets the request to 'awaiting_confirmation' for the logistics GCM to confirm.
+ */
+export async function reportDeliveryComplete(
+  requestId: string,
+  proofUrl: string,
+  notes?: string,
+): Promise<{ request: DeliveryRequest | null; error: string | null }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return { request: null, error: "Unauthorized" }
+  if (!proofUrl) return { request: null, error: "Proof of delivery is required" }
+
+  // Only the assigned executive may report completion.
+  const { data: existing } = await supabase
+    .from("delivery_requests")
+    .select("id, assigned_executive_id, logistics_gcm_id")
+    .eq("id", requestId)
+    .single()
+
+  if (!existing) return { request: null, error: "Delivery not found" }
+  if (existing.assigned_executive_id !== user.id) {
+    return { request: null, error: "Only the assigned executive can report this delivery" }
+  }
+
+  const { data, error } = await supabase
+    .from("delivery_requests")
+    .update({
+      status: "awaiting_confirmation",
+      proof_of_delivery_url: proofUrl,
+      completion_notes: notes || null,
+      completion_reported_at: new Date().toISOString(),
+      completion_reported_by: user.id,
+    })
+    .eq("id", requestId)
+    .select("*, order:marketplace_orders(product_title)")
+    .single()
+
+  if (error) return { request: null, error: error.message }
+
+  // Notify the logistics GCM that proof is ready for confirmation.
+  try {
+    const productTitle = (data as any)?.order?.product_title ?? "an order"
+    if (existing.logistics_gcm_id) {
+      await createNotification({
+        userId: existing.logistics_gcm_id,
+        type: "system",
+        title: "Delivery awaiting confirmation",
+        body: `Proof of delivery submitted for "${productTitle}". Review and confirm.`,
+        actionUrl: "/dashboard/logistics",
+      })
+    }
+  } catch (e) {
+    console.error("[v0] report delivery notify error:", e)
+  }
+
+  revalidatePath("/dashboard/logistics")
+  revalidatePath("/dashboard/assignments")
+  return { request: data as DeliveryRequest, error: null }
+}
+
+/**
  * Mark a delivery as completed.
  */
 export async function completeDelivery(requestId: string): Promise<{
@@ -352,12 +451,12 @@ export async function completeDelivery(requestId: string): Promise<{
       delivered_at: new Date().toISOString(),
     })
     .eq("id", requestId)
-    .select("*, order:marketplace_orders(id, buyer_id, seller_id, product_title)")
+    .select("*, assigned_executive_id, order:marketplace_orders(id, buyer_id, seller_id, product_title)")
     .single()
 
   if (error) return { request: null, error: error.message }
 
-  // Keep the marketplace order in sync and notify both parties.
+  // Keep the marketplace order in sync and notify all parties.
   try {
     const order = (data as any)?.order
     if (order?.id) {
@@ -367,12 +466,13 @@ export async function completeDelivery(requestId: string): Promise<{
         .eq("id", order.id)
     }
     const productTitle = order?.product_title ?? "your order"
-    for (const userId of [order?.buyer_id, order?.seller_id].filter(Boolean)) {
+    const recipients = [order?.buyer_id, order?.seller_id, (data as any)?.assigned_executive_id].filter(Boolean)
+    for (const userId of recipients) {
       await createNotification({
         userId,
         type: "system",
         title: "Order delivered",
-        body: `The delivery for "${productTitle}" has been completed.`,
+        body: `The delivery for "${productTitle}" has been confirmed delivered.`,
         actionUrl: "/dashboard/orders",
       })
     }
@@ -382,5 +482,6 @@ export async function completeDelivery(requestId: string): Promise<{
 
   revalidatePath("/dashboard/logistics")
   revalidatePath("/dashboard/orders")
+  revalidatePath("/dashboard/assignments")
   return { request: data as DeliveryRequest, error: null }
 }

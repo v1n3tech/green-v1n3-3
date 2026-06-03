@@ -1,8 +1,13 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { Truck, Clock, CheckCircle2, CalendarClock, PackageCheck } from "lucide-react"
-import { fetchDeliveryRequests, fetchLogisticsExecutives } from "@/lib/fulfillment/delivery"
+import {
+  fetchDeliveryRequests,
+  fetchLogisticsExecutives,
+  fetchMyDeliveryAssignments,
+} from "@/lib/fulfillment/delivery"
 import { DeliveryRequestsList } from "@/components/dashboard/logistics/delivery-requests-list"
+import { ExecutiveDeliveryAssignments } from "@/components/dashboard/logistics/executive-delivery-assignments"
 import { PageHeading, StatsBar, type StatDef } from "@/components/dashboard/fulfillment/chrome"
 
 export default async function AgroLogisticsPage() {
@@ -13,14 +18,33 @@ export default async function AgroLogisticsPage() {
 
   if (!user) return redirect("/auth/login")
 
-  // Only logistics GCM and admins
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, community")
+    .select("role, community, secondary_communities")
     .eq("id", user.id)
     .single()
 
   const isLogisticsGcm = (profile?.role === "gcm" && profile?.community === "agro_logistics") || profile?.role === "admin"
+
+  const isLogisticsExecutive =
+    profile?.role === "agro_executive" &&
+    (profile?.community === "agro_logistics" ||
+      (profile?.secondary_communities ?? []).includes("agro_logistics"))
+
+  // Field executives see only the deliveries delegated to them.
+  if (!isLogisticsGcm && isLogisticsExecutive) {
+    const { requests: myDeliveries } = await fetchMyDeliveryAssignments()
+    return (
+      <div className="space-y-6 p-6">
+        <PageHeading
+          icon={<Truck className="h-4 w-4" />}
+          title="My Deliveries"
+          subtitle="Deliveries delegated to you. Upload proof and report completion for GCM confirmation."
+        />
+        <ExecutiveDeliveryAssignments requests={myDeliveries} />
+      </div>
+    )
+  }
 
   if (!isLogisticsGcm) {
     return (
@@ -40,7 +64,7 @@ export default async function AgroLogisticsPage() {
     fetchLogisticsExecutives(),
   ])
   // Active = still needs logistics attention (everything except finished/closed).
-  const activeStatuses = ["pending", "accepted", "scheduled", "in_transit"]
+  const activeStatuses = ["pending", "accepted", "scheduled", "in_transit", "awaiting_confirmation"]
   const activeRequests = requests.filter((r) => activeStatuses.includes(r.status))
 
   const countBy = (s: string) => requests.filter((r) => r.status === s).length
