@@ -1343,13 +1343,13 @@ function NewChatModal({
 
   useEffect(() => {
     if (open && search.length >= 2) {
-      searchUsers()
+      handleSearchUsers()
     }
   }, [search, open])
 
-  async function searchUsers() {
+  async function handleSearchUsers() {
     setLoading(true)
-    const { users } = await searchUsersForMessaging(search)
+    const { users } = await searchUsers(search)
     setUsers(users)
     setLoading(false)
   }
