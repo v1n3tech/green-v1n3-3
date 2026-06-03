@@ -15,6 +15,36 @@ export interface MintResult {
   ataCreated?: boolean
 }
 
+// Standard Solana BIP44 derivation path (matches Phantom / Solflare default account).
+const SOLANA_DERIVATION_PATH = "m/44'/501'/0'/0'"
+
+interface MnemonicWallet {
+  keypair: Keypair
+  mnemonic: string
+  publicKey: string
+  secretKeyBase58: string
+}
+
+/**
+ * Generate a brand-new custodial wallet backed by a recoverable BIP39 seed
+ * phrase. The keypair is derived from the mnemonic via the standard Solana
+ * path so the user can later restore it in Phantom / Solflare. We keep BOTH
+ * the mnemonic and the raw secret key so signing stays fast and a backup is
+ * always available.
+ */
+function createMnemonicWallet(): MnemonicWallet {
+  const mnemonic = bip39.generateMnemonic() // 128 bits -> 12 words
+  const seed = bip39.mnemonicToSeedSync(mnemonic)
+  const { key } = derivePath(SOLANA_DERIVATION_PATH, seed.toString("hex"))
+  const keypair = Keypair.fromSeed(key)
+  return {
+    keypair,
+    mnemonic,
+    publicKey: keypair.publicKey.toBase58(),
+    secretKeyBase58: bs58.encode(keypair.secretKey),
+  }
+}
+
 /**
  * Idempotently provision a custodial Solana wallet for a user.
  *
@@ -68,12 +98,11 @@ export async function ensureCustodialWallet(
     return { publicKey: existingWallet.public_key, alreadyExisted: true }
   }
 
-  // 3. Fresh mint.
-  const keypair = Keypair.generate()
-  const publicKey = keypair.publicKey.toBase58()
-  const secretKeyBase58 = bs58.encode(keypair.secretKey)
+  // 3. Fresh mint — derived from a recoverable BIP39 seed phrase.
+  const { keypair, mnemonic, publicKey, secretKeyBase58 } = createMnemonicWallet()
 
   const encrypted = encrypt(secretKeyBase58)
+  const encryptedMnemonic = encrypt(mnemonic)
 
   const { error: insertErr } = await admin.from("user_wallets").insert({
     user_id: userId,
@@ -81,6 +110,9 @@ export async function ensureCustodialWallet(
     encrypted_secret_key: encrypted.ciphertext,
     iv: encrypted.iv,
     auth_tag: encrypted.authTag,
+    encrypted_mnemonic: encryptedMnemonic.ciphertext,
+    mnemonic_iv: encryptedMnemonic.iv,
+    mnemonic_auth_tag: encryptedMnemonic.authTag,
     origin: "minted",
   })
 
@@ -127,9 +159,6 @@ export async function ensureCustodialWallet(
 
   return { publicKey, alreadyExisted: false, ataAddress, ataCreated }
 }
-
-// Standard Solana BIP44 derivation path (matches Phantom / Solflare default account).
-const SOLANA_DERIVATION_PATH = "m/44'/501'/0'/0'"
 
 /**
  * Derive a Solana Keypair from a BIP39 seed phrase (mnemonic).
@@ -303,4 +332,150 @@ export async function getCustodialKeypair(userId: string): Promise<Keypair | nul
   })
 
   return Keypair.fromSecretKey(bs58.decode(secretKeyBase58))
+}
+
+export interface WalletSecrets {
+  publicKey: string
+  /** 12/24-word BIP39 phrase, or null for legacy/imported wallets that have none. */
+  mnemonic: string | null
+  /** base58-encoded 64-byte secret key (Phantom "export private key" format). */
+  secretKey: string
+  origin: string | null
+}
+
+/**
+ * Decrypt a user's wallet secrets so they can back them up.
+ *
+ * SECURITY: this returns raw private material and MUST only be called from a
+ * route that has just re-verified the user via OTP. The result is sent over
+ * the response body once and never logged.
+ */
+export async function revealWalletSecrets(userId: string): Promise<WalletSecrets | null> {
+  const admin = createAdminClient()
+
+  const { data, error } = await admin
+    .from("user_wallets")
+    .select(
+      "public_key, encrypted_secret_key, iv, auth_tag, encrypted_mnemonic, mnemonic_iv, mnemonic_auth_tag, origin",
+    )
+    .eq("user_id", userId)
+    .maybeSingle()
+
+  if (error || !data) return null
+
+  const secretKey = decrypt({
+    ciphertext: data.encrypted_secret_key,
+    iv: data.iv,
+    authTag: data.auth_tag,
+  })
+
+  let mnemonic: string | null = null
+  if (data.encrypted_mnemonic && data.mnemonic_iv && data.mnemonic_auth_tag) {
+    mnemonic = decrypt({
+      ciphertext: data.encrypted_mnemonic,
+      iv: data.mnemonic_iv,
+      authTag: data.mnemonic_auth_tag,
+    })
+  }
+
+  // Audit the reveal (best-effort; never blocks returning secrets).
+  await admin
+    .from("user_wallets")
+    .update({ last_revealed_at: new Date().toISOString(), exported_at: new Date().toISOString() })
+    .eq("user_id", userId)
+
+  return { publicKey: data.public_key, mnemonic, secretKey, origin: data.origin }
+}
+
+export interface RecoverResult {
+  publicKey: string
+  mnemonic: string
+  previousAddress: string | null
+}
+
+/**
+ * Self-heal a custodial wallet whose private keys were lost (e.g. the vault
+ * row was deleted but `profiles.wallet_address` still points at a now-orphaned
+ * address we can no longer sign for).
+ *
+ * Mints a fresh mnemonic-backed wallet, upserts it into `user_wallets`, and
+ * repoints the profile. Funds at the previous address are unrecoverable —
+ * callers MUST warn the user before invoking this. OTP-gated at the route.
+ */
+export async function remintCustodialWallet(userId: string): Promise<RecoverResult> {
+  const admin = createAdminClient()
+
+  const { data: profile, error: profileErr } = await admin
+    .from("profiles")
+    .select("id, wallet_address")
+    .eq("id", userId)
+    .single()
+
+  if (profileErr || !profile) {
+    throw new Error(`[v0] recover: profile not found for user ${userId}`)
+  }
+
+  const previousAddress = profile.wallet_address ?? null
+
+  const { keypair, mnemonic, publicKey, secretKeyBase58 } = createMnemonicWallet()
+  void keypair // keypair intentionally unused here; signing happens lazily later
+
+  const encrypted = encrypt(secretKeyBase58)
+  const encryptedMnemonic = encrypt(mnemonic)
+
+  const { error: upsertErr } = await admin.from("user_wallets").upsert(
+    {
+      user_id: userId,
+      public_key: publicKey,
+      encrypted_secret_key: encrypted.ciphertext,
+      iv: encrypted.iv,
+      auth_tag: encrypted.authTag,
+      encrypted_mnemonic: encryptedMnemonic.ciphertext,
+      mnemonic_iv: encryptedMnemonic.iv,
+      mnemonic_auth_tag: encryptedMnemonic.authTag,
+      origin: "minted",
+      recovered_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" },
+  )
+
+  if (upsertErr) {
+    throw new Error(`[v0] recover: failed to write user_wallets: ${upsertErr.message}`)
+  }
+
+  const { error: updateErr } = await admin
+    .from("profiles")
+    .update({ wallet_address: publicKey })
+    .eq("id", userId)
+
+  if (updateErr) {
+    throw new Error(`[v0] recover: wrote keypair but failed to update profile: ${updateErr.message}`)
+  }
+
+  return { publicKey, mnemonic, previousAddress }
+}
+
+/**
+ * Returns true when the profile points at a wallet address we have NO keys for
+ * (orphaned custodial wallet). Used to surface a recovery prompt in the UI.
+ */
+export async function isWalletOrphaned(userId: string): Promise<boolean> {
+  const admin = createAdminClient()
+
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("wallet_address")
+    .eq("id", userId)
+    .single()
+
+  if (!profile?.wallet_address) return false
+
+  const { data: wallet } = await admin
+    .from("user_wallets")
+    .select("user_id")
+    .eq("user_id", userId)
+    .maybeSingle()
+
+  return !wallet
 }
