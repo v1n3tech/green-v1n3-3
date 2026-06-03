@@ -47,7 +47,7 @@ import {
   sendMessage,
   getOrCreateDirectConversation,
   getOrCreateCommunityGroupChat,
-  searchUsersForMessaging,
+  searchUsers,
   getCurrentUserId,
   fetchConversationParticipants,
   addReaction,
@@ -1343,11 +1343,11 @@ function NewChatModal({
 
   useEffect(() => {
     if (open && search.length >= 2) {
-      handleSearchUsers()
+      searchUsers()
     }
   }, [search, open])
 
-  async function handleSearchUsers() {
+  async function searchUsers() {
     setLoading(true)
     const { users } = await searchUsersForMessaging(search)
     setUsers(users)
