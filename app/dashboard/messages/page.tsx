@@ -47,7 +47,7 @@ import {
   sendMessage,
   getOrCreateDirectConversation,
   getOrCreateCommunityGroupChat,
-  searchUsers,
+  searchUsersForMessaging,
   getCurrentUserId,
   fetchConversationParticipants,
   addReaction,
@@ -1349,7 +1349,7 @@ function NewChatModal({
 
   async function handleSearchUsers() {
     setLoading(true)
-    const { users } = await searchUsers(search)
+    const { users } = await searchUsersForMessaging(search)
     setUsers(users)
     setLoading(false)
   }
