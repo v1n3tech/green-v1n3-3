@@ -47,7 +47,7 @@ import {
   sendMessage,
   getOrCreateDirectConversation,
   getOrCreateCommunityGroupChat,
-  searchUsers,
+  searchUsersForMessaging,
   getCurrentUserId,
   fetchConversationParticipants,
   addReaction,
