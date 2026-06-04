@@ -95,6 +95,29 @@ export function DashboardWallet({
   const [importError, setImportError] = useState<string | null>(null)
   const [importedPublicKey, setImportedPublicKey] = useState<string | null>(null)
 
+  // Reveal secret phrase (backup) state
+  const [showRevealModal, setShowRevealModal] = useState(false)
+  const [revealStep, setRevealStep] = useState<'confirm' | 'otp' | 'revealed'>('confirm')
+  const [revealOtp, setRevealOtp] = useState('')
+  const [revealLoading, setRevealLoading] = useState(false)
+  const [revealError, setRevealError] = useState<string | null>(null)
+  const [revealSentTo, setRevealSentTo] = useState<string | null>(null)
+  const [revealedMnemonic, setRevealedMnemonic] = useState<string | null>(null)
+  const [revealedSecretKey, setRevealedSecretKey] = useState<string | null>(null)
+  const [showSecretKey, setShowSecretKey] = useState(false)
+  const [copiedSecret, setCopiedSecret] = useState<'phrase' | 'key' | null>(null)
+
+  // Wallet recovery (self-heal) state — for orphaned wallets whose keys were lost
+  const [needsRecovery, setNeedsRecovery] = useState(false)
+  const [showRecoverModal, setShowRecoverModal] = useState(false)
+  const [recoverStep, setRecoverStep] = useState<'confirm' | 'otp' | 'done'>('confirm')
+  const [recoverOtp, setRecoverOtp] = useState('')
+  const [recoverLoading, setRecoverLoading] = useState(false)
+  const [recoverError, setRecoverError] = useState<string | null>(null)
+  const [recoverSentTo, setRecoverSentTo] = useState<string | null>(null)
+  const [recoveredAddress, setRecoveredAddress] = useState<string | null>(null)
+  const [recoveredMnemonic, setRecoveredMnemonic] = useState<string | null>(null)
+
   const router = useRouter()
 
   // Solana wallet adapter hooks
@@ -123,6 +146,12 @@ export function DashboardWallet({
           setHasATA(data.hasATA)
           setAtaAddress(data.ataAddress)
           setWalletOrigin(data.origin || null)
+        }
+        // Detect orphaned custodial wallets (vault keys lost) so we can offer recovery.
+        const recoverRes = await fetch('/api/wallet/recover')
+        if (recoverRes.ok) {
+          const recoverData = await recoverRes.json()
+          setNeedsRecovery(!!recoverData.orphaned)
         }
       } catch (err) {
         console.error('[v0] Error checking wallet info:', err)
@@ -324,6 +353,143 @@ export function DashboardWallet({
     setShowImportKey(false)
     setImportError(null)
     setImportedPublicKey(null)
+  }
+
+  // --- Reveal secret phrase (backup) ---
+  const openRevealModal = () => {
+    setShowRevealModal(true)
+    setRevealStep('confirm')
+    setRevealOtp('')
+    setRevealError(null)
+    setRevealSentTo(null)
+    setRevealedMnemonic(null)
+    setRevealedSecretKey(null)
+    setShowSecretKey(false)
+  }
+
+  const closeRevealModal = () => {
+    if (revealLoading) return
+    setShowRevealModal(false)
+    // Clear any revealed secrets from memory.
+    setRevealedMnemonic(null)
+    setRevealedSecretKey(null)
+    setRevealOtp('')
+  }
+
+  const handleRevealRequest = async () => {
+    setRevealLoading(true)
+    setRevealError(null)
+    try {
+      const res = await fetch('/api/wallet/reveal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'request' }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to send code')
+      setRevealSentTo(data.sentTo || null)
+      setRevealStep('otp')
+    } catch (err) {
+      setRevealError(err instanceof Error ? err.message : 'Failed to send code')
+    } finally {
+      setRevealLoading(false)
+    }
+  }
+
+  const handleRevealVerify = async () => {
+    if (!revealOtp.trim()) {
+      setRevealError('Enter the 6-digit code')
+      return
+    }
+    setRevealLoading(true)
+    setRevealError(null)
+    try {
+      const res = await fetch('/api/wallet/reveal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify', token: revealOtp.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Verification failed')
+      setRevealedMnemonic(data.mnemonic ?? null)
+      setRevealedSecretKey(data.secretKey ?? null)
+      setRevealStep('revealed')
+    } catch (err) {
+      setRevealError(err instanceof Error ? err.message : 'Verification failed')
+    } finally {
+      setRevealLoading(false)
+    }
+  }
+
+  const copySecret = (text: string, which: 'phrase' | 'key') => {
+    navigator.clipboard.writeText(text)
+    setCopiedSecret(which)
+    setTimeout(() => setCopiedSecret(null), 2000)
+  }
+
+  // --- Wallet recovery (self-heal re-mint) ---
+  const openRecoverModal = () => {
+    setShowRecoverModal(true)
+    setRecoverStep('confirm')
+    setRecoverOtp('')
+    setRecoverError(null)
+    setRecoverSentTo(null)
+    setRecoveredAddress(null)
+    setRecoveredMnemonic(null)
+  }
+
+  const closeRecoverModal = () => {
+    if (recoverLoading) return
+    setShowRecoverModal(false)
+    setRecoveredMnemonic(null)
+    setRecoverOtp('')
+    if (recoverStep === 'done') router.refresh()
+  }
+
+  const handleRecoverRequest = async () => {
+    setRecoverLoading(true)
+    setRecoverError(null)
+    try {
+      const res = await fetch('/api/wallet/recover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'request' }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to send code')
+      setRecoverSentTo(data.sentTo || null)
+      setRecoverStep('otp')
+    } catch (err) {
+      setRecoverError(err instanceof Error ? err.message : 'Failed to send code')
+    } finally {
+      setRecoverLoading(false)
+    }
+  }
+
+  const handleRecoverVerify = async () => {
+    if (!recoverOtp.trim()) {
+      setRecoverError('Enter the 6-digit code')
+      return
+    }
+    setRecoverLoading(true)
+    setRecoverError(null)
+    try {
+      const res = await fetch('/api/wallet/recover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify', token: recoverOtp.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Recovery failed')
+      setRecoveredAddress(data.publicKey ?? null)
+      setRecoveredMnemonic(data.mnemonic ?? null)
+      setNeedsRecovery(false)
+      setRecoverStep('done')
+    } catch (err) {
+      setRecoverError(err instanceof Error ? err.message : 'Recovery failed')
+    } finally {
+      setRecoverLoading(false)
+    }
   }
 
   const handleSend = async () => {
@@ -707,6 +873,42 @@ export function DashboardWallet({
               </div>
             ) : (
               <p className="mono-xs text-[11px] text-muted-foreground">No wallet assigned</p>
+            )}
+
+            {/* Lost-key recovery banner — orphaned custodial wallet */}
+            {needsRecovery && (
+              <div className="mt-3 bg-destructive/10 border border-destructive/30 rounded-[2px] p-3">
+                <div className="flex gap-2">
+                  <ShieldAlert className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="mono-xs text-[10px] text-destructive font-medium mb-1">
+                      Wallet keys unavailable
+                    </p>
+                    <p className="mono-xs text-[10px] text-destructive/80 mb-2">
+                      We can&apos;t find the signing keys for this address, so it can&apos;t send funds.
+                      Recover a fresh, backed-up wallet to keep using V1N3.
+                    </p>
+                    <button
+                      onClick={openRecoverModal}
+                      className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-destructive/20 border border-destructive/40 rounded-[2px] hover:bg-destructive/30 transition-colors"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 text-destructive" />
+                      <span className="mono-xs text-[10px] text-destructive">RECOVER WALLET</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Reveal / back up secret phrase — only when we hold the keys */}
+            {(walletOrigin === 'minted' || walletOrigin === 'imported') && (
+              <button
+                onClick={openRevealModal}
+                className="mt-3 w-full flex items-center justify-center gap-2 py-2 px-3 bg-secondary/50 border border-border rounded-[2px] hover:border-primary/40 transition-colors"
+              >
+                <Eye className="w-3.5 h-3.5 text-primary" />
+                <span className="mono-xs text-[10px] text-foreground">REVEAL SECRET PHRASE</span>
+              </button>
             )}
 
             <button
@@ -1300,6 +1502,350 @@ export function DashboardWallet({
                         IMPORT WALLET
                       </>
                     )}
+                  </button>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Reveal Secret Phrase Modal */}
+        {showRevealModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4"
+            onClick={closeRevealModal}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-background border border-border rounded-[2px] p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2.5">
+                  <Eye className="w-5 h-5 text-primary" />
+                  <h3 className="font-mono text-lg text-foreground">Backup Wallet</h3>
+                </div>
+                <button
+                  onClick={closeRevealModal}
+                  className="p-1 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                  disabled={revealLoading}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {revealStep === 'confirm' && (
+                <>
+                  <div className="bg-orange/10 border border-orange/30 rounded-[2px] p-3 mb-4">
+                    <div className="flex gap-2">
+                      <ShieldAlert className="w-4 h-4 text-orange shrink-0 mt-0.5" />
+                      <p className="mono-xs text-[10px] text-orange/90">
+                        Your secret phrase and private key grant FULL control of your wallet.
+                        Never share them. Anyone with them can take your funds. We&apos;ll email a
+                        one-time code to confirm it&apos;s you.
+                      </p>
+                    </div>
+                  </div>
+                  {revealError && (
+                    <div className="bg-destructive/10 border border-destructive/30 rounded-[2px] p-3 mb-4">
+                      <p className="mono-xs text-[10px] text-destructive">{revealError}</p>
+                    </div>
+                  )}
+                  <button
+                    onClick={handleRevealRequest}
+                    disabled={revealLoading}
+                    className="w-full py-2.5 bg-primary text-background mono-xs text-[11px] rounded-[2px] hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {revealLoading ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" />SENDING CODE...</>
+                    ) : (
+                      <>SEND VERIFICATION CODE</>
+                    )}
+                  </button>
+                </>
+              )}
+
+              {revealStep === 'otp' && (
+                <>
+                  <p className="mono-xs text-[10px] text-muted-foreground mb-3">
+                    Enter the 6-digit code sent to{' '}
+                    <span className="text-foreground">{revealSentTo}</span>.
+                  </p>
+                  <input
+                    value={revealOtp}
+                    onChange={(e) => setRevealOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    placeholder="000000"
+                    className="w-full px-3 py-2.5 mb-4 bg-secondary/50 border border-border rounded-[2px] text-foreground font-mono text-lg tracking-[0.4em] text-center placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50"
+                  />
+                  {revealError && (
+                    <div className="bg-destructive/10 border border-destructive/30 rounded-[2px] p-3 mb-4">
+                      <p className="mono-xs text-[10px] text-destructive">{revealError}</p>
+                    </div>
+                  )}
+                  <button
+                    onClick={handleRevealVerify}
+                    disabled={revealLoading || revealOtp.length < 6}
+                    className="w-full py-2.5 bg-primary text-background mono-xs text-[11px] rounded-[2px] hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {revealLoading ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" />VERIFYING...</>
+                    ) : (
+                      <>REVEAL SECRETS</>
+                    )}
+                  </button>
+                  <button
+                    onClick={handleRevealRequest}
+                    disabled={revealLoading}
+                    className="w-full mt-2 mono-xs text-[10px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                  >
+                    Resend code
+                  </button>
+                </>
+              )}
+
+              {revealStep === 'revealed' && (
+                <>
+                  {revealedMnemonic ? (
+                    <div className="mb-4">
+                      <p className="mono-xs text-[9px] text-muted-foreground tracking-[0.18em] mb-2">
+                        SEED PHRASE
+                      </p>
+                      <div className="grid grid-cols-3 gap-2 bg-secondary/50 border border-border rounded-[2px] p-3">
+                        {revealedMnemonic.split(' ').map((word, i) => (
+                          <div key={i} className="flex items-center gap-1.5">
+                            <span className="mono-xs text-[9px] text-muted-foreground w-4 text-right">{i + 1}</span>
+                            <span className="font-mono text-xs text-foreground select-all">{word}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => copySecret(revealedMnemonic, 'phrase')}
+                        className="mt-2 w-full flex items-center justify-center gap-2 py-2 bg-secondary/50 border border-border rounded-[2px] hover:border-primary/40 transition-colors"
+                      >
+                        {copiedSecret === 'phrase' ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5 text-muted-foreground" />}
+                        <span className="mono-xs text-[10px] text-foreground">
+                          {copiedSecret === 'phrase' ? 'COPIED' : 'COPY PHRASE'}
+                        </span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="bg-secondary/30 border border-border rounded-[2px] p-3 mb-4">
+                      <p className="mono-xs text-[10px] text-muted-foreground">
+                        This wallet was created before seed-phrase backups, so it has no phrase.
+                        Save the private key below — it fully restores your wallet.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="mb-4">
+                    <p className="mono-xs text-[9px] text-muted-foreground tracking-[0.18em] mb-2">
+                      PRIVATE KEY
+                    </p>
+                    <div className="bg-secondary/50 border border-border rounded-[2px] p-3">
+                      <p className={`font-mono text-xs text-foreground break-all select-all ${showSecretKey ? '' : 'blur-sm'}`}>
+                        {revealedSecretKey}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => setShowSecretKey((v) => !v)}
+                        className="flex-1 flex items-center justify-center gap-2 py-2 bg-secondary/50 border border-border rounded-[2px] hover:border-accent/40 transition-colors"
+                      >
+                        {showSecretKey ? <EyeOff className="w-3.5 h-3.5 text-muted-foreground" /> : <Eye className="w-3.5 h-3.5 text-muted-foreground" />}
+                        <span className="mono-xs text-[10px] text-foreground">{showSecretKey ? 'HIDE' : 'SHOW'}</span>
+                      </button>
+                      <button
+                        onClick={() => revealedSecretKey && copySecret(revealedSecretKey, 'key')}
+                        className="flex-1 flex items-center justify-center gap-2 py-2 bg-secondary/50 border border-border rounded-[2px] hover:border-primary/40 transition-colors"
+                      >
+                        {copiedSecret === 'key' ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5 text-muted-foreground" />}
+                        <span className="mono-xs text-[10px] text-foreground">{copiedSecret === 'key' ? 'COPIED' : 'COPY'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-orange/10 border border-orange/30 rounded-[2px] p-3 mb-4">
+                    <p className="mono-xs text-[10px] text-orange/90">
+                      Store this somewhere safe and offline. We won&apos;t show it again unless you
+                      verify by OTP. Closing this window clears it from the screen.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={closeRevealModal}
+                    className="w-full py-2.5 bg-primary text-background mono-xs text-[11px] rounded-[2px] hover:bg-primary/90 transition-colors"
+                  >
+                    DONE
+                  </button>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Recover Wallet Modal */}
+        {showRecoverModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4"
+            onClick={closeRecoverModal}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-background border border-border rounded-[2px] p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2.5">
+                  <RefreshCw className="w-5 h-5 text-destructive" />
+                  <h3 className="font-mono text-lg text-foreground">Recover Wallet</h3>
+                </div>
+                <button
+                  onClick={closeRecoverModal}
+                  className="p-1 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                  disabled={recoverLoading}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {recoverStep === 'confirm' && (
+                <>
+                  <div className="bg-destructive/10 border border-destructive/30 rounded-[2px] p-3 mb-4">
+                    <div className="flex gap-2">
+                      <ShieldAlert className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                      <div>
+                        <p className="mono-xs text-[10px] text-destructive font-medium mb-1">
+                          This creates a brand-new wallet
+                        </p>
+                        <p className="mono-xs text-[10px] text-destructive/80">
+                          Your current address has no recoverable keys. Recovery mints a fresh,
+                          backed-up wallet and points your account to it. Any balance at the old
+                          address cannot be moved and will be left behind. We&apos;ll email a code to
+                          confirm.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  {recoverError && (
+                    <div className="bg-destructive/10 border border-destructive/30 rounded-[2px] p-3 mb-4">
+                      <p className="mono-xs text-[10px] text-destructive">{recoverError}</p>
+                    </div>
+                  )}
+                  <button
+                    onClick={handleRecoverRequest}
+                    disabled={recoverLoading}
+                    className="w-full py-2.5 bg-destructive text-background mono-xs text-[11px] rounded-[2px] hover:bg-destructive/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {recoverLoading ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" />SENDING CODE...</>
+                    ) : (
+                      <>SEND VERIFICATION CODE</>
+                    )}
+                  </button>
+                </>
+              )}
+
+              {recoverStep === 'otp' && (
+                <>
+                  <p className="mono-xs text-[10px] text-muted-foreground mb-3">
+                    Enter the 6-digit code sent to{' '}
+                    <span className="text-foreground">{recoverSentTo}</span>.
+                  </p>
+                  <input
+                    value={recoverOtp}
+                    onChange={(e) => setRecoverOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    placeholder="000000"
+                    className="w-full px-3 py-2.5 mb-4 bg-secondary/50 border border-border rounded-[2px] text-foreground font-mono text-lg tracking-[0.4em] text-center placeholder:text-muted-foreground/40 focus:outline-none focus:border-destructive/50"
+                  />
+                  {recoverError && (
+                    <div className="bg-destructive/10 border border-destructive/30 rounded-[2px] p-3 mb-4">
+                      <p className="mono-xs text-[10px] text-destructive">{recoverError}</p>
+                    </div>
+                  )}
+                  <button
+                    onClick={handleRecoverVerify}
+                    disabled={recoverLoading || recoverOtp.length < 6}
+                    className="w-full py-2.5 bg-destructive text-background mono-xs text-[11px] rounded-[2px] hover:bg-destructive/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {recoverLoading ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" />RECOVERING...</>
+                    ) : (
+                      <>RECOVER WALLET</>
+                    )}
+                  </button>
+                  <button
+                    onClick={handleRecoverRequest}
+                    disabled={recoverLoading}
+                    className="w-full mt-2 mono-xs text-[10px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                  >
+                    Resend code
+                  </button>
+                </>
+              )}
+
+              {recoverStep === 'done' && (
+                <>
+                  <div className="text-center mb-4">
+                    <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-3">
+                      <Check className="w-7 h-7 text-primary" />
+                    </div>
+                    <p className="font-mono text-base text-foreground mb-1">New Wallet Ready</p>
+                    <p className="font-mono text-[11px] text-muted-foreground break-all select-all">
+                      {recoveredAddress}
+                    </p>
+                  </div>
+
+                  {recoveredMnemonic && (
+                    <div className="mb-4">
+                      <p className="mono-xs text-[9px] text-muted-foreground tracking-[0.18em] mb-2">
+                        SAVE YOUR SEED PHRASE
+                      </p>
+                      <div className="grid grid-cols-3 gap-2 bg-secondary/50 border border-border rounded-[2px] p-3">
+                        {recoveredMnemonic.split(' ').map((word, i) => (
+                          <div key={i} className="flex items-center gap-1.5">
+                            <span className="mono-xs text-[9px] text-muted-foreground w-4 text-right">{i + 1}</span>
+                            <span className="font-mono text-xs text-foreground select-all">{word}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => copySecret(recoveredMnemonic, 'phrase')}
+                        className="mt-2 w-full flex items-center justify-center gap-2 py-2 bg-secondary/50 border border-border rounded-[2px] hover:border-primary/40 transition-colors"
+                      >
+                        {copiedSecret === 'phrase' ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5 text-muted-foreground" />}
+                        <span className="mono-xs text-[10px] text-foreground">
+                          {copiedSecret === 'phrase' ? 'COPIED' : 'COPY PHRASE'}
+                        </span>
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="bg-orange/10 border border-orange/30 rounded-[2px] p-3 mb-4">
+                    <p className="mono-xs text-[10px] text-orange/90">
+                      Write this phrase down and keep it offline. It&apos;s the only way to restore
+                      this wallet outside the app.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={closeRecoverModal}
+                    className="w-full py-2.5 bg-primary text-background mono-xs text-[11px] rounded-[2px] hover:bg-primary/90 transition-colors"
+                  >
+                    DONE
                   </button>
                 </>
               )}

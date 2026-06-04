@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { Truck, Calendar, MapPin, Phone, Loader2, CheckCircle2, PackageX, PackageCheck, UserCheck } from "lucide-react"
+import { Truck, Calendar, MapPin, Phone, Loader2, CheckCircle2, PackageX, PackageCheck, UserCheck, Lock, Clock } from "lucide-react"
 import { DeliveryRequest } from "@/lib/fulfillment/types"
 import { acceptDeliveryRequest, scheduleDelivery, completeDelivery, assignDeliveryExecutive } from "@/lib/fulfillment/delivery"
 import { StatusPill } from "@/components/dashboard/fulfillment/chrome"
@@ -203,14 +203,27 @@ export function DeliveryRequestsList({ requests, isGcm, executives = [] }: Deliv
           )}
 
           {isGcm && (req.status === "accepted" || req.status === "scheduled" || req.status === "in_transit") && (
-            <button
-              onClick={() => handleComplete(req.id)}
-              disabled={completing === req.id}
-              className="mono-xs flex w-full items-center justify-center gap-1.5 rounded-[2px] border border-primary/40 bg-primary/10 py-2 text-[10px] text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
-            >
-              {completing === req.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <PackageCheck className="h-3 w-3" />}
-              {completing === req.id ? "UPDATING" : "MARK DELIVERED"}
-            </button>
+            <div className="mt-2 space-y-1.5 border-t border-border/60 pt-3">
+              <button
+                disabled
+                aria-disabled="true"
+                title={
+                  !req.assigned_executive_id
+                    ? "Assign a field executive first"
+                    : "Waiting for the executive to report this delivery"
+                }
+                className="mono-xs flex w-full cursor-not-allowed items-center justify-center gap-1.5 rounded-[2px] border border-border bg-secondary/40 py-2 text-[10px] text-muted-foreground/60"
+              >
+                <Lock className="h-3 w-3" />
+                MARK DELIVERED
+              </button>
+              <p className="mono-xs flex items-center gap-1.5 text-[9px] text-muted-foreground/70">
+                <Clock className="h-2.5 w-2.5" />
+                {!req.assigned_executive_id
+                  ? "Assign a field executive to begin delivery."
+                  : "Unlocks once the assigned executive reports delivery with proof."}
+              </p>
+            </div>
           )}
 
           {isGcm && req.status === "awaiting_confirmation" && (
