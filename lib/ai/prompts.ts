@@ -56,7 +56,7 @@ export const TRANSLATION_SYSTEM = `You are a translator for GreenV1n3 serving Pl
 
 // Languages offered for translation. Plateau indigenous languages are marked
 // "beta" — the model has limited fluency and a human should review.
-export const TRANSLATION_LANGUAGES: Array<{ code: string; label: string; beta?: boolean }> = [
+export const TRANSLATION_LANGUAGES = [
   { code: "en", label: "English" },
   { code: "ha", label: "Hausa" },
   { code: "yo", label: "Yoruba" },
@@ -66,4 +66,18 @@ export const TRANSLATION_LANGUAGES: Array<{ code: string; label: string; beta?: 
   { code: "ber", label: "Berom", beta: true },
   { code: "mwg", label: "Mwaghavul", beta: true },
   { code: "ankwai", label: "Ngas (Angas)", beta: true },
-]
+] as const
+
+export type LanguageCode = (typeof TRANSLATION_LANGUAGES)[number]["code"]
+
+/** Map of language code -> full English name, for prompt construction. */
+export const SUPPORTED_LANGUAGES: Record<LanguageCode, string> = TRANSLATION_LANGUAGES.reduce(
+  (acc, l) => {
+    acc[l.code] = l.label
+    return acc
+  },
+  {} as Record<LanguageCode, string>,
+)
+
+/** Alias used by the News AI route. */
+export const NEWS_AI_SYSTEM = NEWS_SYSTEM

@@ -91,6 +91,7 @@ const NAV_ITEMS = [
   {
     section: 'ENGAGE',
     items: [
+      { href: '/dashboard/advisor', label: 'AI Advisor', icon: Sparkles, index: 'AI' },
       { href: '/dashboard/feed', label: 'Feed', icon: Radio, index: '09' },
       { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare, index: '10' },
       { href: '/dashboard/requests', label: 'Requests', icon: FileText, index: '11' },
