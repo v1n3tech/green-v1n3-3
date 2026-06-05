@@ -485,3 +485,24 @@
   background: var(--primary);
   color: #ffffff;
 }
+
+/* Print / PDF export — used by the whitepaper "Download PDF" action */
+@media print {
+  header,
+  footer,
+  .print\:hidden {
+    display: none !important;
+  }
+  .bg-green-glow::before {
+    display: none !important;
+  }
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+  /* Avoid breaking section blocks awkwardly across pages */
+  article > section {
+    break-inside: avoid;
+  }
+}

@@ -13,7 +13,7 @@ const footerLinks = {
   ],
   resources: [
     { label: 'Documentation', href: '#' },
-    { label: 'Whitepaper', href: '#' },
+    { label: 'Whitepaper', href: '/whitepaper' },
     { label: 'API Reference', href: '#' },
     { label: 'Brand Kit', href: '#' },
   ],
