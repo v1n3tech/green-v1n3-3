@@ -127,7 +127,7 @@ export function NewsAiPanel({
               {TRANSLATION_LANGUAGES.filter((l) => l.code !== "en").map((l) => (
                 <option key={l.code} value={l.code}>
                   {l.label}
-                  {l.beta ? " (beta)" : ""}
+                  {"beta" in l && l.beta ? " (beta)" : ""}
                 </option>
               ))}
             </select>
