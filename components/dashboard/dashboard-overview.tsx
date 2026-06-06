@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useV1N3Balance } from '@/lib/wallet/use-v1n3-balance'
+import { WeatherCard } from '@/components/dashboard/weather-card'
 
 interface DashboardOverviewProps {
   profile: {
@@ -249,6 +250,9 @@ export function DashboardOverview({ profile }: DashboardOverviewProps) {
 
       {/* Activity & Modules Coming Soon */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {/* Field Weather + AI Advisory */}
+        <WeatherCard />
+
         {/* Recent Activity */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}

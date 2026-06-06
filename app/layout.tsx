@@ -4,6 +4,8 @@ import { Analytics } from '@vercel/analytics/next'
 import { V1n3Loader } from '@/components/v1n3-loader'
 import { WalletProvider } from '@/components/providers/wallet-provider'
 import { ThemeProvider } from '@/components/theme-provider'
+import { SupportWidgetGate } from '@/components/ai/support-widget-gate'
+import { Suspense } from 'react'
 import './globals.css'
 
 const _abel = Abel({ 
@@ -62,6 +64,9 @@ export default function RootLayout({
           <WalletProvider>
             <V1n3Loader minDisplayTime={1000} />
             {children}
+            <Suspense fallback={null}>
+              <SupportWidgetGate />
+            </Suspense>
             {process.env.NODE_ENV === 'production' && <Analytics />}
           </WalletProvider>
         </ThemeProvider>

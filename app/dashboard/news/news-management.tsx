@@ -40,6 +40,7 @@ import {
   Link2,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { NewsAiPanel } from '@/components/news/news-ai-panel'
 
 // Dynamically import the rich text editor to avoid SSR issues
 const RichTextEditor = dynamic(
@@ -710,6 +711,17 @@ export function NewsManagement({ profile, canManageNews, categories, initialArti
                 {error}
               </div>
             )}
+
+            {/* AI Assistant */}
+            <NewsAiPanel
+              title={formData.title}
+              excerpt={formData.excerpt}
+              content={formData.content}
+              category={categories.find(c => c.id === formData.category_id)?.name}
+              onApplyContent={(html) => setFormData(prev => ({ ...prev, content: html }))}
+              onApplyExcerpt={(text) => setFormData(prev => ({ ...prev, excerpt: text }))}
+              onApplyTags={(csv) => setFormData(prev => ({ ...prev, tags: csv }))}
+            />
 
             {/* Editor Form */}
             <div className="grid lg:grid-cols-3 gap-6">

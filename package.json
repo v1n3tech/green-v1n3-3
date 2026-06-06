@@ -9,6 +9,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@ai-sdk/react": "^3.0.199",
     "@emoji-mart/data": "^1.2.1",
     "@emoji-mart/react": "^1.1.1",
     "@hookform/resolvers": "^3.9.1",
@@ -60,6 +61,7 @@
     "@tiptap/starter-kit": "^3.23.5",
     "@vercel/analytics": "1.6.1",
     "@vercel/blob": "^2.3.3",
+    "ai": "^6.0.197",
     "autoprefixer": "^10.4.20",
     "bip39": "^3.1.0",
     "bn.js": "^5.2.3",
@@ -86,6 +88,8 @@
     "recharts": "2.15.0",
     "server-only": "^0.0.1",
     "sonner": "^1.7.1",
+    "streamdown": "^2.5.0",
+    "swr": "^2.4.1",
     "tailwind-merge": "^3.3.1",
     "vaul": "^1.1.2",
     "zod": "^3.24.1"

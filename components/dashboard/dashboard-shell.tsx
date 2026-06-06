@@ -34,6 +34,7 @@ import {
   PackageOpen,
   Truck,
   Megaphone,
+  LineChart,
 } from 'lucide-react'
 import { signOut } from '@/lib/auth/actions'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -91,6 +92,8 @@ const NAV_ITEMS = [
   {
     section: 'ENGAGE',
     items: [
+      { href: '/dashboard/advisor', label: 'AI Advisor', icon: Sparkles, index: 'AI' },
+      { href: '/dashboard/insights', label: 'Insights', icon: LineChart, index: 'AI' },
       { href: '/dashboard/feed', label: 'Feed', icon: Radio, index: '09' },
       { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare, index: '10' },
       { href: '/dashboard/requests', label: 'Requests', icon: FileText, index: '11' },
