@@ -1,4 +1,9 @@
-# V1N3 Staking Program
+# V1N3 Staking Program — GreenV1n3 / AgroV1n3
+
+Live platform: https://agro.v1n3tech.com  
+Program ID (devnet): BygtFoZ4xWpCuQteoYAoA1WFcqzF8aVeAQjex3Ym8xgX  
+Network: Solana Devnet | Token standard: Token-2022  
+Admin wallet: DqzGbbGUXBx6wUyNjZf7y6cqcL55i6YBfPpHkXQN4m8X
 
 A real on-chain Solana staking program (Anchor, **Token-2022**) for the V1N3 token.
 
