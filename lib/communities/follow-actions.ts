@@ -226,7 +226,7 @@ export async function getCommunityFeed(
       kind: "post" as const,
       title: p.title,
       content: p.content,
-      authorName: (p.profiles as { display_name: string | null } | null)?.display_name ?? null,
+      authorName: (p.profiles as unknown as { display_name: string | null } | null)?.display_name ?? null,
       isPinned: p.is_pinned ?? false,
       createdAt: p.created_at,
     })),

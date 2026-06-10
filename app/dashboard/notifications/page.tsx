@@ -23,6 +23,7 @@ import {
   Loader2,
   ChevronDown,
   RefreshCw,
+  Users,
 } from 'lucide-react'
 import {
   fetchNotifications,
@@ -51,6 +52,7 @@ const NOTIFICATION_ICONS: Record<NotificationType, typeof MessageSquare> = {
   system: Settings,
   admin_alert: AlertCircle,
   security: Shield,
+  community_update: Users,
 }
 
 // Color mapping for notification types
@@ -70,6 +72,7 @@ const NOTIFICATION_COLORS: Record<NotificationType, string> = {
   system: 'text-muted-foreground bg-muted border-border',
   admin_alert: 'text-destructive bg-destructive/10 border-destructive/20',
   security: 'text-red-400 bg-red-400/10 border-red-400/20',
+  community_update: 'text-primary bg-primary/10 border-primary/20',
 }
 
 // Filter categories
