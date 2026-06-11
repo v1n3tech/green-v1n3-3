@@ -24,6 +24,7 @@ export type NotificationType =
   | 'system'
   | 'admin_alert'
   | 'security'
+  | 'community_update'
 
 export type ReferenceType = 
   | 'conversation'
@@ -35,6 +36,10 @@ export type ReferenceType =
   | 'badge'
   | 'profile'
   | 'community'
+  | 'post'
+  | 'service'
+  | 'product'
+  | 'broadcast'
 
 export interface Notification {
   id: string

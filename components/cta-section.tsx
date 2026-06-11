@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { ArrowRight, Wallet, Sprout } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
 
 export function CTASection() {
   return (
@@ -63,9 +64,9 @@ export function CTASection() {
             <a href="#" className="px-3 sm:px-4 py-2 sm:py-2.5 border border-border rounded-[2px] bg-card/30 hover:border-primary/50 transition-all mono-xs text-foreground/70 hover:text-foreground text-[10px] sm:text-xs">
               EXPLORE MARKETPLACE
             </a>
-            <a href="#" className="px-3 sm:px-4 py-2 sm:py-2.5 border border-border rounded-[2px] bg-card/30 hover:border-primary/50 transition-all mono-xs text-foreground/70 hover:text-foreground text-[10px] sm:text-xs">
+            <Link href="/whitepaper" className="px-3 sm:px-4 py-2 sm:py-2.5 border border-border rounded-[2px] bg-card/30 hover:border-primary/50 transition-all mono-xs text-foreground/70 hover:text-foreground text-[10px] sm:text-xs">
               READ WHITEPAPER
-            </a>
+            </Link>
           </div>
         </motion.div>
       </div>

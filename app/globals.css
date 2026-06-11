@@ -28,7 +28,7 @@
   --border-strong: rgba(0, 200, 83, 0.40);
   --input: #0a0f0a;
   --ring: #00c853;
-  --radius: 4px;
+  --radius: 1px;
   --glow-color: rgba(0, 200, 83, 0.15);
   --grid-color: rgba(0, 200, 83, 0.025);
   --scrollbar-thumb: rgba(0, 200, 83, 0.3);
@@ -90,9 +90,9 @@
   --color-border-strong: var(--border-strong);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-sm: 4px;
-  --radius-md: 4px;
-  --radius-lg: 4px;
+  --radius-sm: 1px;
+  --radius-md: 1px;
+  --radius-lg: 1px;
 }
 
 @layer base {
@@ -267,7 +267,7 @@
   border: 1px solid var(--border-strong);
   padding: 5px 10px;
   font-size: 10px;
-  border-radius: 4px;
+  border-radius: 1px;
 }
 
 .badge-fill {
@@ -275,7 +275,7 @@
   color: var(--background);
   padding: 5px 10px;
   font-size: 10px;
-  border-radius: 4px;
+  border-radius: 1px;
 }
 
 /* Vertical text */
@@ -332,7 +332,7 @@
   padding: 10px 12px;
   background: var(--input);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 1px;
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: 13px;
@@ -350,10 +350,10 @@
   background: var(--input);
 }
 
-/* Sleek media frame — unified image container language (4dp radius) */
+/* Sleek media frame — unified image container language (1dp radius) */
 .media-frame {
   position: relative;
-  border-radius: 4px;
+  border-radius: 1px;
   background: var(--card);
   overflow: hidden;
   box-shadow:
@@ -507,3 +507,26 @@
     break-inside: avoid;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* 1dp radius standard — global override.                              */
+/* The codebase historically hardcoded rounded-[2px] / rounded-[4px]   */
+/* box corners in hundreds of places. Rather than editing each one,    */
+/* we normalize those exact utilities to the new 1dp default here.     */
+/* Circular elements (rounded-full / 9999px) are intentionally spared. */
+/* ------------------------------------------------------------------ */
+.rounded-\[2px\],
+.rounded-\[3px\],
+.rounded-\[4px\],
+.rounded-\[5px\],
+.rounded-\[6px\],
+.rounded-\[8px\],
+.rounded,
+.rounded-sm,
+.rounded-md,
+.rounded-lg,
+.rounded-xl,
+.rounded-2xl {
+  border-radius: 1px !important;
+}
+

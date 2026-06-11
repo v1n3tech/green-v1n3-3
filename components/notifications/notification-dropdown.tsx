@@ -19,6 +19,7 @@ import {
   X,
   ChevronRight,
   Loader2,
+  Users,
 } from 'lucide-react'
 import {
   fetchNotifications,
@@ -47,6 +48,7 @@ const NOTIFICATION_ICONS: Record<NotificationType, typeof MessageSquare> = {
   system: Settings,
   admin_alert: AlertCircle,
   security: Shield,
+  community_update: Users,
 }
 
 // Color mapping for notification types
@@ -66,6 +68,7 @@ const NOTIFICATION_COLORS: Record<NotificationType, string> = {
   system: 'text-muted-foreground bg-muted',
   admin_alert: 'text-destructive bg-destructive/10',
   security: 'text-red-400 bg-red-400/10',
+  community_update: 'text-primary bg-primary/10',
 }
 
 // Format relative time
