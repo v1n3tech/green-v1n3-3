@@ -207,6 +207,11 @@ export function DashboardCommunities({
           </div>
           <span className="mono-xs text-[9px] text-primary">{directory.length} CHANNELS</span>
         </div>
+        {!isRegularUser && (
+          <p className="mono-xs text-[9px] text-muted-foreground/70 leading-relaxed">
+            As {role === 'admin' ? 'an administrator' : 'staff'}, you have full access to every community — following is reserved for member accounts.
+          </p>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
           {directory.map((entry) => (
             <DirectoryCard
