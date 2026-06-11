@@ -345,10 +345,10 @@ function CredentialModal({ pkg, onClose }: { pkg: CredentialPackage; onClose: ()
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md space-y-4 rounded-[3px] border border-primary/30 bg-card p-5 shadow-2xl"
+        className="flex max-h-[88vh] w-full max-w-md flex-col rounded-[3px] border border-primary/30 bg-card shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between border-b border-border p-5 pb-3">
           <div className="flex items-center gap-2">
             <KeyRound className="h-4 w-4 text-primary" />
             <h3 className="mono-sm text-xs text-foreground">Credential Package</h3>
@@ -358,7 +358,8 @@ function CredentialModal({ pkg, onClose }: { pkg: CredentialPackage; onClose: ()
           </button>
         </div>
 
-        <p className="text-[12px] text-foreground">{pkg.displayName}</p>
+        <div className="flex-1 space-y-4 overflow-y-auto p-5">
+          <p className="text-[12px] text-foreground">{pkg.displayName}</p>
 
         <div className="space-y-2.5">
           {rows.map((r) => (
@@ -402,19 +403,22 @@ function CredentialModal({ pkg, onClose }: { pkg: CredentialPackage; onClose: ()
         </div>
 
         <div className="flex items-start gap-2 rounded-[2px] border border-accent/30 bg-accent/5 p-2.5">
-          <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
-          <p className="mono-xs text-[9px] leading-relaxed text-muted-foreground">
-            Anyone with the seed phrase controls this wallet. Hand the PDF over securely and store it offline.
-          </p>
+            <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
+            <p className="mono-xs text-[9px] leading-relaxed text-muted-foreground">
+              Anyone with the seed phrase controls this wallet. Hand the PDF over securely and store it offline.
+            </p>
+          </div>
         </div>
 
-        <button
-          onClick={() => downloadCredentialPdf(pkg)}
-          className="flex w-full items-center justify-center gap-2 rounded-[2px] bg-primary px-3 py-2.5 text-[10px] font-medium tracking-[0.12em] text-primary-foreground transition-opacity hover:opacity-90"
-        >
-          <Download className="h-3.5 w-3.5" />
-          DOWNLOAD PDF PACKAGE
-        </button>
+        <div className="border-t border-border p-5 pt-3">
+          <button
+            onClick={() => downloadCredentialPdf(pkg)}
+            className="flex w-full items-center justify-center gap-2 rounded-[2px] bg-primary px-3 py-2.5 text-[10px] font-medium tracking-[0.12em] text-primary-foreground transition-opacity hover:opacity-90"
+          >
+            <Download className="h-3.5 w-3.5" />
+            DOWNLOAD PDF PACKAGE
+          </button>
+        </div>
       </div>
     </div>
   )
