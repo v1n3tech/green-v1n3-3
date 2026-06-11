@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { Coins, TrendingUp, Users, Lock, Zap, Gift } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
 
 const tokenomics = [
   { label: 'Community Rewards', percentage: 40, color: 'bg-primary' },
@@ -136,9 +137,12 @@ export function TokenSection() {
               <p className="text-xs sm:text-sm text-foreground/50 mb-3 sm:mb-4">
                 Early adopters who register during the pre-launch phase receive bonus V1n3 allocation.
               </p>
-              <button className="w-full px-4 sm:px-5 py-2.5 sm:py-3 bg-primary text-background rounded-[2px] mono-sm hover:bg-primary/90 transition-colors text-xs sm:text-sm">
+              <Link
+                href="/whitelist"
+                className="block w-full text-center px-4 sm:px-5 py-2.5 sm:py-3 bg-primary text-background rounded-[2px] mono-sm hover:bg-primary/90 transition-colors text-xs sm:text-sm"
+              >
                 JOIN WHITELIST
-              </button>
+              </Link>
             </div>
           </motion.div>
         </div>
