@@ -25,6 +25,7 @@ export type CommunityFeedItem = {
   title: string | null
   content: string
   authorName: string | null
+  imageUrl: string | null
   isPinned: boolean
   createdAt: string
 }
@@ -206,7 +207,7 @@ export async function getCommunityFeed(
   const [postsRes, broadcastsRes] = await Promise.all([
     supabase
       .from("community_posts")
-      .select("id, title, content, is_pinned, created_at, author_id, profiles:author_id (display_name)")
+      .select("id, title, content, image_url, is_pinned, created_at, author_id, profiles:author_id (display_name)")
       .eq("community", community)
       .order("is_pinned", { ascending: false })
       .order("created_at", { ascending: false })
@@ -227,6 +228,7 @@ export async function getCommunityFeed(
       title: p.title,
       content: p.content,
       authorName: (p.profiles as unknown as { display_name: string | null } | null)?.display_name ?? null,
+      imageUrl: p.image_url ?? null,
       isPinned: p.is_pinned ?? false,
       createdAt: p.created_at,
     })),
@@ -236,6 +238,7 @@ export async function getCommunityFeed(
       title: b.title,
       content: b.message,
       authorName: "GREENV1N3 HQ",
+      imageUrl: null,
       isPinned: false,
       createdAt: b.sent_at,
     })),
@@ -247,7 +250,64 @@ export async function getCommunityFeed(
   return { items, relation }
 }
 
-/** Merged, time-sorted updates across every community the viewer follows. */
+/**
+ * Public read-only feed for the marketing /communities page. No auth gate —
+ * surfaces real community posts + sent broadcasts so visitors see live activity.
+ * Uses the admin client for counts/reads only; no write capability is exposed.
+ */
+export async function getPublicCommunityFeed(
+  community: AgroCommunityKey,
+  limit = 20,
+): Promise<{ items: CommunityFeedItem[]; error?: string }> {
+  if (!VALID_KEYS.has(community)) return { items: [], error: "Invalid community" }
+
+  const admin = createAdminClient()
+
+  const [postsRes, broadcastsRes] = await Promise.all([
+    admin
+      .from("community_posts")
+      .select("id, title, content, image_url, is_pinned, created_at, author_id, profiles:author_id (display_name)")
+      .eq("community", community)
+      .order("is_pinned", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(limit),
+    admin
+      .from("broadcasts")
+      .select("id, title, message, sent_at")
+      .eq("status", "sent")
+      .eq("target_community", community)
+      .order("sent_at", { ascending: false })
+      .limit(10),
+  ])
+
+  const items: CommunityFeedItem[] = [
+    ...(postsRes.data ?? []).map((p) => ({
+      id: p.id,
+      kind: "post" as const,
+      title: p.title,
+      content: p.content,
+      authorName: (p.profiles as unknown as { display_name: string | null } | null)?.display_name ?? null,
+      imageUrl: p.image_url ?? null,
+      isPinned: p.is_pinned ?? false,
+      createdAt: p.created_at,
+    })),
+    ...(broadcastsRes.data ?? []).map((b) => ({
+      id: b.id,
+      kind: "broadcast" as const,
+      title: b.title,
+      content: b.message,
+      authorName: "GREENV1N3 HQ",
+      imageUrl: null,
+      isPinned: false,
+      createdAt: b.sent_at,
+    })),
+  ].sort((a, b) => {
+    if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  })
+
+  return { items }
+}
 export async function getFollowedUpdates(
   limit = 20,
 ): Promise<{ updates: FollowedUpdate[]; followed: AgroCommunityKey[]; error?: string }> {

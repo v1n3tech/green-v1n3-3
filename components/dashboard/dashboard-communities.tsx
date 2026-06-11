@@ -35,6 +35,7 @@ import {
   Send,
 } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import type { AgroCommunityKey } from '@/components/onboarding/data'
 import { fetchServices, type CommunityService } from '@/lib/services/actions'
 import { joinCommunity } from '@/lib/communities/actions'
@@ -810,49 +811,77 @@ function CommunityFeed({
 
 function FeedItemCard({ item }: { item: CommunityFeedItem }) {
   const isBroadcast = item.kind === 'broadcast'
+  const authorName = item.authorName ?? 'Member'
+  const initials = authorName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+
   return (
-    <div className={`bg-background border rounded-[2px] p-4 ${item.isPinned || isBroadcast ? 'border-primary/30' : 'border-border'}`}>
-      {item.isPinned && (
-        <div className="flex items-center gap-1.5 mb-3">
-          <Star className="w-3 h-3 text-primary fill-primary" />
-          <span className="mono-xs text-[9px] text-primary">PINNED</span>
+    <div className={`bg-background border rounded-[2px] overflow-hidden ${item.isPinned || isBroadcast ? 'border-primary/30' : 'border-border'}`}>
+      {(item.isPinned || isBroadcast) && (
+        <div className="px-4 pt-3 flex items-center gap-1.5">
+          {isBroadcast ? <Megaphone className="w-3 h-3 text-primary" /> : <Star className="w-3 h-3 text-primary fill-primary" />}
+          <span className="mono-xs text-[8px] text-primary tracking-wider">
+            {isBroadcast ? 'OFFICIAL BROADCAST' : 'PINNED'}
+          </span>
         </div>
       )}
-      <div className="flex gap-3">
-        <div className={`w-9 h-9 rounded-[2px] flex items-center justify-center flex-shrink-0 ${
-          isBroadcast ? 'bg-primary/10 border border-primary/30' : 'bg-secondary border border-border'
-        }`}>
-          {isBroadcast
-            ? <Megaphone className="w-4 h-4 text-primary" />
-            : <Sparkles className="w-4 h-4 text-muted-foreground" />}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="mono-sm text-xs text-foreground">{item.authorName ?? 'Member'}</span>
-            <span className={`mono-xs text-[8px] px-1.5 py-0.5 rounded-[2px] ${
-              isBroadcast ? 'bg-primary/10 text-primary' : 'bg-secondary text-muted-foreground'
-            }`}>
-              {isBroadcast ? 'BROADCAST' : 'POST'}
-            </span>
-            <span className="mono-xs text-[9px] text-muted-foreground/60">• {timeAgo(item.createdAt)}</span>
+
+      {/* Header */}
+      <div className="px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+            isBroadcast ? 'bg-primary/15' : 'bg-muted'
+          }`}>
+            {isBroadcast
+              ? <Megaphone className="w-4 h-4 text-primary" />
+              : <span className="mono text-sm text-muted-foreground">{initials}</span>}
           </div>
-          {item.title && <p className="mt-2 mono-sm text-xs text-foreground">{item.title}</p>}
-          <p className="mt-1.5 text-sm text-foreground/85 leading-relaxed whitespace-pre-line">{item.content}</p>
-          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border">
-            <button className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors" aria-label="Like">
-              <Heart className="w-3.5 h-3.5" />
-            </button>
-            <button className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors" aria-label="Comment">
-              <MessageSquare className="w-3.5 h-3.5" />
-            </button>
-            <button className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors" aria-label="Share">
-              <Share2 className="w-3.5 h-3.5" />
-            </button>
-            <button className="ml-auto text-muted-foreground hover:text-foreground transition-colors" aria-label="More options">
-              <MoreHorizontal className="w-4 h-4" />
-            </button>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="mono-sm text-foreground text-xs">{authorName}</span>
+              {isBroadcast && (
+                <svg className="w-3.5 h-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+            </div>
+            <span className="mono-xs text-[9px] text-muted-foreground">{timeAgo(item.createdAt)}</span>
           </div>
         </div>
+        <button className="p-1.5 text-muted-foreground hover:text-foreground transition-colors" aria-label="More options">
+          <MoreHorizontal className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="px-4 pb-3">
+        {item.title && <p className="mono-sm text-xs text-foreground mb-1.5">{item.title}</p>}
+        <p className="text-sm text-foreground/85 leading-relaxed whitespace-pre-line">{item.content}</p>
+      </div>
+
+      {/* Image */}
+      {item.imageUrl && (
+        <div className="relative aspect-video bg-muted">
+          <Image
+            src={item.imageUrl || "/placeholder.svg"}
+            alt="Post attachment"
+            fill
+            className="object-cover"
+            crossOrigin="anonymous"
+          />
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="px-4 py-3 border-t border-border flex items-center gap-4">
+        <button className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors" aria-label="Like">
+          <Heart className="w-3.5 h-3.5" />
+        </button>
+        <button className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors" aria-label="Comment">
+          <MessageSquare className="w-3.5 h-3.5" />
+        </button>
+        <button className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors" aria-label="Share">
+          <Share2 className="w-3.5 h-3.5" />
+        </button>
       </div>
     </div>
   )

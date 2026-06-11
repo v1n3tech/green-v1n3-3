@@ -1,77 +1,70 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { 
   Heart, MessageCircle, Share2, Bookmark, MoreHorizontal,
-  TrendingUp, Clock, Filter, ArrowRight, Lock, ImageIcon
+  TrendingUp, Clock, Filter, ArrowRight, Lock, Loader2, Megaphone
 } from 'lucide-react'
 import type { CommunityData } from './communities-hub'
+import { getPublicCommunityFeed, type CommunityFeedItem } from '@/lib/communities/follow-actions'
+import type { AgroCommunityKey } from '@/components/onboarding/data'
 
 interface CommunityFeedProps {
   community: CommunityData
   isAuthenticated: boolean
 }
 
-// Mock feed data - in production this would come from Supabase
-const MOCK_FEED_POSTS = [
-  {
-    id: '1',
-    author: { name: 'Aisha Musa', handle: '@aisha_agro', avatar: null, isVerified: true },
-    content: 'Just harvested our first batch of organic tomatoes this season! The drip irrigation system we installed has increased our yield by 40%. V1n3 community support made this possible.',
-    image: 'https://images.unsplash.com/photo-1592921870789-04563d55041c?w=600&h=400&fit=crop',
-    likes: 234,
-    comments: 45,
-    shares: 12,
-    timestamp: '2h ago',
-    tags: ['harvest', 'organic', 'success'],
-  },
-  {
-    id: '2',
-    author: { name: 'Ibrahim Danjuma', handle: '@ibrahim_tech', avatar: null, isVerified: false },
-    content: 'Attended the GCM training session in Jos yesterday. The insights on modern farming techniques were invaluable. Looking forward to implementing what I learned on my plot.',
-    image: null,
-    likes: 156,
-    comments: 23,
-    shares: 8,
-    timestamp: '5h ago',
-    tags: ['training', 'learning'],
-  },
-  {
-    id: '3',
-    author: { name: 'GreenV1n3 Official', handle: '@greenv1n3', avatar: null, isVerified: true },
-    content: 'Phase 01 milestone achieved! Plateau State now has over 2,400 registered Agro Executives. Together, we are transforming Nigerian agriculture.',
-    image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&h=400&fit=crop',
-    likes: 892,
-    comments: 134,
-    shares: 256,
-    timestamp: '1d ago',
-    tags: ['milestone', 'plateau', 'growth'],
-  },
-  {
-    id: '4',
-    author: { name: 'Fatima Yusuf', handle: '@fatima_farms', avatar: null, isVerified: true },
-    content: 'My fish pond expansion project is now complete! Thanks to the Agro Logistics community for the efficient delivery of equipment. 500 catfish fingerlings ready for the new season.',
-    image: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600&h=400&fit=crop',
-    likes: 445,
-    comments: 67,
-    shares: 34,
-    timestamp: '2d ago',
-    tags: ['fishery', 'expansion'],
-  },
-]
+function timeAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  if (days < 7) return `${days}d ago`
+  return new Date(iso).toLocaleDateString()
+}
 
 export function CommunityFeed({ community, isAuthenticated }: CommunityFeedProps) {
-  const [filter, setFilter] = useState<'trending' | 'recent'>('trending')
-  const accentColor = community.color === 'orange' ? 'text-orange' : 'text-primary'
+  const [filter, setFilter] = useState<'trending' | 'recent'>('recent')
+  const [items, setItems] = useState<CommunityFeedItem[]>([])
+  const [loading, setLoading] = useState(true)
   const accentBg = community.color === 'orange' ? 'bg-orange' : 'bg-primary'
+
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    getPublicCommunityFeed(community.key as AgroCommunityKey)
+      .then(({ items }) => {
+        if (active) setItems(items)
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [community.key])
 
   const filters = [
     { id: 'trending' as const, label: 'TRENDING', icon: TrendingUp },
     { id: 'recent' as const, label: 'RECENT', icon: Clock },
   ]
+
+  // "Trending" pins broadcasts + pinned posts first; "recent" is pure chronological.
+  const ordered =
+    filter === 'recent'
+      ? items
+      : [...items].sort((a, b) => {
+          const aw = a.kind === 'broadcast' || a.isPinned ? 1 : 0
+          const bw = b.kind === 'broadcast' || b.isPinned ? 1 : 0
+          if (aw !== bw) return bw - aw
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        })
 
   return (
     <div className="space-y-4">
@@ -123,24 +116,31 @@ export function CommunityFeed({ community, isAuthenticated }: CommunityFeedProps
       )}
 
       {/* Feed Posts */}
-      <div className="space-y-3">
-        {MOCK_FEED_POSTS.map((post, index) => (
-          <FeedPost 
-            key={post.id} 
-            post={post} 
-            index={index}
-            isAuthenticated={isAuthenticated}
-            accentColor={community.color}
-          />
-        ))}
-      </div>
-
-      {/* Load More */}
-      <div className="pt-4 flex justify-center">
-        <button className="flex items-center gap-2 px-6 py-2.5 border border-border rounded-[2px] text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all mono-xs text-[10px]">
-          LOAD MORE POSTS
-        </button>
-      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-6 h-6 text-primary animate-spin" />
+        </div>
+      ) : ordered.length > 0 ? (
+        <div className="space-y-3">
+          {ordered.map((post, index) => (
+            <FeedPost 
+              key={`${post.kind}-${post.id}`} 
+              post={post} 
+              index={index}
+              isAuthenticated={isAuthenticated}
+              accentColor={community.color}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="border border-border rounded-[2px] bg-card/50 p-10 text-center">
+          <Megaphone className="w-10 h-10 text-muted-foreground/30 mx-auto mb-4" />
+          <p className="mono-sm text-foreground/80">No posts yet</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Be the first to share an update in {community.name}.
+          </p>
+        </div>
+      )}
     </div>
   )
 }
@@ -151,75 +151,86 @@ function FeedPost({
   isAuthenticated,
   accentColor
 }: { 
-  post: typeof MOCK_FEED_POSTS[0]
+  post: CommunityFeedItem
   index: number
   isAuthenticated: boolean
   accentColor: 'green' | 'orange'
 }) {
   const [liked, setLiked] = useState(false)
   const [saved, setSaved] = useState(false)
+  const isBroadcast = post.kind === 'broadcast'
+  const authorName = post.authorName ?? 'Member'
+  const initials = authorName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
 
   return (
     <motion.article
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
-      className="border border-border rounded-[2px] bg-card/50 overflow-hidden"
+      transition={{ delay: Math.min(index * 0.06, 0.3) }}
+      className={`border rounded-[2px] bg-card/50 overflow-hidden ${
+        post.isPinned || isBroadcast ? 'border-primary/30' : 'border-border'
+      }`}
     >
+      {/* Pinned / Broadcast ribbon */}
+      {(post.isPinned || isBroadcast) && (
+        <div className="px-4 pt-3 flex items-center gap-1.5">
+          {isBroadcast ? (
+            <Megaphone className="w-3 h-3 text-primary" />
+          ) : (
+            <TrendingUp className="w-3 h-3 text-primary" />
+          )}
+          <span className="mono-xs text-[8px] text-primary tracking-wider">
+            {isBroadcast ? 'OFFICIAL BROADCAST' : 'PINNED'}
+          </span>
+        </div>
+      )}
+
       {/* Post Header */}
       <div className="px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-            <span className="mono text-sm text-muted-foreground">
-              {post.author.name.split(' ').map(n => n[0]).join('')}
-            </span>
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+            isBroadcast ? 'bg-primary/15' : 'bg-muted'
+          }`}>
+            {isBroadcast ? (
+              <Megaphone className="w-4 h-4 text-primary" />
+            ) : (
+              <span className="mono text-sm text-muted-foreground">{initials}</span>
+            )}
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="mono-sm text-foreground text-xs">{post.author.name}</span>
-              {post.author.isVerified && (
-                <svg className="w-3.5 h-3.5 text-primary" viewBox="0 0 24 24" fill="currentColor">
+              <span className="mono-sm text-foreground text-xs">{authorName}</span>
+              {isBroadcast && (
+                <svg className="w-3.5 h-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               )}
             </div>
-            <span className="mono-xs text-[9px] text-muted-foreground">{post.author.handle} / {post.timestamp}</span>
+            <span className="mono-xs text-[9px] text-muted-foreground">{timeAgo(post.createdAt)}</span>
           </div>
         </div>
-        <button className="p-1.5 text-muted-foreground hover:text-foreground transition-colors">
+        <button className="p-1.5 text-muted-foreground hover:text-foreground transition-colors" aria-label="More options">
           <MoreHorizontal className="w-4 h-4" />
         </button>
       </div>
 
       {/* Post Content */}
       <div className="px-4 pb-3">
-        <p className="text-sm text-foreground/85 leading-relaxed">{post.content}</p>
-        
-        {/* Tags */}
-        <div className="flex flex-wrap gap-1.5 mt-3">
-          {post.tags.map((tag) => (
-            <span 
-              key={tag}
-              className={`px-2 py-0.5 rounded-[2px] mono-xs text-[8px] ${
-                accentColor === 'orange'
-                  ? 'bg-orange-soft text-orange'
-                  : 'bg-primary/10 text-primary'
-              }`}
-            >
-              #{tag.toUpperCase()}
-            </span>
-          ))}
-        </div>
+        {post.title && (
+          <p className="mono-sm text-sm text-foreground mb-1.5">{post.title}</p>
+        )}
+        <p className="text-sm text-foreground/85 leading-relaxed whitespace-pre-line">{post.content}</p>
       </div>
 
       {/* Post Image */}
-      {post.image && (
+      {post.imageUrl && (
         <div className="relative aspect-video bg-muted">
           <Image
-            src={post.image}
-            alt="Post image"
+            src={post.imageUrl || "/placeholder.svg"}
+            alt="Post attachment"
             fill
             className="object-cover"
+            crossOrigin="anonymous"
           />
         </div>
       )}
@@ -232,25 +243,25 @@ function FeedPost({
             className={`flex items-center gap-1.5 transition-colors ${
               liked ? 'text-red-500' : 'text-muted-foreground hover:text-foreground'
             } ${!isAuthenticated && 'opacity-50 cursor-not-allowed'}`}
+            aria-label="Like"
           >
             <Heart className={`w-4 h-4 ${liked && 'fill-current'}`} />
-            <span className="mono-xs text-[10px]">{liked ? post.likes + 1 : post.likes}</span>
           </button>
           <button 
             className={`flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors ${
               !isAuthenticated && 'opacity-50 cursor-not-allowed'
             }`}
+            aria-label="Comment"
           >
             <MessageCircle className="w-4 h-4" />
-            <span className="mono-xs text-[10px]">{post.comments}</span>
           </button>
           <button 
             className={`flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors ${
               !isAuthenticated && 'opacity-50 cursor-not-allowed'
             }`}
+            aria-label="Share"
           >
             <Share2 className="w-4 h-4" />
-            <span className="mono-xs text-[10px]">{post.shares}</span>
           </button>
         </div>
         <button 
@@ -260,6 +271,7 @@ function FeedPost({
               ? accentColor === 'orange' ? 'text-orange' : 'text-primary' 
               : 'text-muted-foreground hover:text-foreground'
           } ${!isAuthenticated && 'opacity-50 cursor-not-allowed'}`}
+          aria-label="Save"
         >
           <Bookmark className={`w-4 h-4 ${saved && 'fill-current'}`} />
         </button>
