@@ -2,7 +2,9 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { Building2 } from "lucide-react"
 import { fetchProvisionedAccounts } from "@/lib/admin/provisioning"
+import { fetchAllChangeRequests } from "@/lib/profile/change-requests"
 import { OrganizationConsole } from "@/components/dashboard/organization/organization-console"
+import { ChangeRequestQueue } from "@/components/dashboard/organization/change-request-queue"
 import { PageHeading } from "@/components/dashboard/fulfillment/chrome"
 
 export const metadata = {
@@ -37,6 +39,7 @@ export default async function OrganizationPage() {
   }
 
   const { accounts } = await fetchProvisionedAccounts()
+  const { requests } = await fetchAllChangeRequests()
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-6">
@@ -46,6 +49,9 @@ export default async function OrganizationPage() {
         subtitle="Create accounts, allocate roles and communities, and issue downloadable credential packages."
       />
       <OrganizationConsole initialAccounts={accounts} />
+      <div className="border-t border-border pt-6">
+        <ChangeRequestQueue initialRequests={requests} />
+      </div>
     </div>
   )
 }
