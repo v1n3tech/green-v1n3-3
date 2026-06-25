@@ -158,9 +158,11 @@ function GovernanceLadder() {
 const tokenSpec: { k: string; v: string }[] = [
   { k: 'Token name', v: 'V1n3' },
   { k: 'Symbol', v: 'V1N3' },
-  { k: 'Standard', v: 'SPL (Token program)' },
+  { k: 'Standard', v: 'Token-2022 (SPL)' },
   { k: 'Decimals', v: '9' },
-  { k: 'Network', v: 'Solana Devnet (pilot)' },
+  { k: 'Total supply', v: '4,000,000,000 (fixed)' },
+  { k: 'Mint authority', v: 'Revoked' },
+  { k: 'Network', v: 'Solana Mainnet' },
 ]
 
 function TokenSpecTable() {
@@ -538,10 +540,12 @@ export const sections: WhitepaperSection[] = [
         </P>
         <TokenSpecTable />
         <P>
-          The token is live on <Strong>devnet</Strong> during the pilot phase. This is a deliberate
-          choice: it lets the full economic loop — checkout settlement, delivery-fee transfers,
-          staking, and points conversion — be exercised end-to-end with real on-chain mechanics
-          before value is committed on mainnet.
+          V1N3 is <Strong>live on Solana mainnet</Strong> with a fixed total supply of{' '}
+          <Strong>4,000,000,000</Strong> tokens. The full supply has been minted and the mint
+          authority <Strong>permanently revoked</Strong> — no more V1N3 can ever be created. The
+          freeze authority is disabled, so holder accounts can never be frozen. The full economic
+          loop — checkout settlement, delivery-fee transfers, staking, and points conversion —
+          settles on-chain.
         </P>
         <SubHead>8.2 — Utility</SubHead>
         <Bullets
@@ -580,8 +584,8 @@ export const sections: WhitepaperSection[] = [
         <div className="rounded-[2px] border border-accent/30 bg-accent/[0.06] p-4">
           <Bullets
             items={[
-              <><Strong>Devnet status.</Strong> V1N3 currently operates on Solana devnet. Devnet tokens carry no monetary value. A mainnet launch, with a fixed and published supply schedule, is a future milestone.</>,
-              <><Strong>Supply.</Strong> A final mainnet supply policy and distribution schedule have not yet been fixed in this version and will be published before any mainnet deployment.</>,
+              <><Strong>Mainnet status.</Strong> V1N3 is live on Solana mainnet as a Token-2022 asset. The mint authority has been permanently revoked, so the supply is hard-capped and cannot be inflated.</>,
+              <><Strong>Supply.</Strong> Total supply is fixed at 4,000,000,000 V1N3 (9 decimals). Distribution is managed from a treasury wallet into program operations, rewards, and staking over time.</>,
               <><Strong>No investment guarantee.</Strong> Program outcome targets and staking yields are aspirations and configurable parameters, not guarantees of financial return.</>,
               <><Strong>Regulatory posture.</Strong> V1N3 is designed and described as a utility token. The program intends to operate within applicable Nigerian law, and the token’s design may evolve to maintain compliance.</>,
             ]}
@@ -611,7 +615,7 @@ export const sections: WhitepaperSection[] = [
           items={[
             <><Strong>Authority mirrors the program.</Strong> Roles and community membership are first-class in the data model and enforced by RLS and security-definer functions, not merely hidden in the UI.</>,
             <><Strong>Auditable money.</Strong> Points, fees, and conversions are written to immutable ledgers via atomic functions; on-chain transfers are recorded with their signatures.</>,
-            <><Strong>Separation of duties.</Strong> Sensitive workflows — especially delivery and service completion — separate the party who does the work from the party who confirms it.</>,
+            <><Strong>Separation of duties.</Strong> Sensitive workflows — especially delivery and service completion �� separate the party who does the work from the party who confirms it.</>,
             <><Strong>Honest state.</Strong> The platform distinguishes what it holds keys for from what it does not, and surfaces recovery rather than hiding failure.</>,
           ]}
         />
@@ -649,19 +653,19 @@ export const sections: WhitepaperSection[] = [
             phase: 'PHASE 01',
             tag: 'CURRENT',
             title: 'Plateau Pilot',
-            desc: 'Onboard the first cohort across Plateau’s seventeen LGAs toward the ~10,000-participant target. Operate the full platform — marketplace, logistics, services, wallet, staking, messaging, ratings — with V1N3 on devnet, validating the governance structure with real operations.',
+            desc: 'Onboard the first cohort across Plateau’s seventeen LGAs toward the ~10,000-participant target. Operate the full platform — marketplace, logistics, services, wallet, staking, messaging, ratings — settling in mainnet V1N3, validating the governance structure with real operations.',
           },
           {
             phase: 'PHASE 02',
             tag: 'NEXT',
-            title: 'Hardening & mainnet preparation',
-            desc: 'Publish the mainnet token supply and distribution policy. Independent review of token and custody design. Strengthen evaluation and weekly-rating analytics. Expand pickup-terminal and logistics coverage across all LGAs.',
+            title: 'Hardening & distribution',
+            desc: 'Publish the V1N3 distribution policy across operations, rewards, and staking. Independent review of token and custody design. Strengthen evaluation and weekly-rating analytics. Expand pickup-terminal and logistics coverage across all LGAs.',
           },
           {
             phase: 'PHASE 03',
             tag: 'PLANNED',
-            title: 'Mainnet & multi-state expansion',
-            desc: 'Migrate V1N3 to Solana mainnet under the published supply schedule. Extend the program to additional Nigerian states using the proven operational template.',
+            title: 'Multi-state expansion',
+            desc: 'Extend the program to additional Nigerian states using the proven operational template, scaling V1N3 settlement across new cohorts.',
           },
           {
             phase: 'PHASE 04',
@@ -706,11 +710,11 @@ export const sections: WhitepaperSection[] = [
           structure that runs from the field executive up to the State Coordinating Council.
         </P>
         <P>
-          What exists today is a functioning pilot: a real application, a real on-chain token economy
-          on devnet, and a real operational model being exercised in Plateau State. What lies ahead
-          is the disciplined work of hardening, governance, mainnet launch, and expansion. This
-          whitepaper is meant to be read as a faithful account of both — an invitation to build, to
-          participate, and to hold the program to the outcomes it has set for itself.
+          What exists today is a functioning platform: a real application, a real on-chain token
+          economy live on Solana mainnet, and a real operational model being exercised in Plateau
+          State. What lies ahead is the disciplined work of hardening, governance, and expansion.
+          This whitepaper is meant to be read as a faithful account of both — an invitation to build,
+          to participate, and to hold the program to the outcomes it has set for itself.
         </P>
       </div>
     ),

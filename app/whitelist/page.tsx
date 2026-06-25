@@ -60,7 +60,7 @@ export default function WhitelistPage() {
           </div>
 
           <p className="mono-xs text-muted-foreground mt-10">
-            DEVNET PILOT · V1N3 CARRIES NO MONETARY VALUE UNTIL MAINNET
+            LIVE ON SOLANA MAINNET · FIXED SUPPLY · MINT AUTHORITY REVOKED
           </p>
         </div>
       </section>

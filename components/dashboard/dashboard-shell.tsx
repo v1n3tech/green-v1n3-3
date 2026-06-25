@@ -106,8 +106,9 @@ const NAV_ITEMS = [
     section: 'ADMIN',
     items: [
       { href: '/dashboard/organization', label: 'Organization', icon: Building2, index: '15' },
-      { href: '/dashboard/security', label: 'Security', icon: Shield, index: '16' },
-      { href: '/dashboard/settings', label: 'Settings', icon: Settings, index: '17' },
+      { href: '/dashboard/token', label: 'Token', icon: Coins, index: '16' },
+      { href: '/dashboard/security', label: 'Security', icon: Shield, index: '17' },
+      { href: '/dashboard/settings', label: 'Settings', icon: Settings, index: '18' },
     ]
   },
 ]
