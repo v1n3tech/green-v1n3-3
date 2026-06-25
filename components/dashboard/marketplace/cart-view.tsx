@@ -5,6 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
+import { getExplorerUrl } from "@/lib/wallet/v1n3-token"
 import {
   ArrowLeft,
   ArrowRight,
@@ -339,7 +340,7 @@ export function CartView({ initialItems }: { initialItems: CartItem[] }) {
               </p>
               {success.signature && (
                 <a
-                  href={`https://explorer.solana.com/tx/${success.signature}?cluster=devnet`}
+                  href={getExplorerUrl(success.signature, 'tx')}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 mt-4 mono-xs text-[10px] text-primary hover:underline"

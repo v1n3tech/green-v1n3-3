@@ -1,22 +1,36 @@
 import { PublicKey, Connection, clusterApiUrl, Transaction, sendAndConfirmTransaction, Keypair } from '@solana/web3.js'
 import { getAccount, getAssociatedTokenAddress, TOKEN_2022_PROGRAM_ID, createAssociatedTokenAccountInstruction, ASSOCIATED_TOKEN_PROGRAM_ID, getOrCreateAssociatedTokenAccount, createTransferInstruction } from '@solana/spl-token'
 
+// Network configuration (env-driven, mainnet by default after the V1N3 launch).
+// Override per environment with NEXT_PUBLIC_SOLANA_NETWORK / NEXT_PUBLIC_V1N3_MINT_ADDRESS.
+type SolanaCluster = 'mainnet-beta' | 'devnet' | 'testnet'
+
+export const SOLANA_NETWORK: SolanaCluster =
+  (process.env.NEXT_PUBLIC_SOLANA_NETWORK as SolanaCluster | undefined) ?? 'mainnet-beta'
+
+// Mainnet V1N3 mint (Token-2022). Devnet builds can override via env.
+const DEFAULT_MINT_ADDRESS = 'StYmxutozcFfYtjaxEqLt8f5fX3ZGgTbgkn9rdg3To2'
+
+// Custom RPC endpoint (Helius/QuickNode/etc). Public mainnet RPC is heavily
+// rate-limited, so a dedicated endpoint is strongly recommended in production.
+// Falls back to the public cluster endpoint when not set.
+export const SOLANA_RPC_ENDPOINT =
+  process.env.NEXT_PUBLIC_SOLANA_RPC_ENDPOINT || clusterApiUrl(SOLANA_NETWORK)
+
 // V1N3 Token Configuration
 // NOTE: V1N3 uses Token-2022 program, NOT the legacy Token program!
 export const V1N3_TOKEN = {
   name: 'V1n3',
   symbol: 'V1N3',
   decimals: 9,
-  mintAddress: 'EAtP7GvoVreBt9jFH7NEQkW5bkzDWQ1uuhQ7nnSMx7g1',
+  // Total fixed supply minted on mainnet (mint authority permanently revoked).
+  totalSupply: 4_000_000_000,
+  mintAddress: process.env.NEXT_PUBLIC_V1N3_MINT_ADDRESS || DEFAULT_MINT_ADDRESS,
   programId: 'BygtFoZ4xWpCuQteoYAoA1WFcqzF8aVeAQjex3Ym8xgX',
-  network: 'devnet' as const,
+  network: SOLANA_NETWORK,
   // Exchange rate: 1 V1N3 = 3002.40 NGN (mock rate for display)
   ngnRate: 3002.40,
 } as const
-
-// Network configuration
-export const SOLANA_NETWORK = 'devnet' as const
-export const SOLANA_RPC_ENDPOINT = clusterApiUrl(SOLANA_NETWORK)
 
 // Public keys
 export const V1N3_MINT_PUBKEY = new PublicKey(V1N3_TOKEN.mintAddress)
@@ -97,7 +111,8 @@ export function formatNGN(amount: number): string {
 // Get Solana Explorer URL for transaction or address
 export function getExplorerUrl(signature: string, type: 'tx' | 'address' = 'tx'): string {
   const base = 'https://explorer.solana.com'
-  const cluster = `?cluster=${SOLANA_NETWORK}`
+  // Mainnet is the explorer default; only append a cluster param for non-mainnet.
+  const cluster = SOLANA_NETWORK === 'mainnet-beta' ? '' : `?cluster=${SOLANA_NETWORK}`
   return `${base}/${type}/${signature}${cluster}`
 }
 
@@ -235,8 +250,14 @@ export async function getV1N3Transactions(
     const connection = getConnection()
     const walletPubkey = new PublicKey(walletAddress)
     
-    // Get the ATA for this wallet
-    const ata = await getAssociatedTokenAddress(V1N3_MINT_PUBKEY, walletPubkey)
+    // Get the ATA for this wallet (Token-2022 — must pass the program id or
+    // this resolves to the wrong account and returns no history).
+    const ata = await getAssociatedTokenAddress(
+      V1N3_MINT_PUBKEY,
+      walletPubkey,
+      false,
+      TOKEN_2022_PROGRAM_ID
+    )
     
     // Get recent signatures for the token account
     const signatures = await connection.getSignaturesForAddress(ata, { limit })

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getCustodialKeypair } from "@/lib/wallet/mint"
-import { transferV1N3, getV1N3Balance, V1N3_TOKEN } from "@/lib/wallet/v1n3-token"
+import { transferV1N3, getV1N3Balance, V1N3_TOKEN, getExplorerUrl } from "@/lib/wallet/v1n3-token"
 import { getPlatformConfig } from "@/lib/rewards/config"
 import { ADMIN_WALLET } from "@/lib/staking/staking-program"
 import { createNotification } from "@/lib/notifications/actions"
@@ -203,7 +203,7 @@ export async function POST(request: NextRequest) {
       pointsSpent: points,
       v1n3Amount,
       signature: result.signature,
-      explorerUrl: `https://explorer.solana.com/tx/${result.signature}?cluster=devnet`,
+      explorerUrl: getExplorerUrl(result.signature, 'tx'),
     })
   } catch (error) {
     console.error("[v0] convert error:", error)
