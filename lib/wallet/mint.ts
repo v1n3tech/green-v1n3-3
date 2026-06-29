@@ -1,12 +1,12 @@
 import "server-only"
-import { Keypair, Connection, clusterApiUrl } from "@solana/web3.js"
+import { Keypair, Connection } from "@solana/web3.js"
 import bs58 from "bs58"
 import * as bip39 from "bip39"
 import { derivePath } from "ed25519-hd-key"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { encrypt, decrypt } from "@/lib/wallet/encryption"
-import { getOrCreateAssociatedTokenAccount } from "@solana/spl-token"
-import { V1N3_MINT_PUBKEY, SOLANA_NETWORK } from "@/lib/wallet/v1n3-token"
+import { getOrCreateAssociatedTokenAccount, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token"
+import { V1N3_MINT_PUBKEY, SOLANA_RPC_ENDPOINT } from "@/lib/wallet/v1n3-token"
 
 export interface MintResult {
   publicKey: string
@@ -137,7 +137,7 @@ export async function ensureCustodialWallet(
   let ataCreated = false
   
   try {
-    const connection = new Connection(clusterApiUrl(SOLANA_NETWORK), 'confirmed')
+    const connection = new Connection(SOLANA_RPC_ENDPOINT, 'confirmed')
     const walletBalance = await connection.getBalance(keypair.publicKey)
     
     // Only attempt ATA creation if wallet has some SOL (at least 0.002 SOL for rent + fees)
@@ -146,7 +146,11 @@ export async function ensureCustodialWallet(
         connection,
         keypair, // payer
         V1N3_MINT_PUBKEY,
-        keypair.publicKey // owner
+        keypair.publicKey, // owner
+        false,
+        'confirmed',
+        undefined,
+        TOKEN_2022_PROGRAM_ID // V1N3 uses Token-2022
       )
       ataAddress = ata.address.toBase58()
       ataCreated = true

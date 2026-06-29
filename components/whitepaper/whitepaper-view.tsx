@@ -63,7 +63,7 @@ export function WhitepaperView() {
             {[
               ['VERSION', '1.0'],
               ['DATE', 'JUNE 2026'],
-              ['NETWORK', 'SOLANA DEVNET'],
+              ['NETWORK', 'SOLANA MAINNET'],
               ['PHASE', '01 — PLATEAU'],
             ].map(([k, v]) => (
               <div key={k} className="flex flex-col">
@@ -143,10 +143,9 @@ export function WhitepaperView() {
             <p className="border-t border-border pt-6 text-[11px] leading-relaxed text-muted-foreground italic">
               This document describes a program and a platform under active development. Feature
               descriptions reflect the current build at the time of writing; economic parameters are
-              configurable and subject to governance; and the V1N3 token operates on Solana devnet
-              during the pilot phase and carries no monetary value until a future mainnet launch under
-              a published supply policy. Nothing in this document is financial advice or an offer of
-              securities.
+              configurable and subject to governance. The V1N3 token is live on Solana mainnet as a
+              Token-2022 asset with a fixed total supply of 4,000,000,000 and a permanently revoked
+              mint authority. Nothing in this document is financial advice or an offer of securities.
             </p>
           </article>
         </div>

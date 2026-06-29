@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCustodialKeypair } from '@/lib/wallet/mint'
-import { transferV1N3, getV1N3Balance, V1N3_TOKEN, getConnection } from '@/lib/wallet/v1n3-token'
+import { transferV1N3, getV1N3Balance, V1N3_TOKEN, getConnection, getExplorerUrl } from '@/lib/wallet/v1n3-token'
 import { PublicKey, SystemProgram, Transaction, sendAndConfirmTransaction } from '@solana/web3.js'
 
 export async function POST(request: NextRequest) {
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: true,
           signature,
-          explorerUrl: `https://explorer.solana.com/tx/${signature}?cluster=devnet`,
+          explorerUrl: getExplorerUrl(signature, 'tx'),
         })
       } catch (error) {
         // Update transaction to failed
@@ -249,7 +249,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         signature: result.signature,
-        explorerUrl: `https://explorer.solana.com/tx/${result.signature}?cluster=devnet`,
+        explorerUrl: getExplorerUrl(result.signature, 'tx'),
         newBalance,
       })
     } else {

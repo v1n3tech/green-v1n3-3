@@ -199,17 +199,19 @@ Recovery is deliberately explicit and never destructive-by-default: the system w
 
 **V1N3** is the unit of account and settlement across the Green V1N3 platform. It is an SPL token on **Solana**, chosen for low transaction costs, high throughput, and fast finality — properties that matter when the goal is many small, fast agricultural transactions rather than a few large ones.
 
-Current configuration (pilot):
+Current configuration:
 
 | Property | Value |
 | --- | --- |
 | Token name | V1n3 |
 | Symbol | V1N3 |
-| Standard | SPL (Token program) |
+| Standard | Token-2022 (SPL) |
 | Decimals | 9 |
-| Network | Solana Devnet (pilot) |
+| Total supply | 4,000,000,000 (fixed) |
+| Mint authority | Revoked |
+| Network | Solana Mainnet |
 
-The token is live on **devnet** during the pilot phase. This is a deliberate choice: it lets the full economic loop — checkout settlement, delivery-fee transfers, staking, and points conversion — be exercised end-to-end with real on-chain mechanics before value is committed on mainnet.
+V1N3 is **live on Solana mainnet** with a fixed total supply of **4,000,000,000** tokens. The full supply has been minted and the mint authority **permanently revoked** — no more V1N3 can ever be created. The freeze authority is disabled, so holder accounts can never be frozen. The full economic loop — checkout settlement, delivery-fee transfers, staking, and points conversion — settles on-chain.
 
 ### 7.2 Utility
 
@@ -240,8 +242,8 @@ Token-economic parameters — marketplace fee percentage, points-per-transaction
 
 In the spirit of a genuine whitepaper, several points must be stated plainly:
 
-- **Devnet status.** V1N3 currently operates on Solana devnet. Devnet tokens carry no monetary value. A mainnet launch, with a fixed and published supply schedule, is a future milestone (see Roadmap).
-- **Supply.** A final mainnet supply policy and distribution schedule have not yet been fixed in this version and will be published before any mainnet deployment.
+- **Mainnet status.** V1N3 is live on Solana mainnet as a Token-2022 asset. The mint authority has been permanently revoked, so the supply is hard-capped and cannot be inflated.
+- **Supply.** Total supply is fixed at 4,000,000,000 V1N3 (9 decimals). Distribution is managed from a treasury wallet into program operations, rewards, and staking over time.
 - **No investment guarantee.** Program outcome targets (Section 2) and staking yields are aspirations and configurable parameters, not guarantees of financial return. Yields are funded by program economics and are subject to change by governance.
 - **Regulatory posture.** V1N3 is designed and described as a utility token for use within the platform. The program intends to operate within applicable Nigerian law and regulation, and the token's design may evolve to maintain compliance.
 
@@ -284,13 +286,13 @@ Architectural principles:
 The roadmap is expressed in phases rather than dates, reflecting program readiness.
 
 **Phase 1 — Plateau Pilot (current).**
-Onboard the first cohort across Plateau's seventeen LGAs toward the ~10,000-participant target. Operate the full platform — marketplace, logistics, services, wallet, staking, messaging, ratings — with V1N3 on devnet. Validate the governance structure (Executives, GCMs, LGPAs, Forum, SCC) with real operations.
+Onboard the first cohort across Plateau's seventeen LGAs toward the ~10,000-participant target. Operate the full platform — marketplace, logistics, services, wallet, staking, messaging, ratings — settling in mainnet V1N3. Validate the governance structure (Executives, GCMs, LGPAs, Forum, SCC) with real operations.
 
-**Phase 2 — Hardening and mainnet preparation.**
-Publish the mainnet token supply and distribution policy. Independent review of token and custody design. Strengthen evaluation and weekly-rating analytics. Expand pickup-terminal and logistics coverage across all LGAs.
+**Phase 2 — Hardening and distribution.**
+Publish the V1N3 distribution policy across operations, rewards, and staking. Independent review of token and custody design. Strengthen evaluation and weekly-rating analytics. Expand pickup-terminal and logistics coverage across all LGAs.
 
-**Phase 3 — Mainnet and multi-state expansion.**
-Migrate V1N3 to Solana mainnet under the published supply schedule. Extend the program to additional Nigerian states using the proven operational template.
+**Phase 3 — Multi-state expansion.**
+Extend the program to additional Nigerian states using the proven operational template, scaling V1N3 settlement across new cohorts.
 
 **Phase 4 — Pan-African market linkages.**
 Connect regional agricultural markets, pursuing the program's ambition of new agricultural markets across Africa.
@@ -301,8 +303,8 @@ Connect regional agricultural markets, pursuing the program's ambition of new ag
 
 Green V1N3 Nigeria is built on a simple conviction: that organising young people into a coordinated, transparent, and rewarding agricultural value chain can change both individual livelihoods and the structure of a market at the same time. The platform turns that conviction into working software — identities, communities, a marketplace, logistics, services, a wallet, a token, staking, and a measurement layer — governed by a human structure that runs from the field executive up to the State Coordinating Council.
 
-What exists today is a functioning pilot: a real application, a real on-chain token economy on devnet, and a real operational model being exercised in Plateau State. What lies ahead is the disciplined work of hardening, governance, mainnet launch, and expansion. This whitepaper is meant to be read as a faithful account of both — an invitation to build, to participate, and to hold the program to the outcomes it has set for itself.
+What exists today is a functioning platform: a real application, a real on-chain token economy live on Solana mainnet, and a real operational model being exercised in Plateau State. What lies ahead is the disciplined work of hardening, governance, and expansion. This whitepaper is meant to be read as a faithful account of both — an invitation to build, to participate, and to hold the program to the outcomes it has set for itself.
 
 ---
 
-*This document describes a program and a platform under active development. Feature descriptions reflect the current build at the time of writing; economic parameters are configurable and subject to governance; and the V1N3 token operates on Solana devnet during the pilot phase and carries no monetary value until a future mainnet launch under a published supply policy. Nothing in this document is financial advice or an offer of securities.*
+*This document describes a program and a platform under active development. Feature descriptions reflect the current build at the time of writing; economic parameters are configurable and subject to governance. The V1N3 token is live on Solana mainnet as a Token-2022 asset with a fixed total supply of 4,000,000,000 and a permanently revoked mint authority. Nothing in this document is financial advice or an offer of securities.*

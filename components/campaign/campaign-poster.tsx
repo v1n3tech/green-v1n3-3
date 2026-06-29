@@ -154,7 +154,7 @@ export const CampaignPoster = forwardRef<HTMLDivElement>(function CampaignPoster
             <span className="mono-sm text-foreground tracking-widest">GREENV1N3</span>
           </div>
           <span className="mono-xs text-muted-foreground">
-            Devnet pilot · V1N3 carries no monetary value until mainnet · Not financial advice
+            Live on Solana mainnet · Fixed supply, mint authority revoked · Not financial advice
           </span>
         </div>
       </div>

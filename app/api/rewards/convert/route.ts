@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { getCustodialKeypair } from "@/lib/wallet/mint"
-import { transferV1N3, getV1N3Balance, V1N3_TOKEN } from "@/lib/wallet/v1n3-token"
+import { transferV1N3, getV1N3Balance, V1N3_TOKEN, getExplorerUrl } from "@/lib/wallet/v1n3-token"
 import { getPlatformConfig } from "@/lib/rewards/config"
-import { ADMIN_WALLET } from "@/lib/staking/staking-program"
+import { getDistributorKeypair, DISTRIBUTOR_WALLET } from "@/lib/wallet/distributor"
 import { createNotification } from "@/lib/notifications/actions"
 
 function roundV1n3(amount: number): number {
@@ -59,30 +58,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Amount too small to redeem" }, { status: 400 })
     }
 
-    // Locate the treasury (dev wallet) custodial keypair.
-    const { data: treasuryProfile } = await admin
-      .from("profiles")
-      .select("id")
-      .eq("wallet_address", ADMIN_WALLET)
-      .maybeSingle()
-
-    if (!treasuryProfile?.id) {
+    // Load the mainnet distributor signer from the secure server env var.
+    const treasuryKeypair = getDistributorKeypair()
+    if (!treasuryKeypair) {
       return NextResponse.json(
-        { error: "Rewards treasury is not configured yet. Please contact support." },
+        { error: "Rewards distributor is not configured yet. Please contact support." },
         { status: 503 },
       )
     }
 
-    const treasuryKeypair = await getCustodialKeypair(treasuryProfile.id)
-    if (!treasuryKeypair || treasuryKeypair.publicKey.toBase58() !== ADMIN_WALLET) {
-      return NextResponse.json(
-        { error: "Rewards treasury signer unavailable. Please contact support." },
-        { status: 503 },
-      )
-    }
-
-    // Ensure the treasury can cover the payout.
-    const treasuryBalance = await getV1N3Balance(ADMIN_WALLET)
+    // Ensure the distributor can cover the payout.
+    const treasuryBalance = await getV1N3Balance(DISTRIBUTOR_WALLET)
     if (treasuryBalance < v1n3Amount) {
       return NextResponse.json(
         { error: "Rewards pool is temporarily out of funds. Please try again later." },
@@ -98,7 +84,7 @@ export async function POST(request: NextRequest) {
         points_spent: points,
         v1n3_amount: v1n3Amount,
         rate: config.pointsPerV1n3,
-        treasury_wallet: ADMIN_WALLET,
+        treasury_wallet: DISTRIBUTOR_WALLET,
         user_wallet: me.wallet_address,
         status: "pending",
       })
@@ -168,7 +154,7 @@ export async function POST(request: NextRequest) {
       token_mint: V1N3_TOKEN.mintAddress,
       amount: v1n3Amount,
       fee: 0,
-      from_address: ADMIN_WALLET,
+      from_address: DISTRIBUTOR_WALLET,
       to_address: me.wallet_address,
       signature: result.signature,
       confirmed_at: new Date().toISOString(),
@@ -203,7 +189,7 @@ export async function POST(request: NextRequest) {
       pointsSpent: points,
       v1n3Amount,
       signature: result.signature,
-      explorerUrl: `https://explorer.solana.com/tx/${result.signature}?cluster=devnet`,
+      explorerUrl: getExplorerUrl(result.signature, 'tx'),
     })
   } catch (error) {
     console.error("[v0] convert error:", error)

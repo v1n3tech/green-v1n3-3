@@ -6,7 +6,7 @@ import { transferV1N3, getV1N3Balance, V1N3_TOKEN } from "@/lib/wallet/v1n3-toke
 import { ngnToV1n3 } from "@/lib/marketplace/types"
 import { createNotification } from "@/lib/notifications/actions"
 import { getPlatformConfig } from "@/lib/rewards/config"
-import { ADMIN_WALLET } from "@/lib/staking/staking-program"
+import { DISTRIBUTOR_WALLET } from "@/lib/wallet/distributor"
 
 // Round a V1N3 amount to the token's display precision to avoid dust.
 function roundV1n3(amount: number): number {
@@ -242,12 +242,12 @@ export async function POST(request: NextRequest) {
           .eq("id", pendingTx.id)
       }
 
-      // Route the platform fee to the treasury (dev wallet). Best-effort: a
-      // failed fee transfer must NOT void a paid order — we just record fee 0.
+      // Route the platform fee to the distributor (treasury) wallet. Best-effort:
+      // a failed fee transfer must NOT void a paid order — we just record fee 0.
       let feeSignature: string | null = null
       let collectedFeeV1n3 = 0
-      if (feeV1n3 > 0 && sellerWallet !== ADMIN_WALLET) {
-        const feeResult = await transferV1N3(keypair, ADMIN_WALLET, feeV1n3)
+      if (feeV1n3 > 0 && sellerWallet !== DISTRIBUTOR_WALLET) {
+        const feeResult = await transferV1N3(keypair, DISTRIBUTOR_WALLET, feeV1n3)
         if (feeResult.success) {
           feeSignature = feeResult.signature
           collectedFeeV1n3 = feeV1n3
