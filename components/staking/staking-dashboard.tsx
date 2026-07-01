@@ -25,7 +25,7 @@ import { useWallet, useConnection } from '@solana/wallet-adapter-react'
 import { Transaction, PublicKey } from '@solana/web3.js'
 import BN from 'bn.js'
 import { useV1N3Balance } from '@/lib/wallet/use-v1n3-balance'
-import { formatV1N3Balance } from '@/lib/wallet/v1n3-token'
+import { formatV1N3Balance, getExplorerUrl } from '@/lib/wallet/v1n3-token'
 import {
   LOCK_PERIODS,
   ADMIN_WALLET,
@@ -38,7 +38,6 @@ import {
   createFundRewardsInstruction,
   parseStakeInfo,
   calculatePendingRewards,
-  getExplorerUrl,
   formatTimeRemaining,
   type StakeInfo,
   type LockPeriodOption,
@@ -1044,7 +1043,7 @@ export function StakingDashboard({
                 </button>
                 {effectiveWalletAddress && (
                   <a
-                    href={`https://explorer.solana.com/address/${effectiveWalletAddress}?cluster=devnet`}
+                    href={getExplorerUrl(effectiveWalletAddress, 'address')}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-1.5 hover:bg-muted/30 rounded-[2px] transition-colors"

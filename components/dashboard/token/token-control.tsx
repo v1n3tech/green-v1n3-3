@@ -15,6 +15,7 @@ import {
   CircleSlash,
 } from "lucide-react"
 import type { TokenStatus } from "@/lib/admin/token-status"
+import { TokenOperations } from "@/components/dashboard/token/token-operations"
 
 function short(addr: string) {
   return `${addr.slice(0, 6)}…${addr.slice(-6)}`
@@ -171,6 +172,20 @@ export function TokenControl({ status }: { status: TokenStatus }) {
           configured={status.distributorConfigured}
         />
       </div>
+
+      {/* Control room operations */}
+      <TokenOperations
+        symbol={status.symbol}
+        network={status.network}
+        distributorAddress={status.distributor.address}
+        distributorBalance={status.distributor.v1n3}
+        distributorConfigured={status.distributorConfigured}
+        treasuryAddress={status.treasury.address}
+        mintAddress={status.mintAddress}
+        explorerBase={explorerBase}
+        clusterParam={clusterParam}
+        distributorTxs={status.distributorTxs}
+      />
 
       {/* Operational notes */}
       <div className="space-y-2 rounded-[2px] border border-border bg-secondary/10 p-4">

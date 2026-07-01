@@ -6,7 +6,7 @@ import { derivePath } from "ed25519-hd-key"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { encrypt, decrypt } from "@/lib/wallet/encryption"
 import { getOrCreateAssociatedTokenAccount, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token"
-import { V1N3_MINT_PUBKEY, SOLANA_RPC_ENDPOINT } from "@/lib/wallet/v1n3-token"
+import { V1N3_MINT_PUBKEY, SOLANA_RPC_ENDPOINT, getConnection, getV1N3Balance } from "@/lib/wallet/v1n3-token"
 
 export interface MintResult {
   publicKey: string
@@ -180,6 +180,123 @@ function keypairFromMnemonic(mnemonic: string): Keypair {
 }
 
 /**
+ * Detect whether a user-supplied string is a BIP39 seed phrase (as opposed to
+ * a byte-array or base58 secret key). Purely structural — does not validate the
+ * checksum here.
+ */
+function looksLikeMnemonic(input: string): boolean {
+  const trimmed = input.trim()
+  if (trimmed.startsWith("[")) return false
+  const words = trimmed.split(/\s+/)
+  return words.length >= 12 && words.every((w) => /^[a-zA-Z]+$/.test(w))
+}
+
+interface MnemonicCandidate {
+  path: string
+  label: string
+  keypair: Keypair
+}
+
+/**
+ * Derive every common Solana keypair a seed phrase could map to. Different
+ * wallets use different derivation conventions for the SAME seed phrase, so a
+ * single path (like Phantom's) silently produces the "wrong" address for
+ * solana-keygen, Ledger, or multi-account users. We cover the full common set.
+ */
+function deriveMnemonicCandidates(mnemonic: string): MnemonicCandidate[] {
+  const normalized = mnemonic.trim().toLowerCase().replace(/\s+/g, " ")
+  if (!bip39.validateMnemonic(normalized)) {
+    throw new Error("Invalid seed phrase: please check the words and try again")
+  }
+  const seed = bip39.mnemonicToSeedSync(normalized)
+  const seedHex = seed.toString("hex")
+  const candidates: MnemonicCandidate[] = []
+  const seen = new Set<string>()
+
+  const push = (path: string, label: string, keypair: Keypair) => {
+    const addr = keypair.publicKey.toBase58()
+    if (seen.has(addr)) return
+    seen.add(addr)
+    candidates.push({ path, label, keypair })
+  }
+
+  // Raw seed, no derivation path — the solana-keygen CLI default.
+  try {
+    push("raw-seed", "CLI (solana-keygen)", Keypair.fromSeed(seed.subarray(0, 32)))
+  } catch {
+    // ignore
+  }
+
+  // BIP44 with change segment — Phantom / Solflare default account style.
+  for (let i = 0; i < 5; i++) {
+    try {
+      const path = `m/44'/501'/${i}'/0'`
+      const { key } = derivePath(path, seedHex)
+      push(path, i === 0 ? "Phantom / Solflare" : `Phantom / Solflare (account ${i + 1})`, Keypair.fromSeed(key))
+    } catch {
+      // ignore
+    }
+  }
+
+  // BIP44 without change segment — Ledger and older Solflare.
+  for (let i = 0; i < 5; i++) {
+    try {
+      const path = `m/44'/501'/${i}'`
+      const { key } = derivePath(path, seedHex)
+      push(path, i === 0 ? "Ledger / legacy" : `Ledger / legacy (account ${i + 1})`, Keypair.fromSeed(key))
+    } catch {
+      // ignore
+    }
+  }
+
+  return candidates
+}
+
+export interface ImportCandidate {
+  address: string
+  path: string
+  label: string
+  v1n3: number
+  sol: number
+  hasActivity: boolean
+}
+
+/**
+ * Derive all candidate addresses for a seed phrase and probe each one on-chain
+ * (V1N3 balance, SOL balance, and any signature history) so the UI can show the
+ * user which address is really theirs. No secrets are returned.
+ */
+export async function resolveMnemonicCandidates(mnemonic: string): Promise<ImportCandidate[]> {
+  const candidates = deriveMnemonicCandidates(mnemonic)
+  const connection = getConnection()
+
+  return Promise.all(
+    candidates.map(async (c) => {
+      const address = c.keypair.publicKey.toBase58()
+      let v1n3 = 0
+      let sol = 0
+      let sigCount = 0
+      const [bal, lamports, sigs] = await Promise.all([
+        getV1N3Balance(address).catch(() => 0),
+        connection.getBalance(c.keypair.publicKey).catch(() => 0),
+        connection.getSignaturesForAddress(c.keypair.publicKey, { limit: 1 }).catch(() => [] as unknown[]),
+      ])
+      v1n3 = bal
+      sol = lamports / 1e9
+      sigCount = sigs.length
+      return {
+        address,
+        path: c.path,
+        label: c.label,
+        v1n3,
+        sol,
+        hasActivity: v1n3 > 0 || sol > 0 || sigCount > 0,
+      }
+    }),
+  )
+}
+
+/**
  * Parse a user-supplied secret into a Keypair.
  * Accepts any of:
  *  - a BIP39 seed phrase / mnemonic (12, 15, 18, 21, or 24 words), or
@@ -194,8 +311,7 @@ function parseSecretKey(input: string): Keypair {
   }
 
   // Seed phrase: multiple space-separated words (not a byte array or single base58 blob).
-  const words = trimmed.split(/\s+/)
-  if (!trimmed.startsWith("[") && words.length >= 12 && words.every((w) => /^[a-zA-Z]+$/.test(w))) {
+  if (looksLikeMnemonic(trimmed)) {
     return keypairFromMnemonic(trimmed)
   }
 
@@ -238,25 +354,15 @@ export interface ImportResult {
   replacedPreviousWallet: boolean
 }
 
-/**
- * Import an existing Solana wallet for a user from a supplied secret key.
- *
- * The secret key is encrypted with AES-256-GCM and stored in `user_wallets`
- * exactly like a minted custodial wallet, so the platform can sign on the
- * user's behalf. Because `user_wallets.user_id` is the primary key, importing
- * REPLACES the user's current custodial wallet (upsert on user_id), and the
- * profile's `wallet_address` is repointed to the imported public key.
- *
- * Server-only. The raw secret key is NEVER returned to the client.
- */
-export async function importWallet(
-  userId: string,
-  secretKeyInput: string,
-): Promise<ImportResult> {
-  const admin = createAdminClient()
+/** Union outcome: either the wallet was imported, or we need the user to pick
+ *  which derived address (from an ambiguous seed phrase) is really theirs. */
+export type ImportOutcome =
+  | ({ needsSelection: false } & ImportResult)
+  | { needsSelection: true; candidates: ImportCandidate[] }
 
-  // Validate + derive keypair before touching the DB.
-  const keypair = parseSecretKey(secretKeyInput)
+/** Persist a resolved keypair into the user's custodial vault + profile. */
+async function persistImportedKeypair(userId: string, keypair: Keypair): Promise<ImportResult> {
+  const admin = createAdminClient()
   const publicKey = keypair.publicKey.toBase58()
   const secretKeyBase58 = bs58.encode(keypair.secretKey)
 
@@ -312,6 +418,61 @@ export async function importWallet(
   }
 
   return { publicKey, replacedPreviousWallet }
+}
+
+/**
+ * Import an existing Solana wallet for a user from a supplied secret key or
+ * seed phrase.
+ *
+ * - Byte-array / base58 secret keys import the exact key directly.
+ * - Seed phrases are resolved across all common derivation paths (Phantom,
+ *   Solflare, Ledger, solana-keygen, multi-account). If exactly one derived
+ *   address shows on-chain activity we import it automatically; otherwise we
+ *   return the candidate list so the user can choose. A specific choice can be
+ *   forced with `options.derivationPath`.
+ *
+ * The secret key is encrypted with AES-256-GCM and stored in `user_wallets`.
+ * Server-only. The raw secret key is NEVER returned to the client.
+ */
+export async function importWallet(
+  userId: string,
+  secretKeyInput: string,
+  options?: { derivationPath?: string },
+): Promise<ImportOutcome> {
+  const trimmed = secretKeyInput.trim()
+
+  // Non-mnemonic inputs (byte array / base58) map to exactly one keypair.
+  if (!looksLikeMnemonic(trimmed)) {
+    const keypair = parseSecretKey(trimmed)
+    const result = await persistImportedKeypair(userId, keypair)
+    return { needsSelection: false, ...result }
+  }
+
+  // Seed phrase: derive every common candidate.
+  const candidates = deriveMnemonicCandidates(trimmed)
+
+  // If the caller forced a specific derivation path, honor it.
+  if (options?.derivationPath) {
+    const chosen = candidates.find((c) => c.path === options.derivationPath)
+    if (!chosen) {
+      throw new Error("Selected derivation path did not match this seed phrase")
+    }
+    const result = await persistImportedKeypair(userId, chosen.keypair)
+    return { needsSelection: false, ...result }
+  }
+
+  // Smart hybrid: probe on-chain and auto-import iff exactly one is funded.
+  const probed = await resolveMnemonicCandidates(trimmed)
+  const funded = probed.filter((c) => c.hasActivity)
+
+  if (funded.length === 1) {
+    const chosen = candidates.find((c) => c.path === funded[0].path)!
+    const result = await persistImportedKeypair(userId, chosen.keypair)
+    return { needsSelection: false, ...result }
+  }
+
+  // Zero or multiple funded candidates -> let the user choose.
+  return { needsSelection: true, candidates: probed }
 }
 
 /**
