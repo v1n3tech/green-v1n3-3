@@ -4,6 +4,7 @@ import {
   getConnection,
   getV1N3Balance,
   getSOLBalance,
+  getV1N3Transactions,
   V1N3_MINT_PUBKEY,
   V1N3_TOKEN,
   SOLANA_NETWORK,
@@ -17,6 +18,15 @@ export interface WalletStatus {
   address: string
   v1n3: number
   sol: number
+}
+
+export interface TokenTx {
+  signature: string
+  type: "send" | "receive"
+  amount: number
+  counterparty: string
+  timestamp: number
+  status: "confirmed" | "failed"
 }
 
 export interface TokenStatus {
@@ -34,6 +44,8 @@ export interface TokenStatus {
   distributorConfigured: boolean
   treasury: WalletStatus
   distributor: WalletStatus
+  /** Recent on-chain V1N3 activity for the distributor (best-effort). */
+  distributorTxs: TokenTx[]
   /** True if every live read succeeded. */
   healthy: boolean
 }
@@ -66,9 +78,10 @@ export async function getTokenStatus(): Promise<TokenStatus> {
     console.error("[v0] getTokenStatus: failed to read mint:", err)
   }
 
-  const [treasuryBal, distributorBal] = await Promise.all([
+  const [treasuryBal, distributorBal, distributorTxs] = await Promise.all([
     safeBalances(TREASURY_WALLET),
     safeBalances(DISTRIBUTOR_WALLET),
+    getV1N3Transactions(DISTRIBUTOR_WALLET, 8).catch(() => [] as TokenTx[]),
   ])
 
   return {
@@ -85,6 +98,7 @@ export async function getTokenStatus(): Promise<TokenStatus> {
     distributorConfigured: getDistributorKeypair() !== null,
     treasury: { address: TREASURY_WALLET, ...treasuryBal },
     distributor: { address: DISTRIBUTOR_WALLET, ...distributorBal },
+    distributorTxs,
     healthy: onChainSupply !== null,
   }
 }
