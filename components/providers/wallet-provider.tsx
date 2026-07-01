@@ -21,7 +21,7 @@ interface WalletProviderProps {
 }
 
 export function WalletProvider({ children }: WalletProviderProps) {
-  // Use devnet endpoint for V1N3 token
+  // V1N3 RPC endpoint (network via env, mainnet by default)
   const endpoint = useMemo(() => SOLANA_RPC_ENDPOINT, [])
 
   const wallets = useMemo(

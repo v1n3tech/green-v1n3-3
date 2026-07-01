@@ -5,8 +5,8 @@ import { PublicKey, Connection } from '@solana/web3.js'
 import { getAccount, getAssociatedTokenAddress, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token'
 import { V1N3_MINT_PUBKEY, V1N3_TOKEN, SOLANA_RPC_ENDPOINT } from './v1n3-token'
 
-// Create a dedicated devnet connection for V1N3
-const devnetConnection = new Connection(SOLANA_RPC_ENDPOINT, 'confirmed')
+// Dedicated V1N3 RPC connection (network set via env; mainnet by default)
+const v1n3Connection = new Connection(SOLANA_RPC_ENDPOINT, 'confirmed')
 
 interface UseV1N3BalanceResult {
   balance: number
@@ -42,7 +42,7 @@ export function useV1N3Balance(walletAddress?: string | null): UseV1N3BalanceRes
       )
 
       try {
-        const tokenAccount = await getAccount(devnetConnection, tokenAccountAddress, 'confirmed', TOKEN_2022_PROGRAM_ID)
+        const tokenAccount = await getAccount(v1n3Connection, tokenAccountAddress, 'confirmed', TOKEN_2022_PROGRAM_ID)
         // Convert from lamports (raw amount) to token amount
         const tokenBalance = Number(tokenAccount.amount) / Math.pow(10, V1N3_TOKEN.decimals)
         setBalance(tokenBalance)
@@ -79,7 +79,7 @@ export function useV1N3Balance(walletAddress?: string | null): UseV1N3BalanceRes
           TOKEN_2022_PROGRAM_ID
         )
 
-        subscriptionId = devnetConnection.onAccountChange(
+        subscriptionId = v1n3Connection.onAccountChange(
           tokenAccountAddress,
           (accountInfo) => {
             // Parse the token account data
@@ -101,7 +101,7 @@ export function useV1N3Balance(walletAddress?: string | null): UseV1N3BalanceRes
 
     return () => {
       if (subscriptionId !== undefined) {
-        devnetConnection.removeAccountChangeListener(subscriptionId)
+        v1n3Connection.removeAccountChangeListener(subscriptionId)
       }
     }
   }, [walletAddress])
@@ -114,7 +114,7 @@ export function useV1N3Balance(walletAddress?: string | null): UseV1N3BalanceRes
   }
 }
 
-// Hook for SOL balance on devnet
+// Hook for SOL balance
 export function useSOLBalance(walletAddress?: string | null) {
   const [balance, setBalance] = useState<number>(0)
   const [loading, setLoading] = useState<boolean>(true)
@@ -129,7 +129,7 @@ export function useSOLBalance(walletAddress?: string | null) {
     try {
       setLoading(true)
       const walletPubkey = new PublicKey(walletAddress)
-      const lamports = await devnetConnection.getBalance(walletPubkey)
+      const lamports = await v1n3Connection.getBalance(walletPubkey)
       setBalance(lamports / 1e9)
     } catch (err) {
       console.error('Error fetching SOL balance:', err)

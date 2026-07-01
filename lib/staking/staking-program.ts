@@ -355,9 +355,10 @@ export function calculatePendingRewards(
 
 export function getExplorerUrl(
   signature: string,
-  cluster: 'devnet' | 'mainnet-beta' = 'devnet'
+  cluster: 'devnet' | 'mainnet-beta' = 'mainnet-beta'
 ): string {
-  return `https://explorer.solana.com/tx/${signature}?cluster=${cluster}`
+  const suffix = cluster === 'mainnet-beta' ? '' : `?cluster=${cluster}`
+  return `https://explorer.solana.com/tx/${signature}${suffix}`
 }
 
 /** Accepts seconds remaining until unlock. */

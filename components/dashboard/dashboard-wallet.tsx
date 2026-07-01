@@ -124,8 +124,8 @@ export function DashboardWallet({
   const { publicKey, connected, disconnect, signTransaction } = useWallet()
   const { setVisible } = useWalletModal()
   
-  // Create devnet connection for V1N3 (Token-2022)
-  const devnetConnection = new Connection(SOLANA_RPC_ENDPOINT, 'confirmed')
+  // V1N3 RPC connection (Token-2022; network via env, mainnet by default)
+  const v1n3Connection = new Connection(SOLANA_RPC_ENDPOINT, 'confirmed')
   
   // Real-time V1N3 balance from blockchain
   const { balance: onChainBalance, loading: balanceLoading, refetch: refetchBalance } = useV1N3Balance(walletAddress)
@@ -579,7 +579,7 @@ export function DashboardWallet({
       
       // Check if destination ATA exists, create if not
       try {
-        await getAccount(devnetConnection, toAta, 'confirmed', TOKEN_2022_PROGRAM_ID)
+        await getAccount(v1n3Connection, toAta, 'confirmed', TOKEN_2022_PROGRAM_ID)
       } catch {
         // ATA doesn't exist, add instruction to create it
         transaction.add(
@@ -608,7 +608,7 @@ export function DashboardWallet({
       )
       
       // Get recent blockhash
-      const { blockhash, lastValidBlockHeight } = await devnetConnection.getLatestBlockhash()
+      const { blockhash, lastValidBlockHeight } = await v1n3Connection.getLatestBlockhash()
       transaction.recentBlockhash = blockhash
       transaction.feePayer = publicKey
       
@@ -616,10 +616,10 @@ export function DashboardWallet({
       const signedTx = await signTransaction(transaction)
       
       // Send transaction
-      const signature = await devnetConnection.sendRawTransaction(signedTx.serialize())
+      const signature = await v1n3Connection.sendRawTransaction(signedTx.serialize())
       
       // Confirm transaction
-      await devnetConnection.confirmTransaction({
+      await v1n3Connection.confirmTransaction({
         signature,
         blockhash,
         lastValidBlockHeight,

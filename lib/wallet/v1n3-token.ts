@@ -36,7 +36,7 @@ export const V1N3_TOKEN = {
 export const V1N3_MINT_PUBKEY = new PublicKey(V1N3_TOKEN.mintAddress)
 export const V1N3_PROGRAM_PUBKEY = new PublicKey(V1N3_TOKEN.programId)
 
-// Create connection to Solana devnet
+// Create connection to Solana (network via env, mainnet by default)
 export function getConnection(): Connection {
   return new Connection(SOLANA_RPC_ENDPOINT, 'confirmed')
 }
