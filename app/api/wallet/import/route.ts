@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    let body: { secretKey?: string }
+    let body: { secretKey?: string; derivationPath?: string }
     try {
       body = await request.json()
     } catch {
@@ -26,12 +26,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Secret key is required" }, { status: 400 })
     }
 
-    const result = await importWallet(user.id, secretKey)
+    const outcome = await importWallet(user.id, secretKey, {
+      derivationPath: typeof body.derivationPath === "string" ? body.derivationPath : undefined,
+    })
+
+    // Seed phrase mapped to multiple/zero funded addresses — ask the user to pick.
+    if (outcome.needsSelection) {
+      return NextResponse.json({ success: false, needsSelection: true, candidates: outcome.candidates })
+    }
 
     return NextResponse.json({
       success: true,
-      publicKey: result.publicKey,
-      replacedPreviousWallet: result.replacedPreviousWallet,
+      publicKey: outcome.publicKey,
+      replacedPreviousWallet: outcome.replacedPreviousWallet,
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to import wallet"

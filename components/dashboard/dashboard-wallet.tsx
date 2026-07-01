@@ -94,6 +94,10 @@ export function DashboardWallet({
   const [importLoading, setImportLoading] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const [importedPublicKey, setImportedPublicKey] = useState<string | null>(null)
+  // Seed-phrase candidate selection (when one phrase maps to several addresses)
+  const [importCandidates, setImportCandidates] = useState<
+    { address: string; path: string; label: string; v1n3: number; sol: number; hasActivity: boolean }[] | null
+  >(null)
 
   // Reveal secret phrase (backup) state
   const [showRevealModal, setShowRevealModal] = useState(false)
@@ -320,6 +324,7 @@ export function DashboardWallet({
 
     setImportLoading(true)
     setImportError(null)
+    setImportCandidates(null)
 
     try {
       const response = await fetch('/api/wallet/import', {
@@ -334,12 +339,43 @@ export function DashboardWallet({
         throw new Error(result.error || 'Failed to import wallet')
       }
 
+      // Seed phrase mapped to multiple / no funded addresses — let the user pick.
+      if (result.needsSelection) {
+        setImportCandidates(result.candidates ?? [])
+        return
+      }
+
       setImportedPublicKey(result.publicKey)
-      setImportKey('')
       // Refresh server data so the new wallet address propagates.
       router.refresh()
     } catch (err) {
       console.error('[v0] Import wallet error:', err)
+      setImportError(err instanceof Error ? err.message : 'Failed to import wallet')
+    } finally {
+      setImportLoading(false)
+    }
+  }
+
+  // Import a specific derived address the user selected from the candidate list.
+  const handleSelectCandidate = async (derivationPath: string) => {
+    setImportLoading(true)
+    setImportError(null)
+    try {
+      const response = await fetch('/api/wallet/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secretKey: importKey.trim(), derivationPath }),
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to import wallet')
+      }
+      setImportedPublicKey(result.publicKey)
+      setImportCandidates(null)
+      setImportKey('')
+      router.refresh()
+    } catch (err) {
+      console.error('[v0] Select candidate error:', err)
       setImportError(err instanceof Error ? err.message : 'Failed to import wallet')
     } finally {
       setImportLoading(false)
@@ -353,6 +389,7 @@ export function DashboardWallet({
     setShowImportKey(false)
     setImportError(null)
     setImportedPublicKey(null)
+    setImportCandidates(null)
   }
 
   // --- Reveal secret phrase (backup) ---
@@ -1426,6 +1463,58 @@ export function DashboardWallet({
                     className="w-full py-2.5 bg-primary text-background mono-xs text-[11px] rounded-[2px] hover:bg-primary/90 transition-colors"
                   >
                     DONE
+                  </button>
+                </div>
+              ) : importCandidates ? (
+                <div>
+                  <p className="font-mono text-sm text-foreground mb-1">Choose your wallet</p>
+                  <p className="mono-xs text-[10px] text-muted-foreground mb-4">
+                    This seed phrase can unlock several addresses depending on the wallet that
+                    created it. Pick the one that matches your wallet.
+                  </p>
+
+                  {importError && (
+                    <div className="bg-destructive/10 border border-destructive/30 rounded-[2px] p-3 mb-4">
+                      <div className="flex gap-2">
+                        <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                        <p className="mono-xs text-[10px] text-destructive">{importError}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2 max-h-[320px] overflow-y-auto mb-4">
+                    {importCandidates.map((c) => (
+                      <button
+                        key={c.path}
+                        onClick={() => handleSelectCandidate(c.path)}
+                        disabled={importLoading}
+                        className="w-full text-left bg-secondary/40 border border-border rounded-[2px] p-3 hover:border-accent/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <span className="mono-xs text-[10px] text-accent">{c.label}</span>
+                          {c.hasActivity && (
+                            <span className="mono-xs text-[9px] text-primary bg-primary/15 px-1.5 py-0.5 rounded-[2px]">
+                              ACTIVE
+                            </span>
+                          )}
+                        </div>
+                        <p className="font-mono text-xs text-foreground break-all mb-1">{c.address}</p>
+                        <p className="mono-xs text-[9px] text-muted-foreground">
+                          {c.v1n3.toLocaleString()} V1N3 · {c.sol.toFixed(4)} SOL
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setImportCandidates(null)
+                      setImportError(null)
+                    }}
+                    disabled={importLoading}
+                    className="w-full py-2.5 bg-secondary text-foreground mono-xs text-[11px] rounded-[2px] hover:bg-secondary/80 transition-colors disabled:opacity-50"
+                  >
+                    BACK
                   </button>
                 </div>
               ) : (
